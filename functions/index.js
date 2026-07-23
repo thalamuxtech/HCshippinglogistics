@@ -92,9 +92,19 @@ function stageMessage(status, destination) {
 // the secrets are set + bound, and cleanly falls back to stub mode otherwise.
 const DEFAULT_FROM = "Highclass Shipping <noreply@highclassshippinglogistics.com>";
 
+// A secret is "configured" only if it has a real, non-placeholder value.
+// This lets you set every declared secret to "unset" so deploys never block
+// on an empty prompt, while the functions stay in stub mode until real keys
+// are provided.
+function cfg(v) {
+  const s = (v || "").trim();
+  if (!s || s.toLowerCase() === "unset" || s === "-") return "";
+  return s;
+}
+
 async function sendEmail({ to, subject, html }) {
-  const key = process.env.RESEND_API_KEY;
-  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM;
+  const key = cfg(process.env.RESEND_API_KEY);
+  const from = cfg(process.env.RESEND_FROM_EMAIL) || DEFAULT_FROM;
   if (!key) {
     console.log(`[STUB EMAIL] to=${to} subject="${subject}"`);
     return { ok: true, stub: true };
@@ -116,9 +126,9 @@ async function sendEmail({ to, subject, html }) {
 }
 
 async function sendSms({ to, body }) {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  const sid = cfg(process.env.TWILIO_ACCOUNT_SID);
+  const token = cfg(process.env.TWILIO_AUTH_TOKEN);
+  const fromNumber = cfg(process.env.TWILIO_FROM_NUMBER);
   if (!sid || !token || !fromNumber) {
     console.log(`[STUB SMS] to=${to} body="${body}"`);
     return { ok: true, stub: true };
