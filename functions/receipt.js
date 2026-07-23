@@ -107,9 +107,17 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(9).text(receiptNumber, W - M - 170, 60, { width: 170, align: "right" });
   doc.fillColor("#C9D8EC").font("Helvetica").fontSize(8).text(`Issued ${issued}`, W - M - 170, 73, { width: 170, align: "right" });
 
+  // Subtle diagonal status watermark behind the content (premium touch).
+  doc.save();
+  doc.rotate(-32, { origin: [W / 2, 430] });
+  doc.fillColor(badge.color).opacity(0.06);
+  doc.font("Helvetica-Bold").fontSize(96).text(badge.label, W / 2 - 240, 390, { width: 480, align: "center" });
+  doc.opacity(1);
+  doc.restore();
+
   const svc = (shipment.service_type || "").toUpperCase();
   const rcv = shipment.receiver || {};
-  let y = 120;
+  let y = 122;
 
   // ── BILL TO (left)  +  Invoice meta (right) ──
   const metaX = W - M - 210;
@@ -211,25 +219,33 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
     y += 16;
   };
   const subtotal = total - (shipment.pickup_fee || 0);
+  const totalsX = cPrice - 60;
+  const totalsTop = y - 4;
   rowT("Subtotal", money(subtotal, currency), true);
   if (shipment.pickup_fee) rowT("Pickup fee", money(shipment.pickup_fee, currency), true);
   if (deposit > 0) rowT("Deposit paid", money(deposit, currency), true);
   if (balance > 0) rowT("Balance due", money(balance, currency), true);
 
-  // Navy TOTAL bar (like the sample)
-  y += 4;
-  const barX = cPrice - 60;
-  doc.rect(barX, y, W - M - barX, 30).fill(NAVY);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(13).text("TOTAL", barX + 14, y + 8);
-  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(13).text(money(total, currency), cAmt - 10, y + 8, { width: 70, align: "right" });
-  y += 42;
+  // Navy TOTAL bar with rounded corners + gold amount.
+  y += 6;
+  const barW = W - M - totalsX;
+  doc.roundedRect(totalsX, y, barW, 34, 6).fill(NAVY);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text("TOTAL", totalsX + 16, y + 11);
+  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(15).text(money(total, currency), cAmt - 20, y + 9, { width: 80, align: "right" });
+  y += 46;
 
-  // "Amount billed to" line
-  doc.fillColor(MUTED).font("Helvetica-Oblique").fontSize(8.5).text(
-    `Amount billed to ${shipment.customer_name || "Customer"}: ${money(total, currency)}${status === "paid" ? "  (Paid in full)" : ""}`,
-    M, y, { width: contentW }
+  // Amount-billed line + thank-you (left side, aligned with terms).
+  doc.fillColor(status === "paid" ? "#16A34A" : INK).font("Helvetica-Bold").fontSize(9).text(
+    status === "paid"
+      ? `Paid in full: ${money(total, currency)}`
+      : `Amount billed to ${shipment.customer_name || "the customer"}: ${money(total, currency)}`,
+    M, totalsTop
   );
-  y += 16;
+  doc.fillColor(MUTED).font("Helvetica-Oblique").fontSize(9).text(
+    "Thank you for shipping with Highclass.",
+    M, totalsTop + 16, { width: 260 }
+  );
+  y = Math.max(y, totalsTop + 44);
 
   // ── Terms ──
   y += 10;

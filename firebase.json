@@ -5,8 +5,7 @@
     "trailingSlash": false,
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "redirects": [
-      { "source": "/:code(HC-:rest*)", "destination": "/track?id=:code", "type": 302 },
-      { "source": "/:code(HC:rest*)", "destination": "/track?id=:code", "type": 302 }
+      { "regex": "^/(?P<code>HC[A-Za-z0-9-]+)$", "destination": "/track?id=:code", "type": 302 }
     ],
     "rewrites": [
       { "source": "/admin/shipments/detail", "destination": "/admin/shipments/detail.html" },
