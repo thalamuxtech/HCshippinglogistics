@@ -61,15 +61,34 @@ Populates the 28-item Sea price list, site content, and serial counters.
 
 ---
 
-## Step 4 — Create the first admin (one-time)
+## Step 4 — Create users (one-time)
 
+### Option A (fastest) — seed all 4 demo roles at once
+Requires `serviceAccountKey.json` in `app/` (from Step 3).
+```powershell
+npm run seed:demo
+```
+Creates one account per role (Plan §7). DEMO credentials (change before real launch):
+
+| Role           | Email                                          | Password         | Portal     |
+|----------------|------------------------------------------------|------------------|------------|
+| admin          | admin@highclassshippinglogistics.com           | HCshipping@54321 | /admin     |
+| nigeria_office | nigeria.office@highclassshippinglogistics.com  | HCshipping@54321 | /office    |
+| dispatcher     | dispatcher@highclassshippinglogistics.com      | HCshipping@54321 | /dispatch  |
+| customer       | customer@highclassshippinglogistics.com        | HCshipping@54321 | /portal    |
+
+The Nigeria office account is scoped to `Nigeria`.
+
+### Option B — promote a real signup to admin
 1. Visit the deployed site's `/signup` and register once (creates a customer account).
 2. Promote it:
    ```powershell
    node scripts/set-admin.mjs your-email@example.com admin
    ```
-3. Log in → you land on `/admin`. From there, create Nigeria-office and dispatcher
-   staff via **Staff & Roles** (no scripts needed).
+3. Log in → `/admin` → create staff via **Staff & Roles** (no scripts needed).
+
+> Real launch: delete/disable the demo accounts (Admin → Staff & Roles → Deactivate,
+> or remove them in the Firebase Auth console) and set strong passwords.
 
 ---
 
