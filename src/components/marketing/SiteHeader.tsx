@@ -14,6 +14,7 @@ const NAV = [
   { href: "/services/air", label: "Air Freight" },
   { href: "/services/roro", label: "RORO" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/track", label: "My Shipments" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
@@ -93,7 +94,7 @@ export function SiteHeader() {
 
           <div className="hidden items-center gap-2 lg:flex">
             <ButtonLink href="/track" variant="outline" size="sm">
-              <Search className="h-4 w-4" /> Track
+              <Search className="h-4 w-4" /> My Shipments
             </ButtonLink>
             <ButtonLink href="/order" variant="gold" size="sm">
               <PackagePlus className="h-4 w-4" /> Start an order
@@ -132,7 +133,7 @@ export function SiteHeader() {
             })}
             <div className="mt-2 grid grid-cols-2 gap-2 border-t border-border pt-3">
               <ButtonLink href="/track" variant="outline" size="md" className="w-full">
-                <Search className="h-4 w-4" /> Track
+                <Search className="h-4 w-4" /> My Shipments
               </ButtonLink>
               <ButtonLink href="/order" variant="gold" size="md" className="w-full">
                 <PackagePlus className="h-4 w-4" /> Start an order

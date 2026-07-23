@@ -10,7 +10,8 @@
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "seed": "node scripts/seed-firestore.mjs",
-    "seed:demo": "node scripts/seed-demo-users.mjs"
+    "seed:demo": "node scripts/seed-demo-users.mjs",
+    "seed:customers": "node scripts/seed-demo-customers.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",
