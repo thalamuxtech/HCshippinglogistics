@@ -96,6 +96,9 @@ export default function HomePage() {
       {/* ─── Hero ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+        {/* soft aurora glows for depth */}
+        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-gold/10 blur-3xl" />
+        <div className="pointer-events-none absolute -right-24 top-24 h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.04]"
           style={{
@@ -104,6 +107,8 @@ export default function HomePage() {
             backgroundSize: "36px 36px",
           }}
         />
+        {/* subtle gradient fade into the next section */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-navy-950/30" />
         <div className="container-page relative py-20 sm:py-28 lg:py-32">
           <div className="mx-auto max-w-3xl text-center">
             <Reveal>
@@ -216,8 +221,10 @@ export default function HomePage() {
               <Reveal key={svc.key} delay={i * 0.08}>
                 <Link
                   href={svc.href}
-                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-white p-7 shadow-card transition-all duration-300 hover:-translate-y-1 hover:shadow-premium focus-ring"
+                  className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-white p-7 shadow-card transition-all duration-300 hover:-translate-y-1.5 hover:border-gold/40 hover:shadow-premium focus-ring"
                 >
+                  {/* gold top accent on hover */}
+                  <span className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-gold-gradient transition-transform duration-300 group-hover:scale-x-100" />
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${svc.accent} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
                   />
