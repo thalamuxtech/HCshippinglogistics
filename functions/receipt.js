@@ -27,7 +27,7 @@ const LINE = "#E2E8F0";
 
 const COMPANY = {
   name: "HIGHCLASS SHIPPING AND LOGISTICS INC.",
-  tagline: "White-Glove Freight Management  ·  USA to Africa",
+  tagline: "Shipping from the USA to Nigeria & across Africa",
   email: "shipthroughhighclass@gmail.com",
   site: "highclassshippinglogistics.com",
   usa: ["6600 Foxley Road, Gate C", "Upper Marlboro, Maryland 20772", "+1 (240) 374-8394"],
@@ -58,8 +58,11 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   const status = shipment.payment_status || "unpaid";
   const badge = STATUS_STYLE[status] || STATUS_STYLE.unpaid;
 
-  // QR encodes a public tracking link with the tracking number (client code).
-  const qrTarget = `${siteUrl}/track?tn=${encodeURIComponent(shipment.tracking_number || "")}`;
+  // QR encodes a single clean tracking URL: domain + tracking number.
+  // e.g. https://highclassshippinglogistics.web.app/HC-AIR-2026-02002
+  // (Hosting redirects /{tracking} -> /track?id={tracking}.)
+  const qrBase = "https://highclassshippinglogistics.web.app";
+  const qrTarget = `${qrBase}/${encodeURIComponent(shipment.tracking_number || "")}`;
   const qrDataUrl = await QRCode.toDataURL(qrTarget, { margin: 1, width: 220, color: { dark: NAVY, light: "#FFFFFF" } });
   const qrBuffer = Buffer.from(qrDataUrl.split(",")[1], "base64");
 
@@ -73,7 +76,9 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   const contentW = W - M * 2;
 
   // ── Header band ──
-  doc.rect(0, 0, W, 96).fill(NAVY);
+  doc.rect(0, 0, W, 100).fill(NAVY);
+  // Premium gold accent rule under the header.
+  doc.rect(0, 100, W, 3).fill(GOLD);
   let textX = M;
   if (LOGO_BUFFER) {
     // White plate behind the crest (logo art is dark-on-white).
@@ -89,80 +94,71 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
     doc.restore();
     textX = M + 58;
   }
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(14).text(COMPANY.name, textX, 28, { width: 300 });
-  doc.fillColor(GOLD).font("Helvetica").fontSize(8.5).text(COMPANY.tagline, textX, 48, { width: 300 });
-  doc.fillColor("#FFFFFF").fontSize(8).text(`${COMPANY.site}  ·  ${COMPANY.email}`, textX, 64, { width: 300 });
+  // Company block (left) constrained so it never collides with the title.
+  const nameW = 250;
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(12.5).text(COMPANY.name, textX, 26, { width: nameW });
+  doc.fillColor(GOLD).font("Helvetica").fontSize(8).text(COMPANY.tagline, textX, 58, { width: nameW });
+  doc.fillColor("#FFFFFF").fontSize(7.5).text(`${COMPANY.site}   ${COMPANY.email}`, textX, 72, { width: nameW });
 
-  // Title: INVOICE when payment is still due, RECEIPT once fully paid.
-  const docTitle = status === "paid" ? "RECEIPT" : "INVOICE";
+  // Everything is called an "Invoice"; the PAID / UNPAID badge conveys status.
+  const docTitle = "INVOICE";
   const issued = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(16).text(docTitle, W - M - 180, 26, { width: 180, align: "right" });
-  doc.fillColor(GOLD).font("Helvetica").fontSize(9).text(`No. ${receiptNumber}`, W - M - 180, 48, { width: 180, align: "right" });
-  doc.fillColor("#FFFFFF").fontSize(8).text(`Issued ${issued}`, W - M - 180, 62, { width: 180, align: "right" });
+  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(24).text(docTitle, W - M - 170, 30, { width: 170, align: "right", characterSpacing: 3 });
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(9).text(receiptNumber, W - M - 170, 60, { width: 170, align: "right" });
+  doc.fillColor("#C9D8EC").font("Helvetica").fontSize(8).text(`Issued ${issued}`, W - M - 170, 73, { width: 170, align: "right" });
 
-  let y = 118;
+  const svc = (shipment.service_type || "").toUpperCase();
+  const rcv = shipment.receiver || {};
+  let y = 120;
 
-  // ── Status badge + tracking ──
+  // ── BILL TO (left)  +  Invoice meta (right) ──
+  const metaX = W - M - 210;
+  doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(9).text("BILL TO", M, y);
+  doc.fillColor(INK).font("Helvetica-Bold").fontSize(11).text(shipment.customer_name || "Customer", M, y + 14, { width: 300 });
+  doc.fillColor(MUTED).font("Helvetica").fontSize(9);
+  let by = y + 30;
+  if (shipment.customer_email) { doc.text(shipment.customer_email, M, by, { width: 300 }); by += 13; }
+  if (shipment.customer_phone) { doc.text(shipment.customer_phone, M, by, { width: 300 }); by += 13; }
+  if (shipment.sender_address) { doc.text(shipment.sender_address, M, by, { width: 300 }); by += 13; }
+
+  // Invoice meta (labels left, values right-aligned)
+  const metaRow = (label, val, yy) => {
+    doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(9).text(label, metaX, yy, { width: 100 });
+    doc.fillColor(INK).font("Helvetica").fontSize(9).text(val, metaX + 100, yy, { width: 110, align: "right" });
+  };
+  const due = new Date(Date.now() + 7 * 864e5).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  metaRow(`${docTitle} #`, receiptNumber, y);
+  metaRow("DATE", issued, y + 15);
+  metaRow("DUE DATE", status === "paid" ? "Paid" : due, y + 30);
+  // Status badge under the meta
   doc.save();
-  doc.roundedRect(M, y, 120, 26, 6).fill(badge.color);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(12).text(badge.label, M, y + 7, { width: 120, align: "center" });
+  doc.roundedRect(metaX + 110, y + 46, 100, 22, 5).fill(badge.color);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text(badge.label, metaX + 110, y + 51, { width: 100, align: "center" });
   doc.restore();
 
-  doc.fillColor(MUTED).font("Helvetica").fontSize(8).text("TRACKING / CLIENT CODE", M + 140, y + 2);
-  doc.fillColor(NAVY).font("Courier-Bold").fontSize(13).text(shipment.tracking_number || "—", M + 140, y + 12);
-
-  // QR (top-right)
-  doc.image(qrBuffer, W - M - 74, y - 2, { width: 74, height: 74 });
-  doc.fillColor(MUTED).font("Helvetica").fontSize(6.5).text("Scan to track", W - M - 74, y + 74, { width: 74, align: "center" });
-
-  y += 92;
-
-  // ── Sender / Receiver ──
-  const colW = (contentW - 20) / 2;
-  const boxTop = y;
-  doc.roundedRect(M, boxTop, colW, 92, 6).stroke(LINE);
-  doc.roundedRect(M + colW + 20, boxTop, colW, 92, 6).stroke(LINE);
-
-  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(8).text("SENDER", M + 12, boxTop + 10);
-  doc.fillColor(INK).font("Helvetica-Bold").fontSize(11).text(shipment.customer_name || "—", M + 12, boxTop + 24, { width: colW - 24 });
-  doc.fillColor(MUTED).font("Helvetica").fontSize(9);
-  doc.text(shipment.customer_email || "", M + 12, boxTop + 42, { width: colW - 24 });
-  doc.text(shipment.customer_phone || "", M + 12, boxTop + 56, { width: colW - 24 });
-
-  const rx = M + colW + 32;
-  const rcv = shipment.receiver || {};
-  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(8).text("RECEIVER", rx, boxTop + 10);
-  doc.fillColor(INK).font("Helvetica-Bold").fontSize(11).text(rcv.full_name || "—", rx, boxTop + 24, { width: colW - 24 });
-  doc.fillColor(MUTED).font("Helvetica").fontSize(9);
-  doc.text(rcv.phone || "", rx, boxTop + 42, { width: colW - 24 });
+  // QR + tracking (left, below bill-to)
+  y = Math.max(by, y + 74) + 6;
+  doc.image(qrBuffer, M, y, { width: 66, height: 66 });
+  doc.fillColor(MUTED).font("Helvetica").fontSize(8).text("SHIP TO", M + 78, y + 2);
+  doc.fillColor(INK).font("Helvetica-Bold").fontSize(10).text(rcv.full_name || "Receiver", M + 78, y + 14, { width: 240 });
+  doc.fillColor(MUTED).font("Helvetica").fontSize(8.5);
   doc.text(
-    [rcv.address, shipment.destination_city, shipment.destination_country].filter(Boolean).join(", "),
-    rx,
-    boxTop + 56,
-    { width: colW - 24 }
+    [rcv.phone, rcv.address, shipment.destination_city, shipment.destination_country].filter(Boolean).join(", "),
+    M + 78, y + 28, { width: W - M - (M + 78) }
   );
+  doc.fillColor(NAVY).font("Courier-Bold").fontSize(9).text(`Tracking: ${shipment.tracking_number || "-"}`, M + 78, y + 52);
+  y += 80;
 
-  y = boxTop + 108;
-
-  // ── Shipment meta row ──
-  const svc = (shipment.service_type || "").toUpperCase();
-  doc.fillColor(MUTED).font("Helvetica").fontSize(8);
-  doc.text(`SERVICE: ${svc}`, M, y);
-  doc.text(`DESTINATION: ${shipment.destination_country || "—"}`, M + 150, y);
-  if (shipment.weight) doc.text(`WEIGHT: ${shipment.weight} lbs`, M + 320, y);
-  y += 18;
-
-  // ── Itemized table ──
-  doc.moveTo(M, y).lineTo(W - M, y).stroke(LINE);
-  y += 8;
-  doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(8.5);
-  doc.text("DESCRIPTION", M, y);
-  doc.text("QTY", W - M - 190, y, { width: 40, align: "right" });
-  doc.text("UNIT", W - M - 130, y, { width: 60, align: "right" });
-  doc.text("AMOUNT", W - M - 60, y, { width: 60, align: "right" });
-  y += 14;
-  doc.moveTo(M, y).lineTo(W - M, y).stroke(LINE);
-  y += 6;
+  // ── Item table (Description / QTY / Price / Amount) ──
+  const cQty = W - M - 210, cPrice = W - M - 150, cAmt = W - M - 70;
+  const headH = 24;
+  doc.rect(M, y, contentW, headH).fill(NAVY);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(9);
+  doc.text("DESCRIPTION", M + 10, y + 8);
+  doc.text("QTY", cQty, y + 8, { width: 50, align: "right" });
+  doc.text("PRICE", cPrice, y + 8, { width: 70, align: "right" });
+  doc.text("AMOUNT", cAmt, y + 8, { width: 60, align: "right" });
+  y += headH;
 
   const items =
     shipment.items && shipment.items.length
@@ -171,47 +167,69 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
           {
             description:
               svc === "AIR"
-                ? `Air freight${shipment.weight ? ` — ${shipment.weight} lbs` : ""}`
+                ? `Air freight${shipment.weight ? ` (${shipment.weight} lbs)` : ""}`
                 : svc === "RORO"
-                ? `RORO vehicle${shipment.shipping_line ? ` — ${shipment.shipping_line}` : ""}`
+                ? `RORO vehicle${shipment.shipping_line ? ` (${shipment.shipping_line})` : ""}`
                 : "Shipment",
             quantity: 1,
-            unit_price: shipment.total_price || 0,
-            line_total: shipment.total_price || 0,
+            unit_price: shipment.baseAmount != null ? shipment.baseAmount : shipment.total_price || 0,
+            line_total: shipment.baseAmount != null ? shipment.baseAmount : shipment.total_price || 0,
           },
         ];
 
-  doc.font("Helvetica").fontSize(9.5).fillColor(INK);
-  for (const it of items) {
-    doc.fillColor(INK).text(it.description || "Item", M, y, { width: W - M - 210 });
-    doc.text(String(it.quantity ?? 1), W - M - 190, y, { width: 40, align: "right" });
-    doc.text(money(it.unit_price, currency), W - M - 130, y, { width: 60, align: "right" });
-    doc.font("Helvetica-Bold").text(money(it.line_total, currency), W - M - 60, y, { width: 60, align: "right" });
-    doc.font("Helvetica");
-    y += 18;
+  // Optional pickup-fee line
+  const rowsToRender = items.slice();
+  if (shipment.pickup_fee) {
+    rowsToRender.push({
+      description: "Door-to-door pickup fee",
+      quantity: 1,
+      unit_price: shipment.pickup_fee,
+      line_total: shipment.pickup_fee,
+    });
   }
 
-  y += 4;
-  doc.moveTo(W - M - 220, y).lineTo(W - M, y).stroke(LINE);
-  y += 8;
+  const rowH = 22;
+  doc.font("Helvetica").fontSize(9.5);
+  rowsToRender.forEach((it, i) => {
+    if (i % 2 === 1) doc.rect(M, y, contentW, rowH).fill("#F4F7FB");
+    doc.fillColor(INK).font("Helvetica").text(it.description || "Item", M + 10, y + 6, { width: cQty - M - 20 });
+    doc.text(String(it.quantity ?? 1), cQty, y + 6, { width: 50, align: "right" });
+    doc.text(money(it.unit_price, currency), cPrice, y + 6, { width: 70, align: "right" });
+    doc.font("Helvetica-Bold").fillColor(NAVY).text(money(it.line_total, currency), cAmt, y + 6, { width: 60, align: "right" });
+    y += rowH;
+  });
+  doc.moveTo(M, y).lineTo(W - M, y).stroke(LINE);
+  y += 10;
 
   // ── Totals ──
   const total = shipment.total_price || 0;
   const deposit = shipment.deposit || 0;
   const balance = shipment.balance != null ? shipment.balance : total - deposit;
-  const rowT = (label, val, bold) => {
-    doc.font(bold ? "Helvetica-Bold" : "Helvetica").fontSize(bold ? 12 : 9.5);
-    doc.fillColor(bold ? NAVY : MUTED).text(label, W - M - 220, y, { width: 120, align: "right" });
-    doc.fillColor(bold ? NAVY : INK).text(val, W - M - 90, y, { width: 90, align: "right" });
-    y += bold ? 20 : 16;
+  const rowT = (label, val, muted) => {
+    doc.font("Helvetica").fontSize(9.5).fillColor(muted ? MUTED : INK).text(label, cPrice - 60, y, { width: 120, align: "right" });
+    doc.font("Helvetica").fontSize(9.5).fillColor(INK).text(val, cAmt, y, { width: 60, align: "right" });
+    y += 16;
   };
-  rowT("Subtotal", money(total, currency));
-  rowT("Deposit paid", money(deposit, currency));
-  rowT("Balance due", money(balance, currency));
-  y += 2;
-  doc.moveTo(W - M - 220, y).lineTo(W - M, y).stroke(NAVY);
-  y += 8;
-  rowT("TOTAL", money(total, currency), true);
+  const subtotal = total - (shipment.pickup_fee || 0);
+  rowT("Subtotal", money(subtotal, currency), true);
+  if (shipment.pickup_fee) rowT("Pickup fee", money(shipment.pickup_fee, currency), true);
+  if (deposit > 0) rowT("Deposit paid", money(deposit, currency), true);
+  if (balance > 0) rowT("Balance due", money(balance, currency), true);
+
+  // Navy TOTAL bar (like the sample)
+  y += 4;
+  const barX = cPrice - 60;
+  doc.rect(barX, y, W - M - barX, 30).fill(NAVY);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(13).text("TOTAL", barX + 14, y + 8);
+  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(13).text(money(total, currency), cAmt - 10, y + 8, { width: 70, align: "right" });
+  y += 42;
+
+  // "Amount billed to" line
+  doc.fillColor(MUTED).font("Helvetica-Oblique").fontSize(8.5).text(
+    `Amount billed to ${shipment.customer_name || "Customer"}: ${money(total, currency)}${status === "paid" ? "  (Paid in full)" : ""}`,
+    M, y, { width: contentW }
+  );
+  y += 16;
 
   // ── Terms ──
   y += 10;
@@ -224,12 +242,13 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   }
 
   // ── Footer offices ──
+  const footColW = (contentW - 20) / 2;
   const fY = doc.page.height - 74;
   doc.moveTo(M, fY - 8).lineTo(W - M, fY - 8).stroke(LINE);
   doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(7.5).text("USA OFFICE", M, fY);
-  doc.fillColor(MUTED).font("Helvetica").fontSize(7.5).text(COMPANY.usa.join("  ·  "), M, fY + 10, { width: colW });
-  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(7.5).text("NIGERIA OFFICE", M + colW + 20, fY);
-  doc.fillColor(MUTED).font("Helvetica").fontSize(7.5).text(COMPANY.nigeria.join("  ·  "), M + colW + 20, fY + 10, { width: colW });
+  doc.fillColor(MUTED).font("Helvetica").fontSize(7.5).text(COMPANY.usa.join("  ·  "), M, fY + 10, { width: footColW });
+  doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(7.5).text("NIGERIA OFFICE", M + footColW + 20, fY);
+  doc.fillColor(MUTED).font("Helvetica").fontSize(7.5).text(COMPANY.nigeria.join("  ·  "), M + footColW + 20, fY + 10, { width: footColW });
 
   doc.end();
   return done;

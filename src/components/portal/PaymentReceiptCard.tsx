@@ -117,7 +117,7 @@ export function PaymentReceiptCard({
   return (
     <Card>
       <CardHeader className="flex-row items-center justify-between space-y-0">
-        <CardTitle>Payment &amp; receipt</CardTitle>
+        <CardTitle>Payment &amp; invoice</CardTitle>
         <Badge variant={badge.variant}>{badge.label}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -4,8 +4,11 @@
     "cleanUrls": true,
     "trailingSlash": false,
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "redirects": [
+      { "source": "/:code(HC-:rest*)", "destination": "/track?id=:code", "type": 302 },
+      { "source": "/:code(HC:rest*)", "destination": "/track?id=:code", "type": 302 }
+    ],
     "rewrites": [
-      { "source": "/portal/shipments/detail", "destination": "/portal/shipments/detail.html" },
       { "source": "/admin/shipments/detail", "destination": "/admin/shipments/detail.html" },
       { "source": "/admin/customers/detail", "destination": "/admin/customers/detail.html" },
       { "source": "/office/shipments/detail", "destination": "/office/shipments/detail.html" },
