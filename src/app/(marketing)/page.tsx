@@ -17,7 +17,8 @@ import {
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/Reveal";
-import { PublicTracker } from "@/components/marketing/PublicTracker";
+import { HeroStart } from "@/components/marketing/HeroStart";
+import { ProcessJourney } from "@/components/marketing/ProcessJourney";
 import { ManagedText } from "@/components/marketing/ManagedText";
 import { COMPANY, SERVICES, STAGES } from "@/lib/constants";
 
@@ -114,10 +115,10 @@ export default function HomePage() {
             </Reveal>
           </div>
 
-          {/* Public tracker */}
+          {/* Send / track widget */}
           <Reveal delay={0.3}>
-            <div className="mx-auto mt-14 max-w-xl">
-              <PublicTracker variant="hero" />
+            <div className="mx-auto mt-14 max-w-2xl">
+              <HeroStart />
             </div>
           </Reveal>
         </div>
@@ -131,6 +132,32 @@ export default function HomePage() {
                 <div className="mt-1 text-xs uppercase tracking-wider text-white/60">{s.label}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── Trust / credentials strip ────────────────────── */}
+      <section className="border-b border-border bg-white">
+        <div className="container-page py-8">
+          <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">
+            Trusted for government, hospital &amp; embassy freight across Africa
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-navy/70">
+            {[
+              { icon: ShieldCheck, label: "FMC Licensed" },
+              { icon: BadgeCheck, label: "CAC Registered" },
+              { icon: Stethoscope, label: "Medical Equipment" },
+              { icon: Container, label: "60+ Container Projects" },
+              { icon: Landmark, label: "Tender-Ready Docs" },
+            ].map((c) => {
+              const Icon = c.icon;
+              return (
+                <div key={c.label} className="inline-flex items-center gap-2">
+                  <Icon className="h-5 w-5 text-gold-600" />
+                  <span className="text-sm font-semibold">{c.label}</span>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -187,8 +214,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ─── How it works — animated journey ──────────────── */}
+      <ProcessJourney />
+
       {/* ─── 8-Stage lifecycle ────────────────────────────── */}
-      <section className="bg-white py-20 sm:py-24">
+      <section className="bg-surface py-20 sm:py-24">
         <div className="container-page">
           <Reveal className="mx-auto max-w-2xl text-center">
             <span className="eyebrow">Radical Transparency</span>

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Ship,
   Plane,
@@ -48,6 +49,7 @@ import { generateTrackingNumber, formatCurrency, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select, Label, FieldHint } from "@/components/ui/input";
+import { AnimatedNumber } from "@/components/ui/animated-number";
 
 const SERVICE_TABS: { key: ServiceType; icon: typeof Ship }[] = [
   { key: "sea", icon: Ship },
@@ -474,9 +476,11 @@ export default function OrderPage() {
               <div className="mt-2 flex items-end justify-between">
                 <span className="text-sm text-white/70">{SERVICES[service].label}</span>
                 <span className="font-mono text-3xl font-bold text-gold">
-                  {service === "roro" && roroQuote.quoted
-                    ? "TBQ"
-                    : formatCurrency(grandTotal)}
+                  {service === "roro" && roroQuote.quoted ? (
+                    "TBQ"
+                  ) : (
+                    <AnimatedNumber value={grandTotal} />
+                  )}
                 </span>
               </div>
             </div>
@@ -496,9 +500,11 @@ export default function OrderPage() {
               <div className="flex items-center justify-between border-t border-border pt-4">
                 <span className="text-sm font-semibold text-navy">Estimated total</span>
                 <span className="font-mono text-lg font-bold text-navy">
-                  {service === "roro" && roroQuote.quoted
-                    ? "Quoted separately"
-                    : formatCurrency(grandTotal)}
+                  {service === "roro" && roroQuote.quoted ? (
+                    "Quoted separately"
+                  ) : (
+                    <AnimatedNumber value={grandTotal} />
+                  )}
                 </span>
               </div>
 
@@ -563,10 +569,14 @@ function SeaBuilder({
         <ul className="divide-y divide-border">
           {items.map((item) => {
             const q = qty[item.s_n] ?? 0;
+            const selected = q > 0;
             return (
               <li
                 key={item.s_n}
-                className="flex items-center justify-between gap-4 py-3"
+                className={cn(
+                  "-mx-3 flex items-center justify-between gap-4 rounded-lg px-3 py-3 transition-colors",
+                  selected && "bg-gold/5"
+                )}
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-navy">
@@ -585,17 +595,31 @@ function SeaBuilder({
                       onClick={() => setQty(item.s_n, q - 1)}
                       disabled={q <= 0}
                       aria-label={`Remove one ${item.description}`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 disabled:opacity-40 cursor-pointer focus-ring"
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 focus-ring disabled:opacity-40"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
-                    <span className="w-8 text-center font-mono text-sm font-semibold text-navy">
+                    <motion.span
+                      key={q}
+                      initial={{ scale: 0.6, opacity: 0.4 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 22 }}
+                      className={cn(
+                        "w-8 text-center font-mono text-sm font-bold",
+                        selected ? "text-gold-700" : "text-navy"
+                      )}
+                    >
                       {q}
-                    </span>
+                    </motion.span>
                     <button
                       onClick={() => setQty(item.s_n, q + 1)}
                       aria-label={`Add one ${item.description}`}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 cursor-pointer focus-ring"
+                      className={cn(
+                        "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border transition-colors focus-ring",
+                        selected
+                          ? "border-gold bg-gold/15 text-gold-700 hover:bg-gold/25"
+                          : "border-border text-navy hover:bg-navy/5"
+                      )}
                     >
                       <Plus className="h-4 w-4" />
                     </button>
@@ -630,25 +654,35 @@ function SeaSummary({
         {quote.itemCount} item{quote.itemCount !== 1 ? "s" : ""}
       </p>
       <ul className="space-y-2">
-        {quote.items.map((it) => (
-          <li key={it.price_list_id} className="flex items-center justify-between gap-2 text-sm">
-            <span className="flex items-center gap-2">
-              <button
-                onClick={() => onRemove(Number(it.price_list_id))}
-                aria-label={`Remove ${it.description}`}
-                className="text-ink-muted hover:text-destructive cursor-pointer focus-ring rounded"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-              <span className="text-navy">
-                {it.quantity}× {it.description}
+        <AnimatePresence initial={false}>
+          {quote.items.map((it) => (
+            <motion.li
+              key={it.price_list_id}
+              layout
+              initial={{ opacity: 0, height: 0, x: -8 }}
+              animate={{ opacity: 1, height: "auto", x: 0 }}
+              exit={{ opacity: 0, height: 0, x: 8 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="flex items-center justify-between gap-2 overflow-hidden text-sm"
+            >
+              <span className="flex items-center gap-2">
+                <button
+                  onClick={() => onRemove(Number(it.price_list_id))}
+                  aria-label={`Remove ${it.description}`}
+                  className="cursor-pointer rounded text-ink-muted hover:text-destructive focus-ring"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+                <span className="text-navy">
+                  {it.quantity}× {it.description}
+                </span>
               </span>
-            </span>
-            <span className="font-mono font-semibold text-navy">
-              {formatCurrency(it.line_total)}
-            </span>
-          </li>
-        ))}
+              <span className="font-mono font-semibold text-navy">
+                {formatCurrency(it.line_total)}
+              </span>
+            </motion.li>
+          ))}
+        </AnimatePresence>
       </ul>
     </div>
   );

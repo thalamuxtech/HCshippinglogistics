@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { COMPANY } from "@/lib/constants";
 import { ShieldCheck, Ship, Plane, Truck } from "lucide-react";
+import { StaffQuickLogin } from "@/components/marketing/StaffQuickLogin";
 
 const cols = [
   {
@@ -79,7 +80,11 @@ export function SiteFooter() {
           <p>
             © {year} {COMPANY.name}. All rights reserved.
           </p>
-          <p className="font-mono text-xs">{COMPANY.domain}</p>
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-xs">{COMPANY.domain}</p>
+            {/* Low-opacity staff / admin access */}
+            <StaffQuickLogin />
+          </div>
         </div>
       </div>
     </footer>

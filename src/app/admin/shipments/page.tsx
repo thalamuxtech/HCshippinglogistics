@@ -2,15 +2,19 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Package, Search, ChevronRight } from "lucide-react";
-import { listAllShipments } from "@/lib/db";
+import { Package, Search, ChevronRight, Layers, X, Loader2 } from "lucide-react";
+import { listAllShipments, advanceStage, logNotification, logActivity } from "@/lib/db";
+import { sendStageUpdateEmail } from "@/lib/notify";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { useToast } from "@/components/ui/toast";
 import type { Shipment, ShipmentStatus, ServiceType } from "@/lib/types";
-import { STAGES, SERVICES } from "@/lib/constants";
+import { STAGES, STAGE_MAP, SERVICES } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
-import { Input, Select } from "@/components/ui/input";
+import { Input, Select, Textarea, Label } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { StageBadge, Badge } from "@/components/ui/badge";
-import { Skeleton, EmptyState } from "@/components/ui/misc";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { Skeleton, EmptyState, Modal } from "@/components/ui/misc";
+import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import type { Timestamp } from "firebase/firestore";
 
 function tsToDate(ts?: Timestamp | null): Date | null {
@@ -29,12 +33,34 @@ const SERVICE_LABEL: Record<ServiceType, string> = {
 };
 
 export default function AdminShipmentsPage() {
+  const { user } = useAuth();
+  const toast = useToast();
   const [loading, setLoading] = React.useState(true);
   const [shipments, setShipments] = React.useState<Shipment[]>([]);
   const [error, setError] = React.useState(false);
   const [q, setQ] = React.useState("");
   const [status, setStatus] = React.useState<ShipmentStatus | "all">("all");
   const [service, setService] = React.useState<ServiceType | "all">("all");
+
+  // ── Bulk selection + advance ──
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [bulkOpen, setBulkOpen] = React.useState(false);
+  const [bulkStage, setBulkStage] = React.useState<ShipmentStatus>("loading");
+  const [bulkNotes, setBulkNotes] = React.useState("");
+  const [bulkNotify, setBulkNotify] = React.useState(true);
+  const [bulkRunning, setBulkRunning] = React.useState(false);
+  const [bulkProgress, setBulkProgress] = React.useState(0);
+
+  const reload = React.useCallback(async () => {
+    try {
+      const s = await listAllShipments();
+      setShipments(s);
+    } catch {
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   React.useEffect(() => {
     let alive = true;
@@ -52,6 +78,70 @@ export default function AdminShipmentsPage() {
       alive = false;
     };
   }, []);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function runBulkAdvance() {
+    if (!user || selected.size === 0) return;
+    setBulkRunning(true);
+    setBulkProgress(0);
+    const ids = Array.from(selected);
+    let done = 0;
+    for (const id of ids) {
+      const ship = shipments.find((s) => s.id === id);
+      if (!ship) continue;
+      try {
+        await advanceStage({
+          shipmentId: id,
+          status: bulkStage,
+          notes: bulkNotes.trim() || undefined,
+          updatedBy: user.id,
+          updatedByName: user.full_name,
+        });
+        if (bulkNotify) {
+          const res = await sendStageUpdateEmail({
+            shipmentId: id,
+            customerId: ship.customer_id,
+            status: bulkStage,
+          });
+          await logNotification({
+            customer_id: ship.customer_id,
+            shipment_id: id,
+            channel: "email",
+            type: `bulk_stage_${bulkStage}`,
+            subject: `Update: ${STAGE_MAP[bulkStage].label}`,
+            status: res.ok ? "sent" : "failed",
+          });
+        }
+      } catch {
+        /* continue with the rest */
+      }
+      done += 1;
+      setBulkProgress(done);
+    }
+    await logActivity({
+      actor_id: user.id,
+      actor_name: user.full_name,
+      actor_role: "admin",
+      action: `bulk-advanced ${ids.length} shipments to ${STAGE_MAP[bulkStage].short}`,
+      meta: { count: ids.length, status: bulkStage },
+    });
+    await reload();
+    setBulkRunning(false);
+    setBulkOpen(false);
+    setSelected(new Set());
+    toast.success(
+      "Batch updated",
+      `${ids.length} shipment${ids.length !== 1 ? "s" : ""} advanced to ${STAGE_MAP[bulkStage].label}.`
+    );
+  }
 
   const filtered = React.useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -147,6 +237,28 @@ export default function AdminShipmentsPage() {
             <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/50 text-left text-xs uppercase tracking-wide text-ink-muted">
+                  <th className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      aria-label="Select all"
+                      className="h-4 w-4 cursor-pointer accent-navy"
+                      checked={filtered.length > 0 && filtered.every((s) => selected.has(s.id))}
+                      ref={(el) => {
+                        if (el)
+                          el.indeterminate =
+                            filtered.some((s) => selected.has(s.id)) &&
+                            !filtered.every((s) => selected.has(s.id));
+                      }}
+                      onChange={(e) => {
+                        setSelected((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) filtered.forEach((s) => next.add(s.id));
+                          else filtered.forEach((s) => next.delete(s.id));
+                          return next;
+                        });
+                      }}
+                    />
+                  </th>
                   <th className="px-4 py-3 font-semibold">Tracking #</th>
                   <th className="px-4 py-3 font-semibold">Customer</th>
                   <th className="px-4 py-3 font-semibold">Service</th>
@@ -161,8 +273,20 @@ export default function AdminShipmentsPage() {
                 {filtered.map((s) => (
                   <tr
                     key={s.id}
-                    className="group border-b border-border last:border-0 transition-colors hover:bg-secondary/40"
+                    className={cn(
+                      "group border-b border-border transition-colors last:border-0 hover:bg-secondary/40",
+                      selected.has(s.id) && "bg-gold/5"
+                    )}
                   >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${s.tracking_number}`}
+                        className="h-4 w-4 cursor-pointer accent-navy"
+                        checked={selected.has(s.id)}
+                        onChange={() => toggle(s.id)}
+                      />
+                    </td>
                     <td className="px-4 py-3">
                       <Link
                         href={`/admin/shipments/detail?id=${s.id}`}
@@ -219,6 +343,114 @@ export default function AdminShipmentsPage() {
           Showing {filtered.length} of {shipments.length} shipments.
         </p>
       )}
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-premium animate-fade-up">
+            <span className="inline-flex items-center gap-2 text-sm font-semibold text-navy">
+              <Layers className="h-4 w-4 text-gold-700" />
+              {selected.size} selected
+            </span>
+            <Button size="sm" variant="gold" onClick={() => setBulkOpen(true)}>
+              Advance stage
+            </Button>
+            <button
+              onClick={() => setSelected(new Set())}
+              className="rounded-md p-1.5 text-ink-muted hover:bg-secondary focus-ring"
+              aria-label="Clear selection"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk advance modal */}
+      <Modal
+        open={bulkOpen}
+        onClose={() => !bulkRunning && setBulkOpen(false)}
+        title={`Advance ${selected.size} shipment${selected.size !== 1 ? "s" : ""}`}
+        description="Move every selected shipment to the same stage. Each change is logged to the audit trail."
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="bulk-stage">Target stage</Label>
+            <Select
+              id="bulk-stage"
+              value={bulkStage}
+              onChange={(e) => setBulkStage(e.target.value as ShipmentStatus)}
+            >
+              {STAGES.map((st) => (
+                <option key={st.key} value={st.key}>
+                  {st.order}. {st.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="bulk-notes">Shared note (optional)</Label>
+            <Textarea
+              id="bulk-notes"
+              value={bulkNotes}
+              onChange={(e) => setBulkNotes(e.target.value)}
+              placeholder="e.g. Cleared Lagos customs on today's manifest."
+            />
+          </div>
+          <label className="flex items-center gap-2.5 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={bulkNotify}
+              onChange={(e) => setBulkNotify(e.target.checked)}
+              className="h-4 w-4 cursor-pointer accent-navy"
+            />
+            Email each customer the update
+          </label>
+
+          {bulkRunning && (
+            <div className="rounded-lg bg-surface p-3">
+              <div className="flex items-center justify-between text-xs text-ink-muted">
+                <span>Updating…</span>
+                <span className="font-mono">
+                  {bulkProgress}/{selected.size}
+                </span>
+              </div>
+              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
+                <div
+                  className="h-full rounded-full bg-gold-gradient transition-all"
+                  style={{ width: `${(bulkProgress / Math.max(1, selected.size)) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setBulkOpen(false)}
+              disabled={bulkRunning}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="gold"
+              className="flex-1"
+              onClick={runBulkAdvance}
+              loading={bulkRunning}
+              disabled={bulkRunning}
+            >
+              {bulkRunning ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Updating
+                </>
+              ) : (
+                `Advance ${selected.size}`
+              )}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

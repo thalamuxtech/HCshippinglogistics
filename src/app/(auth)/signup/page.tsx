@@ -2,10 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Copy, Mail, ShieldCheck, ArrowRight } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input, Label, FieldError, FieldHint } from "@/components/ui/input";
+import { PageLoader } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { signupCustomer } from "@/lib/auth-service";
 import { sendAccessCodeEmail } from "@/lib/notify";
@@ -13,11 +14,43 @@ import { sendAccessCodeEmail } from "@/lib/notify";
 type Errors = Partial<Record<"fullName" | "email" | "password" | "confirm" | "birth" | "zip", string>>;
 
 export default function SignupPage() {
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading…" />}>
+      <SignupForm />
+    </React.Suspense>
+  );
+}
+
+function SignupForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const toast = useToast();
   const [loading, setLoading] = React.useState(false);
   const [errors, setErrors] = React.useState<Errors>({});
   const [issued, setIssued] = React.useState<{ code: string; email: string } | null>(null);
+
+  // Prefill intent from the homepage hero (dest + service) → order form.
+  const prefillDest = searchParams.get("dest");
+  const prefillService = searchParams.get("service");
+
+  function goToPortal() {
+    if (prefillDest || prefillService) {
+      try {
+        sessionStorage.setItem(
+          "hc_reorder",
+          JSON.stringify({
+            destination_country: prefillDest || undefined,
+            service_type: prefillService || undefined,
+          })
+        );
+        router.push("/portal/order");
+        return;
+      } catch {
+        /* fall through */
+      }
+    }
+    router.push("/portal");
+  }
 
   const [form, setForm] = React.useState({
     fullName: "",
@@ -125,13 +158,9 @@ export default function SignupPage() {
           </span>
         </div>
 
-        <Button
-          className="mt-6 w-full"
-          variant="gold"
-          size="lg"
-          onClick={() => router.push("/portal")}
-        >
-          Go to my portal <ArrowRight className="h-4 w-4" />
+        <Button className="mt-6 w-full" variant="gold" size="lg" onClick={goToPortal}>
+          {prefillDest || prefillService ? "Start my order" : "Go to my portal"}{" "}
+          <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
     );
@@ -143,6 +172,23 @@ export default function SignupPage() {
       <p className="mt-2 text-sm text-ink-muted">
         Self-service shipping, real-time tracking, and digital receipts — free to join.
       </p>
+
+      {(prefillDest || prefillService) && (
+        <div className="mt-4 flex items-center gap-2 rounded-xl bg-gold/10 px-3.5 py-2.5 text-sm text-navy ring-1 ring-gold/20">
+          <ArrowRight className="h-4 w-4 shrink-0 text-gold-700" />
+          <span>
+            Continuing your{" "}
+            {prefillService && <strong className="uppercase">{prefillService}</strong>} shipment
+            {prefillDest && (
+              <>
+                {" "}
+                to <strong>{prefillDest}</strong>
+              </>
+            )}{" "}
+            — finish signup to price &amp; book.
+          </span>
+        </div>
+      )}
 
       <form onSubmit={onSubmit} className="mt-7 space-y-4" noValidate>
         <div>
