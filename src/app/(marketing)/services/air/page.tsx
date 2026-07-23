@@ -8,7 +8,7 @@ import { AIR_RATE_PER_LB, SERVICES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Air Freight — Expedited Shipping to Africa at $5.50/lb",
+  title: "Air Freight: Expedited Shipping to Africa at $5.50/lb",
   description:
     "Fast air freight from the USA to Nigeria and Africa in 7–10 business days at $5.50/lb. Instant online calculator with dimensional-weight pricing for time-sensitive cargo.",
 };
@@ -17,12 +17,12 @@ const highlights = [
   {
     icon: Zap,
     title: "7–10 business days",
-    desc: "The fastest way to move time-sensitive cargo — documents, samples, electronics, and medical supplies arrive in days, not weeks.",
+    desc: "The fastest way to move time-sensitive cargo. Documents, samples, electronics, and medical supplies arrive in days, not weeks.",
   },
   {
     icon: Scale,
     title: "Simple, flat rate",
-    desc: `A single ${formatCurrency(AIR_RATE_PER_LB)} per pound on billable weight — no fuel surcharges or hidden line items on the base freight.`,
+    desc: `A single ${formatCurrency(AIR_RATE_PER_LB)} per pound on billable weight, with no fuel surcharges or hidden line items on the base freight.`,
   },
   {
     icon: ShieldCheck,
@@ -61,7 +61,7 @@ export default function AirFreightPage() {
             </Reveal>
             <Reveal delay={0.22}>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Start an air shipment <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
@@ -131,8 +131,8 @@ export default function AirFreightPage() {
             </h2>
             <p className="mt-4 text-ink-muted">
               Aircraft are constrained by space as much as by weight. For light but bulky cargo,
-              carriers bill on <strong className="text-navy">dimensional weight</strong> — a volume
-              equivalent — instead of the scale reading.
+              carriers bill on <strong className="text-navy">dimensional weight</strong>, a volume
+              equivalent, instead of the scale reading.
             </p>
             <ul className="mt-6 space-y-3 text-sm text-ink">
               <li className="flex items-start gap-3">
@@ -191,11 +191,11 @@ export default function AirFreightPage() {
                 Need it there in days?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Create your account and book an air shipment today — with a digital receipt and
+                Create your account and book an air shipment today, with a digital receipt and
                 real-time tracking included.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Ship by air <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink

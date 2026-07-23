@@ -70,7 +70,7 @@ export function AirCalculator() {
             <div>
               <Label>
                 <span className="inline-flex items-center gap-1.5">
-                  <Ruler className="h-3.5 w-3.5" /> Dimensions (in) — optional
+                  <Ruler className="h-3.5 w-3.5" /> Dimensions (in), optional
                 </span>
               </Label>
               <div className="grid grid-cols-3 gap-2">
@@ -125,7 +125,7 @@ export function AirCalculator() {
                   <Ruler className="h-4 w-4" /> Dimensional weight
                 </dt>
                 <dd className="font-mono font-semibold">
-                  {hasDims ? `${quote.dimWeight.toFixed(2)} lb` : "—"}
+                  {hasDims ? `${quote.dimWeight.toFixed(2)} lb` : "-"}
                 </dd>
               </div>
               <div className="flex items-center justify-between">
@@ -141,8 +141,8 @@ export function AirCalculator() {
             {hasDims && (
               <p className="mt-5 rounded-lg bg-white/5 p-3 text-xs text-white/70 ring-1 ring-white/10">
                 {dimApplies
-                  ? "Dimensional weight exceeds actual weight — you are billed on volume."
-                  : "Actual weight exceeds dimensional weight — you are billed on weight."}
+                  ? "Dimensional weight exceeds actual weight, so you are billed on volume."
+                  : "Actual weight exceeds dimensional weight, so you are billed on weight."}
               </p>
             )}
             <p className="mt-4 text-[11px] leading-relaxed text-white/45">

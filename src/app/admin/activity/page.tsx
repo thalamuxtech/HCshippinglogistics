@@ -138,7 +138,7 @@ export default function AdminActivityPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-ink">{a.action}</td>
-                    <td className="px-4 py-3 text-ink-muted">{a.target || "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{a.target || "-"}</td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-ink-muted">
                       {formatDateTime(tsToDate(a.created_at))}
                     </td>

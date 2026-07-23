@@ -23,7 +23,7 @@ import { ManagedText } from "@/components/marketing/ManagedText";
 import { COMPANY, SERVICES, STAGES } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "White-Glove Freight — USA to Africa",
+  title: "Shipping from the USA to Nigeria & across Africa",
   description:
     "FMC-licensed freight forwarder connecting the USA to Nigeria and Africa. Sea Cargo, Air Freight, and RORO vehicle shipping with real-time tracking and digital receipts.",
 };
@@ -85,9 +85,9 @@ export default function HomePage() {
             </Reveal>
             <Reveal delay={0.08}>
               <h1 className="mt-6 text-balance text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-                White-Glove Freight Management.
+                Ship from the USA to
                 <span className="mt-2 block bg-gold-gradient bg-clip-text text-transparent">
-                  Seamlessly Connecting USA to Africa.
+                  Nigeria &amp; across Africa
                 </span>
               </h1>
             </Reveal>
@@ -95,13 +95,13 @@ export default function HomePage() {
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
                 <ManagedText
                   field="hero_subtitle"
-                  fallback="Sea Cargo, Air Freight, and RORO vehicle shipping to Nigeria and across Africa — with real-time tracking, digital receipts, and the security enterprise contracts demand."
+                  fallback="Sea cargo, air freight, and vehicle (RORO) shipping. Track every box, barrel, and vehicle through all 8 stages, and download your receipt online."
                 />
               </p>
             </Reveal>
             <Reveal delay={0.24}>
               <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg" className="w-full sm:w-auto">
+                <ButtonLink href="/order" variant="gold" size="lg" className="w-full sm:w-auto">
                   Ship with Highclass <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
@@ -169,13 +169,13 @@ export default function HomePage() {
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
             <ManagedText
               field="services_heading"
-              fallback="Three service lines. One trusted corridor."
+              fallback="Three ways to ship from the USA to Africa"
             />
           </h2>
           <p className="mt-4 text-ink-muted">
             <ManagedText
               field="services_subheading"
-              fallback="From a single suitcase to a 60-container medical project — priced transparently and tracked end-to-end."
+              fallback="From a single suitcase to a 60-container medical project. Rates are published up front and every shipment is tracked to your door."
             />
           </p>
         </Reveal>
@@ -221,12 +221,12 @@ export default function HomePage() {
       <section className="bg-surface py-20 sm:py-24">
         <div className="container-page">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <span className="eyebrow">Radical Transparency</span>
+            <span className="eyebrow">Tracking</span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
               Every shipment, tracked through 8 stages
             </h2>
             <p className="mt-4 text-ink-muted">
-              No more WhatsApp guesswork. Automated email &amp; SMS updates at every transition.
+              You get an email and SMS update every time your shipment moves to the next stage.
             </p>
           </Reveal>
 
@@ -256,12 +256,12 @@ export default function HomePage() {
           <Reveal>
             <span className="eyebrow">Built for Enterprise</span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-              The infrastructure government &amp; hospital tenders require.
+              Documentation that clears government and hospital tenders.
             </h2>
             <p className="mt-4 text-ink-muted">
-              Agencies, hospitals, and embassies don&apos;t award contracts over WhatsApp. Highclass
-              delivers a customer portal, formal digital receipts, audit trails, and a public
-              credibility footprint — making us bid-eligible from day one.
+              Highclass gives you a customer portal, formal digital receipts, and full audit trails.
+              That is the paperwork agencies, hospitals, and embassies need before they can award a
+              contract, and we have it ready from day one.
             </p>
             <ul className="mt-6 space-y-3">
               {[
@@ -311,14 +311,14 @@ export default function HomePage() {
             <div className="relative mx-auto max-w-2xl">
               <Container className="mx-auto h-10 w-10 text-gold" />
               <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Ready to ship with confidence?
+                Ready to send your first shipment?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
                 Create your free account, get an instant quote, and track every barrel, box, and
                 vehicle from pickup to delivery.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Create your account <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink

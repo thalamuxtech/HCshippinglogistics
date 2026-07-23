@@ -187,10 +187,10 @@ export default function OfficeInventoryPage() {
                             </div>
                           </td>
                           <td className="py-3 pr-3 font-mono text-xs text-ink-muted">
-                            {it.tracking_number || "—"}
+                            {it.tracking_number || "-"}
                           </td>
                           <td className="py-3 pr-3 text-xs text-ink-muted">
-                            {it.location_notes || "—"}
+                            {it.location_notes || "-"}
                           </td>
                           <td className="py-3 pr-3">
                             {dispatched ? (

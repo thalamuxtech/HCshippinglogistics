@@ -24,11 +24,11 @@ const cols = [
     ],
   },
   {
-    title: "Account",
+    title: "Customers",
     links: [
-      { href: "/signup", label: "Create Account" },
-      { href: "/login", label: "Log In" },
-      { href: "/return", label: "Return with Access Code" },
+      { href: "/order", label: "Start an Order" },
+      { href: "/track", label: "Track a Shipment" },
+      { href: "/pricing", label: "Price List" },
     ],
   },
 ];
@@ -40,7 +40,7 @@ export function SiteFooter() {
       <div className="container-page py-16">
         <div className="grid gap-12 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
-            <Logo variant="light" />
+            <Logo variant="light" size="lg" />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/70">
               {COMPANY.tagline}
             </p>

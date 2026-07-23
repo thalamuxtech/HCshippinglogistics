@@ -140,7 +140,7 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active shipments"
-          value={loading ? "—" : active}
+          value={loading ? "-" : active}
           icon={Package}
           accent="navy"
           loading={loading}
@@ -148,7 +148,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Completed this month"
-          value={loading ? "—" : completedThisMonth}
+          value={loading ? "-" : completedThisMonth}
           icon={CheckCircle2}
           accent="emerald"
           loading={loading}
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Total customers"
-          value={loading ? "—" : customers.length}
+          value={loading ? "-" : customers.length}
           icon={Users}
           accent="gold"
           loading={loading}
@@ -164,7 +164,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="New inquiries"
-          value={loading ? "—" : newInquiries}
+          value={loading ? "-" : newInquiries}
           icon={Inbox}
           accent="orange"
           loading={loading}
@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="USA-side shipments"
-          value={loading ? "—" : usaSide}
+          value={loading ? "-" : usaSide}
           icon={Flag}
           accent="blue"
           loading={loading}
@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Destination-side"
-          value={loading ? "—" : destSide}
+          value={loading ? "-" : destSide}
           icon={MapPin}
           accent="purple"
           loading={loading}
@@ -197,7 +197,7 @@ export default function AdminDashboardPage() {
             <ChartCard
               title="Shipments by stage"
               description="Current distribution across the 8-stage lifecycle"
-              caption={`Shipments per stage — ${stageData
+              caption={`Shipments per stage, ${stageData
                 .map((d) => `${d.name}: ${d.value}`)
                 .join(", ")}.`}
             >
@@ -221,7 +221,7 @@ export default function AdminDashboardPage() {
             <ChartCard
               title="Service mix"
               description="Sea · Air · RORO"
-              caption={`Service type breakdown — ${serviceData
+              caption={`Service type breakdown, ${serviceData
                 .map((d) => `${d.name}: ${d.value}`)
                 .join(", ")}.`}
             >
@@ -239,7 +239,7 @@ export default function AdminDashboardPage() {
             <ChartCard
               title="Shipment volume"
               description="New shipments over the last 6 months"
-              caption={`Monthly new shipments — ${monthsData
+              caption={`Monthly new shipments, ${monthsData
                 .map((d) => `${d.name}: ${d.value}`)
                 .join(", ")}.`}
             >

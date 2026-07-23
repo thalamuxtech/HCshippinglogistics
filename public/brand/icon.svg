@@ -1,7 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <rect width="512" height="512" rx="96" fill="#0B1E3A"/>
-  <g stroke="#D4A017" stroke-linecap="round">
-    <path d="M170 130v210M342 130v210M170 235h172" stroke-width="34"/>
-    <path d="M120 400h272" stroke-width="20" opacity="0.5"/>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <rect width="64" height="64" rx="14" fill="#0B1E3A"/>
+  <!-- plane arcing over -->
+  <path d="M14 22 L44 15 L38 23 L46 27 L36 30 L31 37 L28 28 L16 26 Z" fill="#2E6BC6"/>
+  <!-- ship hull -->
+  <path d="M14 44 h30 l-4 8 H18 Z" fill="#EAF0F7"/>
+  <!-- containers -->
+  <rect x="20" y="36" width="7" height="8" fill="#D4A017"/>
+  <rect x="29" y="38" width="7" height="6" fill="#2E6BC6"/>
+  <!-- water line -->
+  <path d="M10 55 q4 3 8 0 t8 0 t8 0 t8 0 t8 0" fill="none" stroke="#D4A017" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

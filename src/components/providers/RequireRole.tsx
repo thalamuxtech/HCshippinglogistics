@@ -6,12 +6,14 @@ import { useAuth } from "./AuthProvider";
 import { PageLoader } from "@/components/ui/misc";
 import type { Role } from "@/lib/types";
 
-// Default landing route per role after login.
+// Default landing route per STAFF role after login. Customers do not log in
+// (they use their Customer ID at /track), so a customer account has no portal;
+// if one ever logs in, send them to the public tracking page.
 export const ROLE_HOME: Record<Role, string> = {
   admin: "/admin",
   nigeria_office: "/office",
   dispatcher: "/dispatch",
-  customer: "/portal",
+  customer: "/track",
 };
 
 export function RequireRole({

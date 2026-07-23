@@ -251,7 +251,7 @@ function DispatchJobDetailPageInner() {
             />
           </div>
 
-          {/* Big Mark Delivered button — min 56px height, high contrast */}
+          {/* Big Mark Delivered button, min 56px height, high contrast */}
           <Button
             variant="gold"
             onClick={handleDelivered}

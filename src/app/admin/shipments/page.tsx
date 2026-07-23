@@ -311,7 +311,7 @@ export default function AdminShipmentsPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="max-w-[180px] truncate font-medium text-ink">
-                        {s.customer_name || "—"}
+                        {s.customer_name || "-"}
                       </div>
                       {s.customer_email && (
                         <div className="max-w-[180px] truncate text-xs text-ink-muted">

@@ -98,7 +98,7 @@ export function RoroEstimator() {
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <dt className="text-white/70">Curb weight</dt>
                 <dd className="font-mono font-semibold">
-                  {weight > 0 ? `${weight.toLocaleString()} lb` : "—"}
+                  {weight > 0 ? `${weight.toLocaleString()} lb` : "-"}
                 </dd>
               </div>
               <div className="flex items-start justify-between gap-4">
@@ -109,7 +109,7 @@ export function RoroEstimator() {
 
             <p className="mt-5 rounded-lg bg-white/5 p-3 text-xs text-white/70 ring-1 ring-white/10">
               {quote.quoted
-                ? "Trucks & trailers (Class C) are quoted individually by volume and dimensions — contact us for a formal quote."
+                ? "Trucks & trailers (Class C) are quoted individually by volume and dimensions. Contact us for a formal quote."
                 : classMeta.basis}
             </p>
             <p className="mt-4 text-[11px] leading-relaxed text-white/45">

@@ -16,7 +16,7 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { COMPANY, DESTINATION_COUNTRIES } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "About Highclass Shipping — FMC-Licensed Since 2017",
+  title: "About Highclass Shipping: FMC-Licensed Since 2017",
   description:
     "Highclass Shipping and Logistics Inc. is an FMC-licensed, CAC-registered freight forwarder specializing in the USA–Nigeria corridor, serving government, hospital, and embassy clients since 2017.",
 };
@@ -42,7 +42,7 @@ const capabilities = [
   {
     icon: Building2,
     title: "Embassies & corporates",
-    desc: "Secure, role-isolated portal access, enterprise SLAs, and a public credibility footprint that supports high-trust contracts.",
+    desc: "Secure, role-isolated portal access, enterprise SLAs, and a documented record that stands up to procurement review.",
   },
 ];
 
@@ -61,9 +61,9 @@ export default function AboutPage() {
             </Reveal>
             <Reveal delay={0.08}>
               <h1 className="mt-6 text-balance text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
-                Built on trust,
+                Shipping the USA to Africa
                 <span className="mt-2 block bg-gold-gradient bg-clip-text text-transparent">
-                  proven across the corridor.
+                  since 2017.
                 </span>
               </h1>
             </Reveal>
@@ -82,7 +82,7 @@ export default function AboutPage() {
           <Reveal>
             <span className="eyebrow">Who we are</span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-              A decade of moving what matters
+              Shipping the USA to Africa since 2017
             </h2>
             <div className="mt-5 space-y-4 text-ink-muted">
               <p>
@@ -92,10 +92,10 @@ export default function AboutPage() {
                 and infrastructure projects.
               </p>
               <p>
-                We built our reputation on radical transparency — formal digital receipts, an 8-stage
-                tracking lifecycle, and automated updates that replace WhatsApp guesswork with an
-                audit-ready record. That infrastructure is exactly what government, hospital, and
-                embassy clients require, and it is what makes us bid-eligible from day one.
+                Every shipment comes with a formal digital receipt, an 8-stage tracking lifecycle,
+                and automated updates, so you always have an audit-ready record instead of a string
+                of chat messages. That is the documentation government, hospital, and embassy clients
+                ask for, and it is what makes us bid-eligible from day one.
               </p>
               <p>
                 Today we operate established lanes to Nigeria, Ghana, Kenya, South Africa, Cameroon,
@@ -166,10 +166,11 @@ export default function AboutPage() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">Who we serve</span>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-            Institutional-grade capability
+            Built for institutional clients
           </h2>
           <p className="mt-4 text-ink-muted">
-            The documentation, security, and reliability that high-trust organizations demand.
+            The documentation, security, and reliability that government, hospital, and embassy
+            clients need.
           </p>
         </Reveal>
         <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -197,14 +198,14 @@ export default function AboutPage() {
             <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
             <div className="relative mx-auto max-w-2xl">
               <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Ship with a partner you can trust
+                Send your next shipment with us
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Join the families, businesses, and institutions who move with confidence across the
-                USA–Africa corridor.
+                Join the families, businesses, and institutions we ship for across the USA to Africa
+                corridor.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Create your account <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink

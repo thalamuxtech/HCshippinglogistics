@@ -105,7 +105,7 @@ export default function OfficeReceiptsPage() {
                     {r.receipt_number}
                   </span>
                   <p className="mt-1 truncate text-sm text-ink-muted">
-                    {r.tracking_number || "—"}
+                    {r.tracking_number || "-"}
                     {r.customer_name ? ` · ${r.customer_name}` : ""}
                   </p>
                   <p className="mt-0.5 text-xs text-ink-muted">{formatDateTime(r.generated_at)}</p>

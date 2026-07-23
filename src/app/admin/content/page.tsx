@@ -23,16 +23,16 @@ interface HomeContent {
 }
 
 const DEFAULTS: HomeContent = {
-  hero_title: "White-Glove Freight Management. Seamlessly Connecting USA to Africa.",
+  hero_title: "Ship from the USA to Nigeria & across Africa",
   hero_subtitle:
-    "Sea Cargo, Air Freight, and RORO vehicle shipping to Nigeria and across Africa — with real-time tracking, digital receipts, and enterprise-grade security.",
+    "Sea cargo, air freight, and vehicle (RORO) shipping. Track every box, barrel, and vehicle through all 8 stages, and download your receipt online.",
   hero_cta: "Ship with Highclass",
-  services_heading: "Three service lines. One trusted corridor.",
+  services_heading: "Three ways to ship from the USA to Africa",
   services_subheading:
-    "From a single suitcase to a 60-container medical project — priced transparently and tracked end-to-end.",
-  enterprise_heading: "The infrastructure government & hospital tenders require.",
+    "From a single suitcase to a 60-container medical project. Rates are published up front and every shipment is tracked to your door.",
+  enterprise_heading: "Documentation that clears government and hospital tenders.",
   enterprise_body:
-    "Agencies, hospitals, and embassies don't award contracts over WhatsApp. Highclass delivers a customer portal, formal digital receipts, and audit trails.",
+    "Highclass gives you a customer portal, formal digital receipts, and full audit trails. That is the paperwork agencies, hospitals, and embassies need before they can award a contract.",
   contact_email: COMPANY.email,
 };
 

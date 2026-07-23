@@ -253,9 +253,9 @@ function AdminShipmentDetailPageInner() {
               <CardTitle>Shipment details</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
-              <InfoRow icon={User} label="Customer" value={s.customer_name || "—"} />
-              <InfoRow icon={Mail} label="Email" value={s.customer_email || "—"} />
-              <InfoRow icon={User} label="Phone" value={s.customer_phone || "—"} />
+              <InfoRow icon={User} label="Customer" value={s.customer_name || "-"} />
+              <InfoRow icon={Mail} label="Email" value={s.customer_email || "-"} />
+              <InfoRow icon={User} label="Phone" value={s.customer_phone || "-"} />
               <InfoRow
                 icon={MapPin}
                 label="Destination"
@@ -329,7 +329,7 @@ function AdminShipmentDetailPageInner() {
                           )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                          {it.dimensions || "—"}
+                          {it.dimensions || "-"}
                         </td>
                         <td className="px-4 py-3 text-right font-mono text-xs">
                           {formatCurrency(it.unit_price, s.currency)}
@@ -403,7 +403,7 @@ function AdminShipmentDetailPageInner() {
           </Card>
         </div>
 
-        {/* Right column — controls */}
+        {/* Right column, controls */}
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -500,7 +500,7 @@ function AdminShipmentDetailPageInner() {
                   value={assignee}
                   onChange={(e) => setAssignee(e.target.value)}
                 >
-                  <option value="">— Unassigned —</option>
+                  <option value="">Unassigned</option>
                   {dispatchers.map((d) => (
                     <option key={d.id} value={d.id}>
                       {d.full_name}

@@ -137,7 +137,7 @@ export default function OfficeConsigneesPage() {
                 </p>
                 <p className="flex items-center gap-2 text-ink">
                   <Phone className="h-4 w-4 shrink-0 text-ink-muted" />
-                  {r.consignee_details?.phone || "—"}
+                  {r.consignee_details?.phone || "-"}
                 </p>
                 <div className="flex flex-wrap items-center gap-2 pt-2">
                   <Badge variant="navy" className="gap-1.5">

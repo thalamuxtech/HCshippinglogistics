@@ -17,9 +17,9 @@ import { RORO_LINES, VEHICLE_CLASSES } from "@/lib/constants";
 import type { ShippingLine, VehicleClass } from "@/lib/types";
 
 export const metadata: Metadata = {
-  title: "RORO Vehicle Shipping — Cars & SUVs to Africa",
+  title: "RORO Vehicle Shipping: Cars & SUVs to Africa",
   description:
-    "Roll-on / roll-off vehicle shipping from the USA to African ports via Grimaldi, Sallaum, and MSC. Transparent class-based rates plus a live curb-weight estimator.",
+    "Roll-on, roll-off vehicle shipping from the USA to African ports via Grimaldi, Sallaum, and MSC. Class-based rates plus a live curb-weight estimator.",
 };
 
 const lineKeys = Object.keys(RORO_LINES) as ShippingLine[];
@@ -66,13 +66,13 @@ export default function RoroPage() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
-                Ship cars, SUVs, and trucks safely and affordably on the world&apos;s leading RORO
-                carriers. Class-based rates, clear documentation, and full tracking.
+                Ship cars, SUVs, and trucks on Grimaldi, Sallaum, and MSC. Class-based rates, clear
+                documentation, and full tracking to the destination port.
               </p>
             </Reveal>
             <Reveal delay={0.22}>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Ship a vehicle <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
@@ -93,10 +93,10 @@ export default function RoroPage() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">Carriers we book</span>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-            Leading RORO shipping lines
+            Grimaldi, Sallaum, and MSC
           </h2>
           <p className="mt-4 text-ink-muted">
-            We compare sailings across three trusted carriers to find the best rate and schedule for
+            We compare sailings across all three carriers to find the best rate and schedule for
             your route. Base ocean rates below (Class A & B).
           </p>
         </Reveal>
@@ -170,7 +170,7 @@ export default function RoroPage() {
             RORO rate estimator
           </h2>
           <p className="mt-4 text-ink-muted">
-            Choose a shipping line and enter your vehicle&apos;s curb weight — we&apos;ll classify it
+            Choose a shipping line and enter your vehicle&apos;s curb weight. We&apos;ll classify it
             and show the base ocean rate instantly.
           </p>
         </Reveal>
@@ -226,7 +226,7 @@ export default function RoroPage() {
                 vehicle to the destination port.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Get started <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink

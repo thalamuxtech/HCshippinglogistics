@@ -298,7 +298,7 @@ function AdminCustomerDetailPageInner() {
           {regenerated && (
             <div className="mt-4 rounded-xl border-2 border-dashed border-gold/40 bg-gold-50/60 p-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-gold-700">
-                New access code (shown once — also emailed to the customer)
+                New access code (shown once, also emailed to the customer)
               </p>
               <div className="mt-2 flex items-center gap-2">
                 <code className="select-all rounded bg-white px-3 py-1.5 font-mono text-lg font-bold tracking-[0.15em] text-navy">
@@ -327,11 +327,11 @@ function AdminCustomerDetailPageInner() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
           <InfoRow icon={Mail} label="Email" value={c.email} />
-          <InfoRow icon={Phone} label="Phone" value={c.phone || "—"} />
+          <InfoRow icon={Phone} label="Phone" value={c.phone || "-"} />
           <InfoRow
             icon={Hash}
             label="Access code prefix"
-            value={c.access_code_prefix ? `${c.access_code_prefix}…` : "—"}
+            value={c.access_code_prefix ? `${c.access_code_prefix}…` : "-"}
           />
           <InfoRow
             icon={KeyRound}

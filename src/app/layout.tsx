@@ -22,11 +22,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://highclassshippinglo
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: `${COMPANY.name} — ${COMPANY.tagline}`,
+    default: `${COMPANY.name}: ${COMPANY.tagline}`,
     template: `%s · ${COMPANY.shortName}`,
   },
   description:
-    "FMC-licensed (since 2017) USA-to-Africa freight forwarder. Sea Cargo, Air Freight, and RORO vehicle shipping to Nigeria and across Africa. Real-time tracking, digital receipts, enterprise-grade security.",
+    "FMC-licensed (since 2017) USA-to-Africa freight forwarder. Sea Cargo, Air Freight, and RORO vehicle shipping to Nigeria and across Africa. Real-time tracking, digital receipts, and secure portal access.",
   keywords: [
     "USA to Africa shipping",
     "Nigeria freight forwarder",
@@ -40,8 +40,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/favicon.png", type: "image/png" },
       { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png", sizes: "48x48" },
     ],
     apple: "/brand/icon-192.png",
   },

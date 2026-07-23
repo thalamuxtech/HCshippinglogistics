@@ -127,7 +127,7 @@ export default function OfficeShipmentsPage() {
                       <StageBadge status={s.current_status} />
                     </div>
                     <p className="mt-1 truncate text-sm text-ink-muted">
-                      {s.customer_name || "—"} ·{" "}
+                      {s.customer_name || "-"} ·{" "}
                       {s.destination_city ? `${s.destination_city}, ` : ""}
                       {s.destination_country}
                     </p>

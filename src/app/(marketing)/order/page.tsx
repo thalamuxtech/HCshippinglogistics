@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Ship,
@@ -10,12 +10,14 @@ import {
   Plus,
   Minus,
   Trash2,
-  Package,
   Info,
   ArrowRight,
   Sparkles,
+  Check,
+  Copy,
+  PackageCheck,
+  ShieldCheck,
 } from "lucide-react";
-import { useAuth } from "@/components/providers/AuthProvider";
 import { useToast } from "@/components/ui/toast";
 import {
   buildSeaQuote,
@@ -38,18 +40,14 @@ import type {
   VehicleClass,
   ShipmentItem,
 } from "@/lib/types";
-import {
-  createShipment,
-  nextCounter,
-  logNotification,
-  logActivity,
-} from "@/lib/db";
-import { sendStageUpdateEmail } from "@/lib/notify";
-import { generateTrackingNumber, formatCurrency, cn } from "@/lib/utils";
+import { submitPublicOrder, type PublicOrderInput } from "@/lib/notify";
+import { formatCurrency, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Input, Textarea, Select, Label, FieldHint } from "@/components/ui/input";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { PageLoader } from "@/components/ui/misc";
+import { Reveal } from "@/components/marketing/Reveal";
 
 const SERVICE_TABS: { key: ServiceType; icon: typeof Ship }[] = [
   { key: "sea", icon: Ship },
@@ -60,12 +58,32 @@ const SERVICE_TABS: { key: ServiceType; icon: typeof Ship }[] = [
 const ALL = "All";
 
 export default function OrderPage() {
-  const { user } = useAuth();
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading order form…" />}>
+      <OrderFlow />
+    </React.Suspense>
+  );
+}
+
+interface OrderResult {
+  customerId: string;
+  trackingNumber: string;
+  total: number;
+}
+
+function OrderFlow() {
   const router = useRouter();
+  const params = useSearchParams();
   const toast = useToast();
 
   const [service, setService] = React.useState<ServiceType>("sea");
   const [submitting, setSubmitting] = React.useState(false);
+  const [result, setResult] = React.useState<OrderResult | null>(null);
+
+  // ---- Sender / account holder (NEW, no login) ----
+  const [senderName, setSenderName] = React.useState("");
+  const [senderEmail, setSenderEmail] = React.useState("");
+  const [senderPhone, setSenderPhone] = React.useState("");
 
   // ---- Sea state: s_n -> quantity ----
   const [seaQty, setSeaQty] = React.useState<Record<number, number>>({});
@@ -97,6 +115,22 @@ export default function OrderPage() {
   const [rcvPhone, setRcvPhone] = React.useState<string>("");
   const [rcvAddress, setRcvAddress] = React.useState<string>("");
 
+  // ---- Prefill from query (?dest=&service=) ----
+  React.useEffect(() => {
+    const qService = params.get("service");
+    if (qService === "sea" || qService === "air" || qService === "roro") {
+      setService(qService);
+    }
+    const qDest = params.get("dest");
+    if (qDest) {
+      const match = DESTINATION_COUNTRIES.find(
+        (c) => c.toLowerCase() === qDest.toLowerCase()
+      );
+      if (match) setDestCountry(match);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ---- Prefill from re-order (sessionStorage) ----
   React.useEffect(() => {
     try {
@@ -112,6 +146,7 @@ export default function OrderPage() {
         shipping_line?: ShippingLine;
         vehicle_class?: VehicleClass;
         vehicle_details?: string;
+        receiver?: { full_name?: string; phone?: string; address?: string };
       };
       if (data.service_type) setService(data.service_type);
       if (data.destination_country) setDestCountry(data.destination_country);
@@ -133,6 +168,9 @@ export default function OrderPage() {
       if (data.shipping_line) setRoroLine(data.shipping_line);
       if (data.vehicle_class) setRoroClass(data.vehicle_class);
       if (data.vehicle_details) setVehicleDetails(data.vehicle_details);
+      if (data.receiver?.full_name) setRcvName(data.receiver.full_name);
+      if (data.receiver?.phone) setRcvPhone(data.receiver.phone);
+      if (data.receiver?.address) setRcvAddress(data.receiver.address);
       sessionStorage.removeItem("hc_reorder");
       toast.info("Order details prefilled", "Review and adjust before submitting.");
     } catch {
@@ -189,6 +227,9 @@ export default function OrderPage() {
 
   // ---- Validation ----
   function validate(): string | null {
+    if (!senderName.trim()) return "Please enter your full name.";
+    if (!senderEmail.trim() || !/.+@.+\..+/.test(senderEmail.trim()))
+      return "Please enter a valid email address.";
     if (!destCountry) return "Please select a destination country.";
     if (!rcvName.trim()) return "Please enter the receiver's full name.";
     if (!rcvPhone.trim()) return "Please enter the receiver's phone number.";
@@ -207,7 +248,6 @@ export default function OrderPage() {
   }
 
   async function handleSubmit() {
-    if (!user) return;
     const err = validate();
     if (err) {
       toast.error("Check your order", err);
@@ -215,373 +255,513 @@ export default function OrderPage() {
     }
     setSubmitting(true);
     try {
-      const serial = await nextCounter("shipment");
-      const tracking = generateTrackingNumber(service, serial);
-
-      const base = {
-        tracking_number: tracking,
-        customer_id: user.id,
-        customer_name: user.full_name,
-        customer_email: user.email,
-        customer_phone: user.phone ?? "",
+      const payload: PublicOrderInput = {
         service_type: service,
-        current_status: "collection" as const,
+        full_name: senderName.trim(),
+        email: senderEmail.trim(),
+        phone: senderPhone.trim() || undefined,
         destination_country: destCountry,
         destination_city: destCity.trim() || undefined,
         door_to_door: doorToDoor,
         pickup_address: doorToDoor ? pickupAddress.trim() : undefined,
         notes: notes.trim() || undefined,
         declared_value: declaredValue ? Number(declaredValue) : undefined,
-        total_price: grandTotal,
-        currency: "USD",
-        // Receiver / consignee for the receipt
         receiver: {
           full_name: rcvName.trim(),
           phone: rcvPhone.trim(),
           address: rcvAddress.trim() || undefined,
-          city: destCity.trim() || undefined,
         },
-        // Payment: new orders start unpaid; balance = full total
-        payment_status: "unpaid" as const,
-        deposit: 0,
-        balance: grandTotal,
       };
 
-      let payload: Record<string, unknown> = base;
-
       if (service === "sea") {
-        payload = { ...base, items: seaQuote.items, item_category: "mixed" };
+        payload.items = seaQuote.items.map((it, i) => ({
+          s_n: Number(it.price_list_id) || i + 1,
+          quantity: it.quantity,
+          description: it.description,
+          dimensions: it.dimensions,
+        }));
       } else if (service === "air") {
-        payload = {
-          ...base,
-          weight: airQuote.actualWeight,
-          dimensional_weight: airQuote.dimWeight,
-          dimensions: airDims
-            ? { length: airDims.length, width: airDims.width, height: airDims.height }
-            : undefined,
-        };
+        payload.weight = airQuote.actualWeight;
+        if (airDims) {
+          payload.dimensions = {
+            length: airDims.length,
+            width: airDims.width,
+            height: airDims.height,
+          };
+        }
       } else {
-        payload = {
-          ...base,
-          shipping_line: roroLine,
-          vehicle_class: effectiveClass,
-          vehicle_details: vehicleDetails.trim(),
-          curb_weight: useCurbWeight ? Number(curbWeight) || undefined : undefined,
-          // Class C is quoted later by admin — store 0 for now
-          total_price: roroQuote.quoted ? 0 : grandTotal,
-        };
+        payload.shipping_line = roroLine;
+        payload.vehicle_class = effectiveClass;
+        payload.vehicle_details = vehicleDetails.trim();
       }
 
-      const id = await createShipment(payload);
+      const res = await submitPublicOrder(payload);
+      if (!res.ok) throw new Error("Order was not accepted.");
 
-      // Notifications + activity (non-fatal)
-      await sendStageUpdateEmail({
-        shipmentId: id,
-        customerId: user.id,
-        status: "collection",
-        extraNote: "Order received — thank you for shipping with Highclass.",
+      setResult({
+        customerId: res.customerId,
+        trackingNumber: res.trackingNumber,
+        total: res.total,
       });
-      await logNotification({
-        customer_id: user.id,
-        shipment_id: id,
-        channel: "email",
-        type: "order_confirmation",
-        subject: `Order confirmed — ${tracking}`,
-        status: "sent",
-      });
-      await logActivity({
-        actor_id: user.id,
-        actor_name: user.full_name,
-        actor_role: "customer",
-        action: "shipment.created",
-        target: id,
-        meta: { tracking_number: tracking, service_type: service, total: grandTotal },
-      });
-
-      toast.success("Order submitted", `Tracking ${tracking} created.`);
-      router.push(`/portal/shipments/detail?id=${id}`);
+      toast.success("Order submitted", "We emailed your Customer ID and tracking number.");
+      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       console.error(e);
       toast.error("Could not submit order", "Please try again in a moment.");
+    } finally {
       setSubmitting(false);
     }
   }
 
+  if (result) {
+    return <OrderSuccess result={result} router={router} />;
+  }
+
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="eyebrow">New Order</p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">
-          Build your shipment
-        </h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Choose a service, add your items, and watch your quote update in real time.
-        </p>
-      </div>
-
-      {/* Service tabs */}
-      <div
-        role="tablist"
-        aria-label="Service type"
-        className="grid grid-cols-3 gap-3 rounded-2xl border border-border bg-white p-2 shadow-card sm:max-w-2xl"
-      >
-        {SERVICE_TABS.map(({ key, icon: Icon }) => {
-          const selected = service === key;
-          return (
-            <button
-              key={key}
-              role="tab"
-              aria-selected={selected}
-              onClick={() => setService(key)}
-              className={cn(
-                "flex flex-col items-center gap-1.5 rounded-xl px-3 py-4 text-sm font-semibold transition-all cursor-pointer focus-ring",
-                selected
-                  ? "bg-navy text-white shadow-premium"
-                  : "text-ink-muted hover:bg-navy/5 hover:text-navy"
-              )}
-            >
-              <Icon className={cn("h-6 w-6", selected ? "text-gold" : "")} />
-              {SERVICES[key].label}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
-        {/* ── Left: service-specific builder ── */}
-        <div className="space-y-6">
-          {service === "sea" && (
-            <SeaBuilder
-              category={seaCategory}
-              setCategory={setSeaCategory}
-              items={filteredSea}
-              qty={seaQty}
-              setQty={setQty}
-            />
-          )}
-
-          {service === "air" && (
-            <AirBuilder
-              weight={airWeight}
-              setWeight={setAirWeight}
-              l={airL}
-              w={airW}
-              h={airH}
-              setL={setAirL}
-              setW={setAirW}
-              setH={setAirH}
-              quote={airQuote}
-            />
-          )}
-
-          {service === "roro" && (
-            <RoroBuilder
-              line={roroLine}
-              setLine={setRoroLine}
-              vehicleClass={roroClass}
-              setVehicleClass={setRoroClass}
-              useCurbWeight={useCurbWeight}
-              setUseCurbWeight={setUseCurbWeight}
-              curbWeight={curbWeight}
-              setCurbWeight={setCurbWeight}
-              vehicleDetails={vehicleDetails}
-              setVehicleDetails={setVehicleDetails}
-              effectiveClass={effectiveClass}
-            />
-          )}
-
-          {/* Common fields */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Destination &amp; details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="dest-country" required>
-                    Destination country
-                  </Label>
-                  <Select
-                    id="dest-country"
-                    value={destCountry}
-                    onChange={(e) => setDestCountry(e.target.value)}
-                  >
-                    {DESTINATION_COUNTRIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="dest-city">Destination city</Label>
-                  <Input
-                    id="dest-city"
-                    value={destCity}
-                    onChange={(e) => setDestCity(e.target.value)}
-                    placeholder="e.g. Lagos"
-                  />
-                </div>
-              </div>
-
-              {/* Receiver / consignee */}
-              <div className="rounded-xl border border-border bg-surface p-4">
-                <p className="text-sm font-semibold text-navy">Receiver details</p>
-                <p className="text-xs text-ink-muted">Who receives this shipment at the destination.</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor="rcv-name" required>
-                      Receiver full name
-                    </Label>
-                    <Input
-                      id="rcv-name"
-                      value={rcvName}
-                      onChange={(e) => setRcvName(e.target.value)}
-                      placeholder="e.g. Hamida Umar"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="rcv-phone" required>
-                      Receiver phone
-                    </Label>
-                    <Input
-                      id="rcv-phone"
-                      type="tel"
-                      value={rcvPhone}
-                      onChange={(e) => setRcvPhone(e.target.value)}
-                      placeholder="e.g. 0706 645 0595"
-                    />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Label htmlFor="rcv-address">Receiver address (optional)</Label>
-                  <Textarea
-                    id="rcv-address"
-                    value={rcvAddress}
-                    onChange={(e) => setRcvAddress(e.target.value)}
-                    placeholder="Street, area, city"
-                  />
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border bg-surface p-4">
-                <label className="flex cursor-pointer items-start gap-3">
-                  <input
-                    type="checkbox"
-                    checked={doorToDoor}
-                    onChange={(e) => setDoorToDoor(e.target.checked)}
-                    className="mt-0.5 h-5 w-5 cursor-pointer rounded border-input text-navy focus-ring"
-                  />
-                  <span>
-                    <span className="text-sm font-semibold text-navy">
-                      Door-to-door pickup
-                    </span>
-                    <span className="block text-xs text-ink-muted">
-                      We collect from your address instead of warehouse drop-off.
-                    </span>
-                  </span>
-                </label>
-                {doorToDoor && (
-                  <div className="mt-4">
-                    <Label htmlFor="pickup" required>
-                      Pickup address
-                    </Label>
-                    <Textarea
-                      id="pickup"
-                      value={pickupAddress}
-                      onChange={(e) => setPickupAddress(e.target.value)}
-                      placeholder="Street, city, state, ZIP"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="grid gap-5 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor="declared">Declared value (USD)</Label>
-                  <Input
-                    id="declared"
-                    type="number"
-                    min={0}
-                    value={declaredValue}
-                    onChange={(e) => setDeclaredValue(e.target.value)}
-                    placeholder="0.00"
-                  />
-                  <FieldHint>Used for insurance &amp; customs documentation.</FieldHint>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes for our team</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Anything we should know about this shipment?"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* ── Right: sticky summary ── */}
-        <div className="lg:sticky lg:top-6 lg:self-start">
-          <Card className="overflow-hidden">
-            <div className="bg-navy-gradient px-6 py-5 text-white">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold-200">
-                <Sparkles className="h-4 w-4" /> Live Quote
-              </div>
-              <div className="mt-2 flex items-end justify-between">
-                <span className="text-sm text-white/70">{SERVICES[service].label}</span>
-                <span className="font-mono text-3xl font-bold text-gold">
-                  {service === "roro" && roroQuote.quoted ? (
-                    "TBQ"
-                  ) : (
-                    <AnimatedNumber value={grandTotal} />
-                  )}
-                </span>
-              </div>
-            </div>
-            <CardContent className="space-y-4 pt-5">
-              {service === "sea" && (
-                <SeaSummary quote={seaQuote} onRemove={(sn) => setQty(sn, 0)} />
-              )}
-              {service === "air" && <AirSummary quote={airQuote} />}
-              {service === "roro" && (
-                <RoroSummary
-                  quote={roroQuote}
-                  line={roroLine}
-                  vehicleClass={effectiveClass}
-                />
-              )}
-
-              <div className="flex items-center justify-between border-t border-border pt-4">
-                <span className="text-sm font-semibold text-navy">Estimated total</span>
-                <span className="font-mono text-lg font-bold text-navy">
-                  {service === "roro" && roroQuote.quoted ? (
-                    "Quoted separately"
-                  ) : (
-                    <AnimatedNumber value={grandTotal} />
-                  )}
-                </span>
-              </div>
-
-              <Button
-                className="w-full"
-                variant="gold"
-                onClick={handleSubmit}
-                loading={submitting}
-              >
-                Submit order <ArrowRight className="h-4 w-4" />
-              </Button>
-              <p className="text-center text-xs text-ink-muted">
-                Prices are estimates. Final invoicing confirms weights &amp; dimensions.
+    <>
+      {/* Hero band */}
+      <section className="relative overflow-hidden bg-navy-gradient text-white">
+        <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
+            backgroundSize: "36px 36px",
+          }}
+        />
+        <div className="container-page relative py-14 sm:py-20">
+          <div className="mx-auto max-w-2xl text-center">
+            <Reveal>
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-gold-200 ring-1 ring-white/15 backdrop-blur">
+                <PackageCheck className="h-4 w-4" /> Start an order
+              </span>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <h1 className="mt-6 text-balance text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
+                Build your shipment
+              </h1>
+            </Reveal>
+            <Reveal delay={0.16}>
+              <p className="mx-auto mt-5 max-w-xl text-balance text-lg leading-relaxed text-white/75">
+                Choose a service, add your items, and watch your quote update as you go. No account
+                needed. You get a Customer ID to check status and download your receipt later.
               </p>
-            </CardContent>
-          </Card>
+            </Reveal>
+          </div>
         </div>
-      </div>
-    </div>
+      </section>
+
+      <section className="container-page py-12 sm:py-16">
+        {/* Service tabs */}
+        <div
+          role="tablist"
+          aria-label="Service type"
+          className="mx-auto grid max-w-2xl grid-cols-3 gap-3 rounded-2xl border border-border bg-white p-2 shadow-card"
+        >
+          {SERVICE_TABS.map(({ key, icon: Icon }) => {
+            const selected = service === key;
+            return (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setService(key)}
+                className={cn(
+                  "flex min-h-[44px] flex-col items-center gap-1.5 rounded-xl px-3 py-4 text-sm font-semibold transition-all cursor-pointer focus-ring",
+                  selected
+                    ? "bg-navy text-white shadow-premium"
+                    : "text-ink-muted hover:bg-navy/5 hover:text-navy"
+                )}
+              >
+                <Icon className={cn("h-6 w-6", selected ? "text-gold" : "")} />
+                {SERVICES[key].label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
+          {/* ── Left: builder + fields ── */}
+          <div className="space-y-6">
+            {/* Sender / contact */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Your contact details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <p className="text-sm text-ink-muted">
+                  We send your Customer ID, tracking number, and receipt to this email.
+                </p>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="sender-name" required>
+                      Your full name
+                    </Label>
+                    <Input
+                      id="sender-name"
+                      value={senderName}
+                      onChange={(e) => setSenderName(e.target.value)}
+                      placeholder="e.g. Aisha Bello"
+                      autoComplete="name"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sender-email" required>
+                      Email
+                    </Label>
+                    <Input
+                      id="sender-email"
+                      type="email"
+                      value={senderEmail}
+                      onChange={(e) => setSenderEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
+                  </div>
+                </div>
+                <div className="sm:max-w-[calc(50%-0.625rem)]">
+                  <Label htmlFor="sender-phone">Phone (optional)</Label>
+                  <Input
+                    id="sender-phone"
+                    type="tel"
+                    value={senderPhone}
+                    onChange={(e) => setSenderPhone(e.target.value)}
+                    placeholder="e.g. +1 240 374 8394"
+                    autoComplete="tel"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {service === "sea" && (
+              <SeaBuilder
+                category={seaCategory}
+                setCategory={setSeaCategory}
+                items={filteredSea}
+                qty={seaQty}
+                setQty={setQty}
+              />
+            )}
+
+            {service === "air" && (
+              <AirBuilder
+                weight={airWeight}
+                setWeight={setAirWeight}
+                l={airL}
+                w={airW}
+                h={airH}
+                setL={setAirL}
+                setW={setAirW}
+                setH={setAirH}
+                quote={airQuote}
+              />
+            )}
+
+            {service === "roro" && (
+              <RoroBuilder
+                line={roroLine}
+                setLine={setRoroLine}
+                vehicleClass={roroClass}
+                setVehicleClass={setRoroClass}
+                useCurbWeight={useCurbWeight}
+                setUseCurbWeight={setUseCurbWeight}
+                curbWeight={curbWeight}
+                setCurbWeight={setCurbWeight}
+                vehicleDetails={vehicleDetails}
+                setVehicleDetails={setVehicleDetails}
+                effectiveClass={effectiveClass}
+              />
+            )}
+
+            {/* Common fields */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Destination &amp; delivery</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-5">
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="dest-country" required>
+                      Destination country
+                    </Label>
+                    <Select
+                      id="dest-country"
+                      value={destCountry}
+                      onChange={(e) => setDestCountry(e.target.value)}
+                    >
+                      {DESTINATION_COUNTRIES.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="dest-city">Destination city</Label>
+                    <Input
+                      id="dest-city"
+                      value={destCity}
+                      onChange={(e) => setDestCity(e.target.value)}
+                      placeholder="e.g. Lagos"
+                    />
+                  </div>
+                </div>
+
+                {/* Receiver / consignee */}
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <p className="text-sm font-semibold text-navy">Receiver details</p>
+                  <p className="text-xs text-ink-muted">
+                    Who receives this shipment at the destination.
+                  </p>
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <Label htmlFor="rcv-name" required>
+                        Receiver full name
+                      </Label>
+                      <Input
+                        id="rcv-name"
+                        value={rcvName}
+                        onChange={(e) => setRcvName(e.target.value)}
+                        placeholder="e.g. Hamida Umar"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="rcv-phone" required>
+                        Receiver phone
+                      </Label>
+                      <Input
+                        id="rcv-phone"
+                        type="tel"
+                        value={rcvPhone}
+                        onChange={(e) => setRcvPhone(e.target.value)}
+                        placeholder="e.g. 0706 645 0595"
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Label htmlFor="rcv-address">Receiver address (optional)</Label>
+                    <Textarea
+                      id="rcv-address"
+                      value={rcvAddress}
+                      onChange={(e) => setRcvAddress(e.target.value)}
+                      placeholder="Street, area, city"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-surface p-4">
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={doorToDoor}
+                      onChange={(e) => setDoorToDoor(e.target.checked)}
+                      className="mt-0.5 h-5 w-5 cursor-pointer rounded border-input text-navy focus-ring"
+                    />
+                    <span>
+                      <span className="text-sm font-semibold text-navy">Door-to-door pickup</span>
+                      <span className="block text-xs text-ink-muted">
+                        We collect from your address instead of warehouse drop-off.
+                      </span>
+                    </span>
+                  </label>
+                  {doorToDoor && (
+                    <div className="mt-4">
+                      <Label htmlFor="pickup" required>
+                        Pickup address
+                      </Label>
+                      <Textarea
+                        id="pickup"
+                        value={pickupAddress}
+                        onChange={(e) => setPickupAddress(e.target.value)}
+                        placeholder="Street, city, state, ZIP"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="declared">Declared value (USD)</Label>
+                    <Input
+                      id="declared"
+                      type="number"
+                      min={0}
+                      value={declaredValue}
+                      onChange={(e) => setDeclaredValue(e.target.value)}
+                      placeholder="0.00"
+                    />
+                    <FieldHint>Used for insurance and customs documentation.</FieldHint>
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="notes">Notes for our team</Label>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder="Anything we should know about this shipment?"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* ── Right: sticky summary ── */}
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <Card className="overflow-hidden">
+              <div className="bg-navy-gradient px-6 py-5 text-white">
+                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-gold-200">
+                  <Sparkles className="h-4 w-4" /> Live Quote
+                </div>
+                <div className="mt-2 flex items-end justify-between">
+                  <span className="text-sm text-white/70">{SERVICES[service].label}</span>
+                  <span className="font-mono text-3xl font-bold text-gold">
+                    {service === "roro" && roroQuote.quoted ? (
+                      "TBQ"
+                    ) : (
+                      <AnimatedNumber value={grandTotal} />
+                    )}
+                  </span>
+                </div>
+              </div>
+              <CardContent className="space-y-4 pt-5">
+                {service === "sea" && (
+                  <SeaSummary quote={seaQuote} onRemove={(sn) => setQty(sn, 0)} />
+                )}
+                {service === "air" && <AirSummary quote={airQuote} />}
+                {service === "roro" && (
+                  <RoroSummary quote={roroQuote} line={roroLine} vehicleClass={effectiveClass} />
+                )}
+
+                <div className="flex items-center justify-between border-t border-border pt-4">
+                  <span className="text-sm font-semibold text-navy">Estimated total</span>
+                  <span className="font-mono text-lg font-bold text-navy">
+                    {service === "roro" && roroQuote.quoted ? (
+                      "Quoted separately"
+                    ) : (
+                      <AnimatedNumber value={grandTotal} />
+                    )}
+                  </span>
+                </div>
+
+                <Button
+                  className="w-full"
+                  variant="gold"
+                  onClick={handleSubmit}
+                  loading={submitting}
+                >
+                  Submit order <ArrowRight className="h-4 w-4" />
+                </Button>
+                <p className="text-center text-xs text-ink-muted">
+                  Prices are estimates. Final invoicing confirms weights and dimensions.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+}
+
+/* ─────────────────────────── Success state ─────────────────────────── */
+
+function OrderSuccess({
+  result,
+  router,
+}: {
+  result: OrderResult;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const [copied, setCopied] = React.useState(false);
+
+  async function copyId() {
+    try {
+      await navigator.clipboard.writeText(result.customerId);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  }
+
+  return (
+    <section className="container-page py-16 sm:py-24">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="mx-auto max-w-lg"
+      >
+        <Card className="overflow-hidden">
+          <div className="bg-navy-gradient px-6 py-8 text-center text-white">
+            <motion.div
+              initial={{ scale: 0.6, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 400, damping: 18, delay: 0.1 }}
+              className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-gold/20 ring-1 ring-gold/40"
+            >
+              <Check className="h-8 w-8 text-gold" />
+            </motion.div>
+            <h1 className="mt-5 text-2xl font-extrabold tracking-tight">Order received</h1>
+            <p className="mt-2 text-sm text-white/75">
+              Thanks. We emailed your Customer ID and tracking number to you.
+            </p>
+          </div>
+
+          <CardContent className="space-y-5 pt-6">
+            {/* Customer ID, big + copy */}
+            <div className="rounded-2xl border border-gold/40 bg-gold/5 p-5 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-ink-muted">
+                Your Customer ID
+              </p>
+              <div className="mt-2 flex items-center justify-center gap-3">
+                <span className="font-mono text-3xl font-bold text-navy sm:text-4xl">
+                  {result.customerId}
+                </span>
+                <button
+                  onClick={copyId}
+                  aria-label="Copy Customer ID"
+                  className="inline-flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gold/40 bg-white text-navy transition-colors hover:bg-gold/10 focus-ring"
+                >
+                  {copied ? (
+                    <Check className="h-5 w-5 text-emerald-600" />
+                  ) : (
+                    <Copy className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+              {copied && <p className="mt-1.5 text-xs font-medium text-emerald-600">Copied</p>}
+            </div>
+
+            <div className="flex items-center justify-between rounded-xl bg-surface px-4 py-3 text-sm">
+              <span className="text-ink-muted">Tracking number</span>
+              <span className="font-mono font-semibold text-navy">{result.trackingNumber}</span>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-xl border border-border bg-white p-4 text-sm">
+              <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
+              <p className="text-ink-muted">
+                Keep your Customer ID safe. It is how you check status and download your receipt.
+                Anyone with it can view this order.
+              </p>
+            </div>
+
+            <Button
+              variant="gold"
+              className="w-full"
+              onClick={() => router.push(`/track?id=${encodeURIComponent(result.customerId)}`)}
+            >
+              Track my shipment <ArrowRight className="h-4 w-4" />
+            </Button>
+            <ButtonLink href="/" variant="outline" className="w-full">
+              Back to home
+            </ButtonLink>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </section>
   );
 }
 
@@ -637,9 +817,7 @@ function SeaBuilder({
                 )}
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-navy">
-                    {item.description}
-                  </p>
+                  <p className="truncate text-sm font-semibold text-navy">{item.description}</p>
                   <p className="text-xs text-ink-muted">
                     {item.dimensions} · {item.category}
                   </p>
@@ -653,7 +831,7 @@ function SeaBuilder({
                       onClick={() => setQty(item.s_n, q - 1)}
                       disabled={q <= 0}
                       aria-label={`Remove one ${item.description}`}
-                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 focus-ring disabled:opacity-40"
+                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 focus-ring disabled:opacity-40"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -673,7 +851,7 @@ function SeaBuilder({
                       onClick={() => setQty(item.s_n, q + 1)}
                       aria-label={`Add one ${item.description}`}
                       className={cn(
-                        "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg border transition-colors focus-ring",
+                        "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border transition-colors focus-ring",
                         selected
                           ? "border-gold bg-gold/15 text-gold-700 hover:bg-gold/25"
                           : "border-border text-navy hover:bg-navy/5"
@@ -853,9 +1031,7 @@ function WeightStat({
         highlight ? "border-gold/40 bg-gold/10" : "border-border bg-white"
       )}
     >
-      <p className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">
-        {label}
-      </p>
+      <p className="text-[11px] font-medium uppercase tracking-wider text-ink-muted">{label}</p>
       <p
         className={cn(
           "mt-1 font-mono text-sm font-bold",
@@ -1026,21 +1202,11 @@ function RoroSummary({
 
 /* ─────────────────────────── shared ─────────────────────────── */
 
-function Row({
-  label,
-  value,
-  bold,
-}: {
-  label: string;
-  value: string;
-  bold?: boolean;
-}) {
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
   return (
     <li className="flex items-center justify-between gap-2">
       <span className="text-ink-muted">{label}</span>
-      <span className={cn("font-mono text-navy", bold ? "font-bold" : "font-medium")}>
-        {value}
-      </span>
+      <span className={cn("font-mono text-navy", bold ? "font-bold" : "font-medium")}>{value}</span>
     </li>
   );
 }

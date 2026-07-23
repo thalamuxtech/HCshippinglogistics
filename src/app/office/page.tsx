@@ -177,7 +177,7 @@ export default function OfficeDashboardPage() {
                         </span>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-ink-muted">
-                        {s.customer_name || "—"} · {s.destination_city || s.destination_country}
+                        {s.customer_name || "-"} · {s.destination_city || s.destination_country}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">

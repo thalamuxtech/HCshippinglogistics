@@ -117,7 +117,7 @@ export const SERVICES: Record<
 > = {
   sea: {
     label: "Sea Cargo",
-    tagline: "Containerized ocean freight — boxes, barrels, bags & furniture.",
+    tagline: "Containerized ocean freight for boxes, barrels, bags, and furniture.",
     leadTime: "21–30 business weeks after departure",
   },
   air: {
@@ -127,7 +127,7 @@ export const SERVICES: Record<
   },
   roro: {
     label: "RORO Vehicle Shipping",
-    tagline: "Roll-on / roll-off vehicle transport to African ports.",
+    tagline: "Roll-on, roll-off vehicle transport to African ports.",
     leadTime: "Varies by shipping line & route",
   },
 };
@@ -148,9 +148,9 @@ export const RORO_LINES: Record<
 };
 
 export const VEHICLE_CLASSES: Record<VehicleClass, { label: string; basis: string }> = {
-  class_a: { label: "Class A — Small & Midsize SUV", basis: "Curb weight ≤ 4,000 lbs" },
-  class_b: { label: "Class B — Big-size SUV", basis: "Curb weight > 4,000 lbs" },
-  class_c: { label: "Class C — Trucks & Trailers", basis: "Priced by volume and dimensions" },
+  class_a: { label: "Class A: Small & Midsize SUV", basis: "Curb weight ≤ 4,000 lbs" },
+  class_b: { label: "Class B: Big-size SUV", basis: "Curb weight > 4,000 lbs" },
+  class_c: { label: "Class C: Trucks & Trailers", basis: "Priced by volume and dimensions" },
 };
 
 // ---- Destination countries ----
@@ -200,7 +200,7 @@ export const SEA_PRICE_LIST: SeedPriceItem[] = [
   { s_n: 25, dimensions: '65"–70"', description: "TV", price: 300, category: "TV" },
   { s_n: 26, dimensions: '75"', description: "TV", price: 400, category: "TV" },
   { s_n: 27, dimensions: '80"', description: "TV", price: 650, category: "TV" },
-  { s_n: 28, dimensions: "—", description: "Furniture Set", price: 1400, category: "Furniture" },
+  { s_n: 28, dimensions: "Varies", description: "Furniture Set", price: 1400, category: "Furniture" },
 ];
 
 export const PRICE_CATEGORIES = Array.from(new Set(SEA_PRICE_LIST.map((i) => i.category)));
@@ -209,7 +209,7 @@ export const PRICE_CATEGORIES = Array.from(new Set(SEA_PRICE_LIST.map((i) => i.c
 export const COMPANY = {
   name: "Highclass Shipping and Logistics Inc.",
   shortName: "Highclass Shipping",
-  tagline: "White-Glove Freight Management. Seamlessly Connecting USA to Africa.",
+  tagline: "Shipping from the USA to Nigeria & across Africa",
   fmcLicensedSince: "2017",
   domain: "highclassshippinglogistics.com",
   webApp: "highclassshippinglogistics.web.app",

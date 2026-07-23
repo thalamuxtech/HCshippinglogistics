@@ -45,6 +45,70 @@ export async function sendSailingBroadcast(
   return res.data as { ok: boolean; recipientCount: number; recipientIds: string[] };
 }
 
+export interface PublicOrderInput {
+  service_type: "sea" | "air" | "roro";
+  full_name: string;
+  email: string;
+  phone?: string;
+  destination_country: string;
+  destination_city?: string;
+  door_to_door?: boolean;
+  pickup_address?: string;
+  notes?: string;
+  declared_value?: number;
+  receiver: { full_name: string; phone: string; address?: string };
+  items?: { s_n: number; quantity: number; description?: string; dimensions?: string }[];
+  weight?: number;
+  dimensions?: { length: number; width: number; height: number };
+  shipping_line?: string;
+  vehicle_class?: string;
+  vehicle_details?: string;
+}
+
+export async function submitPublicOrder(
+  payload: PublicOrderInput
+): Promise<{ ok: boolean; customerId: string; trackingNumber: string; total: number }> {
+  const fn = httpsCallable(functions, "submitPublicOrder");
+  const res = await fn(payload);
+  return res.data as { ok: boolean; customerId: string; trackingNumber: string; total: number };
+}
+
+export interface CustomerView {
+  found: boolean;
+  customer?: { id: string; full_name: string; email: string };
+  shipments?: Array<{
+    id: string;
+    tracking_number: string;
+    service_type: string;
+    current_status: string;
+    destination_country: string;
+    destination_city?: string;
+    receiver?: { full_name: string; phone: string; address?: string; city?: string } | null;
+    items?: { description: string; dimensions?: string; unit_price: number; quantity: number; line_total: number }[];
+    weight?: number | null;
+    shipping_line?: string | null;
+    vehicle_class?: string | null;
+    total_price: number;
+    deposit: number;
+    balance: number;
+    payment_status: string;
+    currency: string;
+    receipt_number?: string | null;
+    receipt_pdf_url?: string | null;
+    created_at?: number | null;
+  }>;
+}
+
+export async function viewByCustomerId(customerId: string): Promise<CustomerView> {
+  try {
+    const fn = httpsCallable(functions, "viewByCustomerId");
+    const res = await fn({ customerId });
+    return (res.data as CustomerView) ?? { found: false };
+  } catch {
+    return { found: false };
+  }
+}
+
 export interface PublicTrackResult {
   found: boolean;
   tracking_number?: string;

@@ -16,7 +16,7 @@ import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/marketing/Reveal";
 
 export const metadata: Metadata = {
-  title: "Enterprise & B2B Freight — Government, Hospitals & Embassies",
+  title: "Enterprise & B2B Freight: Government, Hospitals & Embassies",
   description:
     "Tender-ready freight forwarding for government agencies, hospitals, and embassies. Medical equipment logistics and 60+ container project experience with full audit trails.",
 };
@@ -30,12 +30,12 @@ const segments = [
   {
     icon: Stethoscope,
     title: "Hospitals & health systems",
-    desc: "Specialized handling of medical equipment, diagnostic devices, and supplies with chain-of-custody tracking end to end.",
+    desc: "Specialized handling of medical equipment, diagnostic devices, and supplies with chain-of-custody tracking from pickup to delivery.",
   },
   {
     icon: Building2,
     title: "Embassies & corporates",
-    desc: "Secure, role-isolated portal access with enterprise SLAs and a public credibility footprint for high-trust relationships.",
+    desc: "Secure, role-isolated portal access with enterprise SLAs and a documented record for long-term contracts.",
   },
 ];
 
@@ -44,8 +44,8 @@ const capabilities = [
   { icon: Stethoscope, title: "Medical equipment", desc: "Sensitive medical and lab equipment moved with careful handling and documentation." },
   { icon: Lock, title: "Role-isolated access", desc: "Encrypted portal with least-privilege roles and full activity logging." },
   { icon: ClipboardCheck, title: "Audit-ready records", desc: "Every stage transition and receipt archived permanently and exportable." },
-  { icon: FileCheck2, title: "Formal digital receipts", desc: "Tender- and finance-grade receipts issued at inspection, downloadable anytime." },
-  { icon: ShieldCheck, title: "Licensed & registered", desc: "FMC-licensed and CAC-registered — bid-eligible from day one." },
+  { icon: FileCheck2, title: "Formal digital receipts", desc: "Receipts issued at inspection for tender and finance use, downloadable anytime." },
+  { icon: ShieldCheck, title: "Licensed & registered", desc: "FMC-licensed and CAC-registered, so we are bid-eligible from day one." },
 ];
 
 export default function EnterprisePage() {
@@ -63,17 +63,17 @@ export default function EnterprisePage() {
             </Reveal>
             <Reveal delay={0.08}>
               <h1 className="mt-6 text-balance text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">
-                The freight infrastructure
+                Freight your procurement
                 <span className="mt-2 block bg-gold-gradient bg-clip-text text-transparent">
-                  institutions can bid on.
+                  team can approve.
                 </span>
               </h1>
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
-                Government agencies, hospitals, and embassies do not award contracts over WhatsApp.
-                Highclass delivers audit trails, formal receipts, and secure portal access — the
-                requirements procurement teams insist on.
+                Highclass gives you audit trails, formal receipts, and secure portal access. That is
+                the paperwork procurement teams at government agencies, hospitals, and embassies need
+                before they can sign a contract.
               </p>
             </Reveal>
             <Reveal delay={0.22}>
@@ -99,7 +99,7 @@ export default function EnterprisePage() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">Who we serve</span>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-            Purpose-built for high-trust clients
+            Built for institutional clients
           </h2>
         </Reveal>
         <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -129,8 +129,8 @@ export default function EnterprisePage() {
               Everything a tender asks for
             </h2>
             <p className="mt-4 text-ink-muted">
-              From medical equipment logistics to 60+ container programs, backed by the compliance
-              infrastructure enterprise contracts require.
+              From medical equipment logistics to 60+ container programs, with the licensing,
+              documentation, and audit trails enterprise contracts call for.
             </p>
           </Reveal>
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -162,10 +162,10 @@ export default function EnterprisePage() {
               <div className="p-8 sm:p-10">
                 <span className="eyebrow">Track record</span>
                 <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">
-                  Delivering complex projects at scale
+                  Handling large, multi-container projects
                 </h2>
                 <p className="mt-4 text-ink-muted">
-                  We have coordinated programs exceeding 60 containers — staging inventory,
+                  We have coordinated programs of more than 60 containers, staging inventory,
                   sequencing sailings, and clearing customs across multiple destination ports while
                   keeping every stakeholder informed through a single audit-ready record.
                 </p>

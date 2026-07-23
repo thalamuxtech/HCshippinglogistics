@@ -6,7 +6,7 @@ import { ContactForm } from "@/components/marketing/ContactForm";
 import { COMPANY } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "Contact Highclass Shipping — USA Warehouse & Nigeria Office",
+  title: "Contact Highclass Shipping: USA Warehouse & Nigeria Office",
   description:
     "Get in touch with Highclass Shipping and Logistics. Send an inquiry for quotes, enterprise programs, or support, or reach our USA warehouse and Lagos office directly.",
 };
@@ -50,7 +50,7 @@ export default function ContactPage() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
-                Request a quote, ask about an enterprise program, or get support — our team responds
+                Request a quote, ask about an enterprise program, or get support. Our team responds
                 within one business day.
               </p>
             </Reveal>

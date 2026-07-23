@@ -75,8 +75,8 @@ export default function PricingPage() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
-                Per-item sea cargo pricing, a flat air rate, and class-based RORO rates — no hidden
-                fees, no WhatsApp haggling.
+                Per-item sea cargo pricing, a flat air rate, and class-based RORO rates. Clear,
+                published rates with no hidden fees.
               </p>
             </Reveal>
           </div>
@@ -92,7 +92,7 @@ export default function PricingPage() {
                 <Ship className="h-5 w-5" />
               </span>
               <h2 className="mt-5 text-lg font-bold text-navy">Sea Cargo</h2>
-              <p className="mt-1 text-sm text-ink-muted">Priced per item — see the full table below.</p>
+              <p className="mt-1 text-sm text-ink-muted">Priced per item. See the full table below.</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-mono text-3xl font-bold text-navy">
                   {formatCurrency(Math.min(...SEA_PRICE_LIST.map((i) => i.price)))}
@@ -269,10 +269,10 @@ export default function PricingPage() {
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
                 Create your account to build a full quote, book a pickup, and track your shipment
-                end to end.
+                through all 8 stages.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Create your account <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink

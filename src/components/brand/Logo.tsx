@@ -13,24 +13,18 @@ const LOGO_SRC = "/brand/logo.png";
 const LOGO_W = 768;
 const LOGO_H = 512;
 
-export function LogoMark({ className, size = 40 }: { className?: string; size?: number }) {
+// Compact square mark (staff sidebar, small placements). Uses the clean
+// square brand icon so it stays crisp at any size.
+export function LogoMark({ className }: { className?: string }) {
   return (
-    <span
-      className={cn("relative inline-flex items-center justify-center overflow-hidden", className)}
-      style={{ width: size, height: size }}
+    <Image
+      src="/brand/icon.svg"
+      alt=""
+      width={40}
+      height={40}
+      className={cn("rounded-lg", className)}
       aria-hidden="true"
-    >
-      {/* Crop to the crest area for a compact square mark */}
-      <Image
-        src={LOGO_SRC}
-        alt=""
-        width={LOGO_W}
-        height={LOGO_H}
-        className="max-w-none object-cover"
-        style={{ width: size * 1.5, height: "auto" }}
-        priority
-      />
-    </span>
+    />
   );
 }
 
@@ -38,19 +32,21 @@ export function Logo({
   className,
   variant = "dark",
   href = "/",
-  showText = true,
+  size = "md",
 }: {
   className?: string;
   variant?: "dark" | "light";
   href?: string | null;
-  showText?: boolean;
+  size?: "md" | "lg" | "xl";
 }) {
+  const imgH =
+    size === "xl" ? "h-14 sm:h-16" : size === "lg" ? "h-12 sm:h-14" : "h-11 sm:h-12";
   const content = (
     <span className={cn("group inline-flex items-center", className)}>
       <span
         className={cn(
-          "inline-flex items-center rounded-lg",
-          variant === "light" ? "bg-white p-1.5 shadow-sm" : ""
+          "inline-flex items-center rounded-xl transition-transform duration-300 group-hover:scale-[1.02]",
+          variant === "light" ? "bg-white p-2 shadow-sm" : ""
         )}
       >
         <Image
@@ -58,22 +54,16 @@ export function Logo({
           alt="Highclass Shipping and Logistics Inc."
           width={LOGO_W}
           height={LOGO_H}
-          className="h-9 w-auto sm:h-10"
+          className={cn(imgH, "w-auto")}
           priority
         />
       </span>
-      {/* The wordmark is inside the crest already; keep text off by default to avoid duplication */}
-      {showText && false && (
-        <span className="ml-2 flex flex-col leading-none">
-          <span className="text-[15px] font-extrabold tracking-tight text-navy">Highclass</span>
-        </span>
-      )}
     </span>
   );
 
   if (href === null) return content;
   return (
-    <Link href={href} className="focus-ring rounded-lg" aria-label="Highclass Shipping — home">
+    <Link href={href} className="focus-ring rounded-xl" aria-label="Highclass Shipping, home">
       {content}
     </Link>
   );

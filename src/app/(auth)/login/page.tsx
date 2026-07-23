@@ -60,8 +60,10 @@ function LoginForm() {
 
   return (
     <div className="animate-fade-up">
-      <h1 className="text-2xl font-extrabold tracking-tight text-navy">Welcome back</h1>
-      <p className="mt-2 text-sm text-ink-muted">Log in to manage your shipments.</p>
+      <h1 className="text-2xl font-extrabold tracking-tight text-navy">Staff sign in</h1>
+      <p className="mt-2 text-sm text-ink-muted">
+        For Highclass team members. Customers do not need an account.
+      </p>
 
       {disabled && (
         <div className="mt-5 flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 ring-1 ring-amber-200">
@@ -84,14 +86,9 @@ function LoginForm() {
           />
         </div>
         <div>
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password" required>
-              Password
-            </Label>
-            <Link href="/forgot" className="text-xs font-semibold text-gold-700 hover:underline">
-              Forgot?
-            </Link>
-          </div>
+          <Label htmlFor="password" required>
+            Password
+          </Label>
           <Input
             id="password"
             type="password"
@@ -110,16 +107,11 @@ function LoginForm() {
       </form>
 
       <p className="mt-6 text-center text-sm text-ink-muted">
-        New to Highclass?{" "}
-        <Link href="/signup" className="font-semibold text-gold-700 hover:underline">
-          Create an account
+        Are you a customer? Check your shipment with your Customer ID on the{" "}
+        <Link href="/track" className="font-semibold text-gold-700 hover:underline">
+          tracking page
         </Link>
-      </p>
-      <p className="mt-2 text-center text-sm text-ink-muted">
-        Have an access code?{" "}
-        <Link href="/return" className="font-semibold text-gold-700 hover:underline">
-          Return to your account
-        </Link>
+        .
       </p>
     </div>
   );

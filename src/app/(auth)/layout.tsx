@@ -22,11 +22,10 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
         <div className="relative max-w-md">
           <h2 className="text-3xl font-extrabold leading-tight">
-            White-Glove Freight, from first click to final delivery.
+            Manage shipments across the USA and Africa.
           </h2>
           <p className="mt-4 text-white/70">
-            Track every barrel, box, and vehicle across all 8 stages — with automated updates and
-            permanent digital receipts.
+            Update shipment stages, issue receipts, and keep every customer informed from one place.
           </p>
           <div className="mt-8 flex gap-6 text-white/60">
             <div className="flex items-center gap-2 text-sm">

@@ -166,7 +166,7 @@ export default function AdminSailingPage() {
                 id="subject"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
-                placeholder="e.g. Grimaldi Vessel Sailing — Cut-off Aug 20"
+                placeholder="e.g. Grimaldi Vessel Sailing, Cut-off Aug 20"
               />
             </div>
             <div>

@@ -17,16 +17,16 @@ import { SEA_PRICE_LIST, SERVICES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Sea Cargo — Containerized Ocean Freight to Africa",
+  title: "Sea Cargo: Containerized Ocean Freight to Africa",
   description:
-    "Affordable containerized ocean freight from the USA to Nigeria and across Africa. Door-to-door pickup, transparent per-item pricing on boxes, barrels, bags, and furniture.",
+    "Containerized ocean freight from the USA to Nigeria and across Africa. Door-to-door pickup, transparent per-item pricing on boxes, barrels, bags, and furniture.",
 };
 
 const highlights = [
   {
     icon: Boxes,
     title: "Containerized ocean freight",
-    desc: "Boxes, barrels, bags, totes, TVs, and full furniture sets — consolidated into secure shared containers for the best per-item rates.",
+    desc: "Boxes, barrels, bags, totes, TVs, and full furniture sets, consolidated into secure shared containers for the best per-item rates.",
   },
   {
     icon: Home,
@@ -36,12 +36,12 @@ const highlights = [
   {
     icon: Clock,
     title: "Predictable lead times",
-    desc: "Typical transit runs 21–30 business weeks after departure, with automated stage updates at every step so there is never any guesswork.",
+    desc: "Typical transit runs 21 to 30 business weeks after departure, with an automated stage update at every step so you always know where your cargo is.",
   },
   {
     icon: ShieldCheck,
     title: "Documented & receipted",
-    desc: "Every item is weighed, dimensioned, photographed, and issued a formal digital receipt — the audit trail enterprise shippers require.",
+    desc: "Every item is weighed, dimensioned, photographed, and issued a formal digital receipt, giving you a full audit trail.",
   },
 ];
 
@@ -77,12 +77,12 @@ export default function SeaCargoPage() {
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
                 {meta.tagline} Door-to-door pickup across the USA, transparent per-item pricing, and
-                end-to-end tracking to Nigeria and across Africa.
+                tracking all the way to Nigeria and across Africa.
               </p>
             </Reveal>
             <Reveal delay={0.22}>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Start a sea shipment <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
@@ -111,8 +111,8 @@ export default function SeaCargoPage() {
             The most economical way to move volume
           </h2>
           <p className="mt-4 text-ink-muted">
-            When timing is flexible and volume is high, sea cargo delivers the lowest cost per pound
-            — without sacrificing visibility or documentation.
+            When timing is flexible and volume is high, sea cargo gives you the lowest cost per
+            pound, and you still get full tracking and documentation.
           </p>
         </Reveal>
         <div className="mt-14 grid gap-6 sm:grid-cols-2">
@@ -244,7 +244,7 @@ export default function SeaCargoPage() {
                 container every step of the way.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/signup" variant="gold" size="lg">
+                <ButtonLink href="/order" variant="gold" size="lg">
                   Get started <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink

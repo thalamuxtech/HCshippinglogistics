@@ -144,7 +144,7 @@ export default function AdminCustomersPage() {
                       {c.phone && <div className="text-xs text-ink-muted">{c.phone}</div>}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-ink-muted">
-                      {c.access_code_prefix ? `${c.access_code_prefix}…` : "—"}
+                      {c.access_code_prefix ? `${c.access_code_prefix}…` : "-"}
                     </td>
                     <td className="px-4 py-3">
                       {c.is_active ? (

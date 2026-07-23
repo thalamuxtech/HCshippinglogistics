@@ -281,6 +281,240 @@ export const publicTrack = onCall(async (req) => {
   };
 });
 
+// ─── Customer ID generator (no password; the ID is the lookup credential) ───
+// Format: HC + 2 name initials + 6 base-32 chars, e.g. HCJD7F3K9Q. Unambiguous
+// alphabet, includes a check char. Non-guessable enough for status lookup.
+const ID_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
+function randomIdChars(n) {
+  // Deterministic-free randomness is fine here (runs server-side per order).
+  let out = "";
+  const bytes = require("node:crypto").randomBytes(n);
+  for (let i = 0; i < n; i++) out += ID_ALPHABET[bytes[i] % ID_ALPHABET.length];
+  return out;
+}
+function makeCustomerId(fullName) {
+  const parts = String(fullName || "").trim().split(/\s+/).filter(Boolean);
+  const ini = ((parts[0]?.[0] || "X") + (parts[1]?.[0] || parts[0]?.[1] || "X"))
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "X");
+  const body = `HC${ini}${randomIdChars(6)}`;
+  const check = dammCheck(body);
+  return `${body}${check}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// Callable (PUBLIC): submit an order with no account. Creates a
+// lightweight customer record + shipment via Admin SDK and returns
+// the Customer ID + tracking number. Server recomputes the total from
+// the price list so the client can't tamper with pricing.
+// ═══════════════════════════════════════════════════════════════
+const SEA_PRICES = {
+  1:35,2:50,3:65,4:90,5:100,6:110,7:150,8:160,9:220,10:220,11:200,12:100,13:130,14:80,
+  15:70,16:90,17:200,18:60,19:100,20:60,21:80,22:120,23:120,24:250,25:300,26:400,27:650,28:1400,
+};
+const AIR_RATE = 5.5, DIM_DIV = 166;
+const RORO_RATE = { grimaldi: 1400, sallaum: 1380, msc: 1400 };
+
+export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  const d = req.data || {};
+  const svc = d.service_type;
+  if (!["sea", "air", "roro"].includes(svc))
+    throw new HttpsError("invalid-argument", "Invalid service type.");
+  if (!d.full_name || !d.email) throw new HttpsError("invalid-argument", "Name and email required.");
+  if (!d.destination_country) throw new HttpsError("invalid-argument", "Destination required.");
+  if (!d.receiver?.full_name || !d.receiver?.phone)
+    throw new HttpsError("invalid-argument", "Receiver name and phone required.");
+
+  // Recompute total server-side (never trust client price).
+  let total = 0;
+  let items = [];
+  if (svc === "sea") {
+    const sel = Array.isArray(d.items) ? d.items : [];
+    for (const it of sel) {
+      const price = SEA_PRICES[it.s_n];
+      const qty = Math.max(0, Math.min(999, parseInt(it.quantity, 10) || 0));
+      if (!price || qty <= 0) continue;
+      total += price * qty;
+      items.push({
+        price_list_id: String(it.s_n),
+        description: it.description || `Item ${it.s_n}`,
+        dimensions: it.dimensions || "",
+        unit_price: price,
+        quantity: qty,
+        line_total: price * qty,
+      });
+    }
+    if (items.length === 0) throw new HttpsError("invalid-argument", "Select at least one item.");
+  } else if (svc === "air") {
+    const w = Math.max(0, Number(d.weight) || 0);
+    const dims = d.dimensions;
+    let dim = 0;
+    if (dims && dims.length && dims.width && dims.height)
+      dim = (dims.length * dims.width * dims.height) / DIM_DIV;
+    const billable = Math.max(w, dim);
+    total = Math.round(billable * AIR_RATE * 100) / 100;
+    if (total <= 0) throw new HttpsError("invalid-argument", "Enter a valid weight.");
+  } else {
+    const line = d.shipping_line;
+    if (!RORO_RATE[line]) throw new HttpsError("invalid-argument", "Choose a shipping line.");
+    total = d.vehicle_class === "class_c" ? 0 : RORO_RATE[line];
+  }
+
+  // Create (or reuse) a lightweight customer record keyed by email.
+  const email = String(d.email).trim().toLowerCase();
+  let customerId;
+  const existing = await db
+    .collection("users")
+    .where("email", "==", email)
+    .where("role", "==", "customer")
+    .limit(1)
+    .get();
+  if (!existing.empty) {
+    customerId = existing.docs[0].id;
+    await existing.docs[0].ref.set(
+      { full_name: d.full_name, phone: d.phone || "", updated_at: FieldValue.serverTimestamp() },
+      { merge: true }
+    );
+  } else {
+    customerId = makeCustomerId(d.full_name);
+    await db.collection("users").doc(customerId).set({
+      customer_code: customerId,
+      email,
+      full_name: d.full_name,
+      phone: d.phone || "",
+      role: "customer",
+      is_active: true,
+      notify_email: true,
+      created_at: FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Tracking number.
+  const serial = await db.runTransaction(async (tx) => {
+    const ref = db.collection("counters").doc("shipment");
+    const c = await tx.get(ref);
+    const val = (c.exists ? c.data().value : 1000) + 1;
+    tx.set(ref, { value: val }, { merge: true });
+    return val;
+  });
+  const prefix = { sea: "SEA", air: "AIR", roro: "RRO" }[svc];
+  const yr = new Date().getFullYear();
+  const tracking = `HC-${prefix}-${yr}-${String(serial).padStart(5, "0")}`;
+
+  const shipment = {
+    tracking_number: tracking,
+    customer_id: customerId,
+    customer_name: d.full_name,
+    customer_email: email,
+    customer_phone: d.phone || "",
+    service_type: svc,
+    current_status: "collection",
+    destination_country: d.destination_country,
+    destination_city: d.destination_city || "",
+    door_to_door: !!d.door_to_door,
+    pickup_address: d.door_to_door ? d.pickup_address || "" : "",
+    receiver: {
+      full_name: d.receiver.full_name,
+      phone: d.receiver.phone,
+      address: d.receiver.address || "",
+      city: d.destination_city || "",
+    },
+    notes: d.notes || "",
+    declared_value: Number(d.declared_value) || 0,
+    total_price: total,
+    currency: "USD",
+    payment_status: "unpaid",
+    deposit: 0,
+    balance: total,
+    created_at: FieldValue.serverTimestamp(),
+    updated_at: FieldValue.serverTimestamp(),
+  };
+  if (svc === "sea") shipment.items = items;
+  if (svc === "air") {
+    shipment.weight = Number(d.weight) || 0;
+    if (d.dimensions) shipment.dimensions = d.dimensions;
+  }
+  if (svc === "roro") {
+    shipment.shipping_line = d.shipping_line;
+    shipment.vehicle_class = d.vehicle_class || "class_a";
+    shipment.vehicle_details = d.vehicle_details || "";
+  }
+  const shipRef = await db.collection("shipments").add(shipment);
+
+  // Confirmation email with the Customer ID (stub-safe).
+  await sendEmail({
+    to: email,
+    subject: `Order received — ${tracking}`,
+    html: emailShell({
+      heading: "We've received your order",
+      body: `Thank you, ${d.full_name}. Your shipment to ${d.destination_country} has been logged.<br/><br/>Your Customer ID is <strong style="font-family:monospace;font-size:16px">${customerId}</strong>. Keep it safe — use it on our website to check your status and download your receipt at any time.`,
+      trackingNumber: tracking,
+      ctaUrl: `${SITE}/track?id=${encodeURIComponent(customerId)}`,
+    }),
+  });
+  await db.collection("notifications").doc().set({
+    customer_id: customerId, shipment_id: shipRef.id, channel: "email",
+    type: "order_confirmation", subject: `Order received — ${tracking}`,
+    status: "sent", created_at: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true, customerId, trackingNumber: tracking, total };
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Callable (PUBLIC): view all shipments for a Customer ID. The ID is
+// the credential, so this returns full details + receipt links for the
+// customer's own shipments only.
+// ═══════════════════════════════════════════════════════════════
+export const viewByCustomerId = onCall(async (req) => {
+  const id = String(req.data?.customerId || "").trim().toUpperCase();
+  if (!id || id.length < 6) return { found: false };
+  // Validate check char to reject typos cheaply.
+  if (dammCheck(id.slice(0, -1)) !== id.slice(-1)) {
+    // Still allow (older/admin-made ids may not have a check char) — try lookup anyway.
+  }
+  const userSnap = await db.collection("users").doc(id).get();
+  const snap = await db
+    .collection("shipments")
+    .where("customer_id", "==", id)
+    .get();
+  if (snap.empty && !userSnap.exists) return { found: false };
+
+  const shipments = snap.docs
+    .map((doc) => {
+      const s = doc.data();
+      return {
+        id: doc.id,
+        tracking_number: s.tracking_number || "",
+        service_type: s.service_type || "sea",
+        current_status: s.current_status || "collection",
+        destination_country: s.destination_country || "",
+        destination_city: s.destination_city || "",
+        receiver: s.receiver || null,
+        items: s.items || [],
+        weight: s.weight || null,
+        shipping_line: s.shipping_line || null,
+        vehicle_class: s.vehicle_class || null,
+        total_price: s.total_price || 0,
+        deposit: s.deposit || 0,
+        balance: s.balance != null ? s.balance : s.total_price || 0,
+        payment_status: s.payment_status || "unpaid",
+        currency: s.currency || "USD",
+        receipt_number: s.receipt_number || null,
+        receipt_pdf_url: s.receipt_pdf_url || null,
+        created_at: s.created_at ? s.created_at.toMillis() : null,
+      };
+    })
+    .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+  const u = userSnap.exists ? userSnap.data() : {};
+  return {
+    found: true,
+    customer: { id, full_name: u.full_name || (shipments[0]?.receiver ? "" : ""), email: u.email || "" },
+    shipments,
+  };
+});
+
 export const resolveAccessCode = onCall(async (req) => {
   const clean = normalizeCode(req.data?.code);
   if (clean.length < 10 || clean.length > 12) return { found: false };

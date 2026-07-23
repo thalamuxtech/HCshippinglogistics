@@ -62,7 +62,7 @@ export function ContactForm() {
         inquiry_type: form.inquiry_type,
         message: form.message.trim(),
       });
-      success("Message sent", "Thank you — our team will respond within one business day.");
+      success("Message sent", "Thank you. Our team will respond within one business day.");
       setForm(EMPTY);
       setErrors({});
     } catch {
