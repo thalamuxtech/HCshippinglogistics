@@ -1,0 +1,56 @@
+# Firebase App Hosting configuration
+# https://firebase.google.com/docs/app-hosting/configure
+#
+# The NEXT_PUBLIC_* Firebase web keys are safe to expose (client config).
+# They are set here so the App Hosting build has them. Server-only secrets
+# (none required by the web app itself — Resend/Twilio live in Cloud
+# Functions) would use `secret:` refs instead of `value:`.
+
+runConfig:
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyAyQ526LtZaXaqM2i1rT4FjKXEunDQV1YQ
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: highclassshippinglogistics.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: highclassshippinglogistics
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: highclassshippinglogistics.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "49956531543"
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:49956531543:web:f2bfc58dc8f501554be212
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+    value: G-NEMSZFZZSF
+    availability:
+      - BUILD
+      - RUNTIME
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://highclassshippinglogistics.com
+    availability:
+      - BUILD
+      - RUNTIME
