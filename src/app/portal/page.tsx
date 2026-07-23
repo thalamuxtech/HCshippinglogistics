@@ -173,7 +173,7 @@ export default function PortalDashboard() {
                 return (
                   <li key={s.id}>
                     <Link
-                      href={`/portal/shipments/${s.id}`}
+                      href={`/portal/shipments/detail?id=${s.id}`}
                       className={cn(
                         "group block rounded-xl border border-border bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-card focus-ring"
                       )}

@@ -129,7 +129,7 @@ export default function ShipmentsPage() {
           {filtered.map((s) => {
             const Icon = serviceIcon[s.service_type] ?? Package;
             return (
-              <Link key={s.id} href={`/portal/shipments/${s.id}`} className="group block focus-ring rounded-xl">
+              <Link key={s.id} href={`/portal/shipments/detail?id=${s.id}`} className="group block focus-ring rounded-xl">
                 <Card className="transition-all group-hover:-translate-y-0.5 group-hover:shadow-premium">
                   <CardContent className="p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">

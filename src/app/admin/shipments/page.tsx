@@ -165,7 +165,7 @@ export default function AdminShipmentsPage() {
                   >
                     <td className="px-4 py-3">
                       <Link
-                        href={`/admin/shipments/${s.id}`}
+                        href={`/admin/shipments/detail?id=${s.id}`}
                         className="font-mono text-xs font-semibold text-navy hover:text-gold-700 focus-ring"
                       >
                         {s.tracking_number || s.id.slice(0, 8)}
@@ -199,7 +199,7 @@ export default function AdminShipmentsPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        href={`/admin/shipments/${s.id}`}
+                        href={`/admin/shipments/detail?id=${s.id}`}
                         className="inline-flex items-center rounded-md p-1 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-navy focus-ring"
                         aria-label={`Open ${s.tracking_number}`}
                       >

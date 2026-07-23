@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
+import { PageLoader } from "@/components/ui/misc";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -44,9 +45,9 @@ function tsToDate(ts?: Timestamp | null): Date | null {
   }
 }
 
-export default function AdminShipmentDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+function AdminShipmentDetailPageInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const toast = useToast();
 
@@ -538,5 +539,14 @@ function InfoRow({
         <p className="truncate text-sm font-medium text-ink">{value}</p>
       </div>
     </div>
+  );
+}
+
+
+export default function Page() {
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading…" />}>
+      <AdminShipmentDetailPageInner />
+    </React.Suspense>
   );
 }

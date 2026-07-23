@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   Check,
@@ -42,9 +42,9 @@ const serviceIcon: Record<ServiceType, typeof Ship> = {
   roro: Truck,
 };
 
-export default function ShipmentDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params?.id;
+function ShipmentDetailPageInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const router = useRouter();
 
@@ -415,5 +415,14 @@ function Detail({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="text-ink-muted">{label}</span>
       <span className="text-right font-medium text-navy">{value}</span>
     </div>
+  );
+}
+
+
+export default function Page() {
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading…" />}>
+      <ShipmentDetailPageInner />
+    </React.Suspense>
   );
 }

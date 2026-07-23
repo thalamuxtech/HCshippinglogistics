@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -25,10 +25,10 @@ import { Label, Textarea } from "@/components/ui/input";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 
-export default function DispatchJobDetailPage() {
-  const params = useParams();
+function DispatchJobDetailPageInner() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const id = String(params?.id ?? "");
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const toast = useToast();
 
@@ -263,5 +263,14 @@ export default function DispatchJobDetailPage() {
         </div>
       )}
     </div>
+  );
+}
+
+
+export default function Page() {
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading…" />}>
+      <DispatchJobDetailPageInner />
+    </React.Suspense>
   );
 }

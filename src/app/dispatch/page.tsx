@@ -73,7 +73,7 @@ export default function DispatchJobsPage() {
           {jobs.map((job) => (
             <Link
               key={job.id}
-              href={`/dispatch/jobs/${job.id}`}
+              href={`/dispatch/jobs/detail?id=${job.id}`}
               className="block rounded-2xl border border-border bg-white p-5 shadow-card transition-colors active:bg-secondary/50 focus-ring"
             >
               <div className="flex items-start justify-between gap-3">

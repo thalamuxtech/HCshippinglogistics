@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { useParams } from "next/navigation";
+import { PageLoader } from "@/components/ui/misc";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -46,9 +47,9 @@ function tsToDate(ts?: Timestamp | null): Date | null {
   }
 }
 
-export default function AdminCustomerDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+function AdminCustomerDetailPageInner() {
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const toast = useToast();
 
@@ -382,7 +383,7 @@ export default function AdminCustomerDetailPage() {
                   <tr key={s.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
                     <td className="px-4 py-3">
                       <Link
-                        href={`/admin/shipments/${s.id}`}
+                        href={`/admin/shipments/detail?id=${s.id}`}
                         className="font-mono text-xs font-semibold text-navy hover:text-gold-700 focus-ring"
                       >
                         {s.tracking_number || s.id.slice(0, 8)}
@@ -441,5 +442,14 @@ function InfoRow({
         <p className="truncate text-sm font-medium text-ink">{value}</p>
       </div>
     </div>
+  );
+}
+
+
+export default function Page() {
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading…" />}>
+      <AdminCustomerDetailPageInner />
+    </React.Suspense>
   );
 }

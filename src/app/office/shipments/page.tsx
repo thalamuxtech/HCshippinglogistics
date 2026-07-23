@@ -114,7 +114,7 @@ export default function OfficeShipmentsPage() {
           {filtered.map((s) => (
             <Link
               key={s.id}
-              href={`/office/shipments/${s.id}`}
+              href={`/office/shipments/detail?id=${s.id}`}
               className="group block focus-ring rounded-xl"
             >
               <Card className="transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-premium">

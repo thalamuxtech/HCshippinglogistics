@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -41,10 +41,10 @@ const NEXT_STAGE: Partial<Record<ShipmentStatus, ShipmentStatus>> = {
   delivery: "completed",
 };
 
-export default function OfficeShipmentDetailPage() {
-  const params = useParams();
+function OfficeShipmentDetailPageInner() {
+  const searchParams = useSearchParams();
   const router = useRouter();
-  const id = String(params?.id ?? "");
+  const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const toast = useToast();
 
@@ -377,5 +377,14 @@ function Detail({
       </div>
       <p className="mt-1 text-sm text-navy">{value || "—"}</p>
     </div>
+  );
+}
+
+
+export default function Page() {
+  return (
+    <React.Suspense fallback={<PageLoader label="Loading…" />}>
+      <OfficeShipmentDetailPageInner />
+    </React.Suspense>
   );
 }

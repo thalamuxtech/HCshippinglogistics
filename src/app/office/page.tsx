@@ -167,7 +167,7 @@ export default function OfficeDashboardPage() {
               {recent.map((s) => (
                 <li key={s.id}>
                   <Link
-                    href={`/office/shipments/${s.id}`}
+                    href={`/office/shipments/detail?id=${s.id}`}
                     className="flex items-center justify-between gap-4 py-3.5 transition-colors hover:bg-secondary/40 -mx-2 px-2 rounded-lg focus-ring"
                   >
                     <div className="min-w-0">

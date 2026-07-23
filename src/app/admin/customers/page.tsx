@@ -123,7 +123,7 @@ export default function AdminCustomersPage() {
                   >
                     <td className="px-4 py-3">
                       <Link
-                        href={`/admin/customers/${c.id}`}
+                        href={`/admin/customers/detail?id=${c.id}`}
                         className="flex items-center gap-3 focus-ring"
                       >
                         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold">
@@ -158,7 +158,7 @@ export default function AdminCustomersPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        href={`/admin/customers/${c.id}`}
+                        href={`/admin/customers/detail?id=${c.id}`}
                         className="inline-flex items-center rounded-md p-1 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-navy focus-ring"
                         aria-label={`Open ${c.full_name}`}
                       >

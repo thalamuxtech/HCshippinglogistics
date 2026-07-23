@@ -100,7 +100,7 @@ export default function DispatchCompletedPage() {
           {jobs.map((job) => (
             <li key={job.id}>
               <Link
-                href={`/dispatch/jobs/${job.id}`}
+                href={`/dispatch/jobs/detail?id=${job.id}`}
                 className="flex items-center gap-4 rounded-2xl border border-border bg-white p-5 shadow-card transition hover:border-gold/40 focus-ring"
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">

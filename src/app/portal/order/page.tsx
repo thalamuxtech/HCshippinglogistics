@@ -279,7 +279,7 @@ export default function OrderPage() {
       });
 
       toast.success("Order submitted", `Tracking ${tracking} created.`);
-      router.push(`/portal/shipments/${id}`);
+      router.push(`/portal/shipments/detail?id=${id}`);
     } catch (e) {
       console.error(e);
       toast.error("Could not submit order", "Please try again in a moment.");

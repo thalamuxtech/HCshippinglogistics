@@ -1,4 +1,31 @@
 {
+  "hosting": {
+    "public": "out",
+    "cleanUrls": true,
+    "trailingSlash": false,
+    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "rewrites": [
+      { "source": "/portal/shipments/detail", "destination": "/portal/shipments/detail.html" },
+      { "source": "/admin/shipments/detail", "destination": "/admin/shipments/detail.html" },
+      { "source": "/admin/customers/detail", "destination": "/admin/customers/detail.html" },
+      { "source": "/office/shipments/detail", "destination": "/office/shipments/detail.html" },
+      { "source": "/dispatch/jobs/detail", "destination": "/dispatch/jobs/detail.html" }
+    ],
+    "headers": [
+      {
+        "source": "/_next/static/**",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+        ]
+      },
+      {
+        "source": "/**/*.@(js|css|woff2|png|jpg|jpeg|svg|ico|webmanifest)",
+        "headers": [
+          { "key": "Cache-Control", "value": "public, max-age=86400" }
+        ]
+      }
+    ]
+  },
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"

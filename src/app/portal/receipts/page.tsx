@@ -85,7 +85,7 @@ export default function ReceiptsPage() {
                         {receipt.receipt_number}
                       </p>
                       <Link
-                        href={`/portal/shipments/${shipment.id}`}
+                        href={`/portal/shipments/detail?id=${shipment.id}`}
                         className="inline-flex items-center gap-1 font-mono text-xs text-ink-muted hover:text-navy focus-ring rounded"
                       >
                         {shipment.tracking_number} <ExternalLink className="h-3 w-3" />
