@@ -88,11 +88,19 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
     doc.restore();
     textX = M + 98;
   } else {
+    // Package-icon mark (matches the site favicon) on a navy tile.
     doc.save();
-    doc.roundedRect(M, 26, 44, 44, 8).fill(GOLD);
-    doc.fillColor(NAVY).font("Helvetica-Bold").fontSize(26).text("H", M + 13, 33);
+    doc.roundedRect(M, 24, 48, 48, 10).fill(NAVY).stroke(GOLD);
+    const cx = M + 24, cy = 48;
+    doc.lineWidth(2.4).strokeColor(GOLD);
+    // cube outline
+    doc.moveTo(cx, cy - 15).lineTo(cx + 13, cy - 7).lineTo(cx + 13, cy + 8).lineTo(cx, cy + 16)
+      .lineTo(cx - 13, cy + 8).lineTo(cx - 13, cy - 7).closePath().stroke();
+    // top seam + vertical
+    doc.moveTo(cx - 13, cy - 7).lineTo(cx, cy + 1).lineTo(cx + 13, cy - 7).stroke();
+    doc.moveTo(cx, cy + 1).lineTo(cx, cy + 16).stroke();
     doc.restore();
-    textX = M + 58;
+    textX = M + 62;
   }
   // Company block (left) constrained so it never collides with the title.
   const nameW = 250;

@@ -11,10 +11,14 @@ import {
   MapPin,
   Activity as ActivityIcon,
   ArrowRight,
+  DollarSign,
+  Wallet,
+  TrendingUp,
 } from "lucide-react";
 import { listAllShipments, listUsers, listInquiries, listActivity } from "@/lib/db";
 import type { Shipment, AppUser, ContactInquiry, ActivityLog } from "@/lib/types";
 import { STAGES, SERVICES } from "@/lib/constants";
+import { formatCurrency } from "@/lib/utils";
 import { StatCard } from "@/components/portal/StatCard";
 import {
   ChartCard,
@@ -103,6 +107,43 @@ export default function AdminDashboardPage() {
   }));
   const serviceTotal = serviceData.reduce((a, b) => a + b.value, 0);
 
+  // ── Revenue ──
+  const totalRevenue = shipments.reduce((a, s) => a + (s.total_price || 0), 0);
+  const paidRevenue = shipments
+    .filter((s) => s.payment_status === "paid")
+    .reduce((a, s) => a + (s.total_price || 0), 0);
+  const outstanding = shipments.reduce(
+    (a, s) => a + (s.balance != null ? s.balance : s.payment_status === "paid" ? 0 : s.total_price || 0),
+    0
+  );
+  const revenueThisMonth = shipments
+    .filter((s) => {
+      const d = tsToDate(s.created_at);
+      return d ? d >= monthStart : false;
+    })
+    .reduce((a, s) => a + (s.total_price || 0), 0);
+
+  // ── Item-type breakdown (across all sea shipments' line items) ──
+  const itemTypeData: CategoryDatum[] = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const s of shipments) {
+      if (s.items && s.items.length) {
+        for (const it of s.items) {
+          const cat = it.category || it.description || "Other";
+          counts[cat] = (counts[cat] || 0) + (it.quantity || 1);
+        }
+      } else {
+        const label = s.service_type === "air" ? "Air freight" : s.service_type === "roro" ? "Vehicle (RORO)" : "Other";
+        counts[label] = (counts[label] || 0) + 1;
+      }
+    }
+    return Object.entries(counts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 8);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shipments]);
+
   const monthsData = React.useMemo(() => {
     const buckets: { name: string; key: string; value: number }[] = [];
     for (let i = 5; i >= 0; i--) {
@@ -136,6 +177,42 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Revenue row (admin only) */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          label="Total revenue"
+          value={loading ? "-" : formatCurrency(totalRevenue)}
+          icon={DollarSign}
+          accent="navy"
+          loading={loading}
+          hint="All shipments"
+        />
+        <StatCard
+          label="Collected (paid)"
+          value={loading ? "-" : formatCurrency(paidRevenue)}
+          icon={CheckCircle2}
+          accent="emerald"
+          loading={loading}
+          hint="Fully paid invoices"
+        />
+        <StatCard
+          label="Outstanding"
+          value={loading ? "-" : formatCurrency(outstanding)}
+          icon={Wallet}
+          accent="orange"
+          loading={loading}
+          hint="Balance due"
+        />
+        <StatCard
+          label="This month"
+          value={loading ? "-" : formatCurrency(revenueThisMonth)}
+          icon={TrendingUp}
+          accent="gold"
+          loading={loading}
+          hint={now.toLocaleString("en-US", { month: "long" })}
+        />
+      </div>
+
       {/* KPI row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
@@ -229,6 +306,21 @@ export default function AdminDashboardPage() {
             </ChartCard>
           )}
         </div>
+      </div>
+
+      {/* Item types across all shipments */}
+      <div>
+        {loading ? (
+          <ChartSkeleton />
+        ) : itemTypeData.length === 0 ? null : (
+          <ChartCard
+            title="What customers are shipping"
+            description="Item types across all shipments (by quantity)"
+            caption={`Item types, ${itemTypeData.map((d) => `${d.name}: ${d.value}`).join(", ")}.`}
+          >
+            <CategoryBarChart data={itemTypeData} />
+          </ChartCard>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { Menu, X, LogOut, ChevronDown } from "lucide-react";
+import { Menu, X, LogOut, ChevronDown, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { LogoMark } from "@/components/brand/Logo";
 import { cn, initialsOf } from "@/lib/utils";
@@ -33,10 +33,12 @@ function NavLinks({
   nav,
   pathname,
   onNavigate,
+  collapsed,
 }: {
   nav: PortalNavItem[];
   pathname: string;
   onNavigate?: () => void;
+  collapsed?: boolean;
 }) {
   return (
     <nav className="flex flex-1 flex-col gap-1 px-3 py-4" aria-label="Portal navigation">
@@ -49,8 +51,10 @@ function NavLinks({
             href={item.href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
+            title={collapsed ? item.label : undefined}
             className={cn(
               "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-ring",
+              collapsed && "justify-center px-0",
               active
                 ? "bg-gold-gradient text-navy shadow-gold"
                 : "text-white/70 hover:bg-white/10 hover:text-white"
@@ -60,7 +64,7 @@ function NavLinks({
               className={cn("h-[18px] w-[18px] shrink-0", active ? "text-navy" : "text-gold")}
               aria-hidden
             />
-            <span className="truncate">{item.label}</span>
+            {!collapsed && <span className="truncate">{item.label}</span>}
           </Link>
         );
       })}
@@ -68,17 +72,35 @@ function NavLinks({
   );
 }
 
-function SidebarBrand({ roleLabel }: { roleLabel: string }) {
+// Brand block is a link to the portal home; collapses to just the mark.
+function SidebarBrand({
+  roleLabel,
+  homeHref,
+  collapsed,
+}: {
+  roleLabel: string;
+  homeHref: string;
+  collapsed?: boolean;
+}) {
   return (
-    <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
-      <LogoMark className="h-9 w-9" />
-      <div className="min-w-0">
-        <p className="truncate text-sm font-bold leading-tight text-white">Highclass Shipping</p>
-        <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gold-200">
-          {roleLabel}
-        </p>
-      </div>
-    </div>
+    <Link
+      href={homeHref}
+      className={cn(
+        "flex items-center gap-3 border-b border-white/10 px-5 py-5 transition-colors hover:bg-white/5 focus-ring",
+        collapsed && "justify-center px-0"
+      )}
+      aria-label="Portal home"
+    >
+      <LogoMark className="h-9 w-9 shrink-0" />
+      {!collapsed && (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-bold leading-tight text-white">Highclass Shipping</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gold-200">
+            {roleLabel}
+          </p>
+        </div>
+      )}
+    </Link>
   );
 }
 
@@ -87,7 +109,29 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [collapsed, setCollapsed] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const homeHref = nav[0]?.href ?? "/";
+
+  // Restore collapse preference.
+  React.useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem("hc_sidebar_collapsed") === "1");
+    } catch {
+      /* ignore */
+    }
+  }, []);
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("hc_sidebar_collapsed", next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
 
   // Close mobile slide-over on route change.
   React.useEffect(() => {
@@ -109,16 +153,42 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
   return (
     <div className="min-h-screen bg-surface">
       {/* ─── Desktop fixed sidebar ─────────────────────────── */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 flex-col bg-navy-gradient lg:flex">
-        <SidebarBrand roleLabel={roleLabel} />
-        <NavLinks nav={nav} pathname={pathname} />
-        <div className="border-t border-white/10 px-3 py-4">
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-30 hidden flex-col bg-navy-gradient transition-[width] duration-200 lg:flex",
+          collapsed ? "w-[76px]" : "w-64"
+        )}
+      >
+        <SidebarBrand roleLabel={roleLabel} homeHref={homeHref} collapsed={collapsed} />
+        <NavLinks nav={nav} pathname={pathname} collapsed={collapsed} />
+        <div className="space-y-1 border-t border-white/10 px-3 py-4">
           <button
             onClick={() => void signOut()}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-ring cursor-pointer"
+            title={collapsed ? "Sign out" : undefined}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-ring cursor-pointer",
+              collapsed && "justify-center px-0"
+            )}
           >
-            <LogOut className="h-[18px] w-[18px] text-gold" aria-hidden />
-            Sign out
+            <LogOut className="h-[18px] w-[18px] shrink-0 text-gold" aria-hidden />
+            {!collapsed && "Sign out"}
+          </button>
+          <button
+            onClick={toggleCollapsed}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/50 transition-colors hover:bg-white/10 hover:text-white focus-ring cursor-pointer",
+              collapsed && "justify-center px-0"
+            )}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <PanelLeft className="h-[18px] w-[18px] shrink-0" aria-hidden />
+            ) : (
+              <>
+                <PanelLeftClose className="h-[18px] w-[18px] shrink-0" aria-hidden /> Collapse
+              </>
+            )}
           </button>
         </div>
       </aside>
@@ -133,7 +203,7 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
           />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col bg-navy-gradient shadow-premium animate-fade-up">
             <div className="flex items-center justify-between border-b border-white/10 pr-3">
-              <SidebarBrand roleLabel={roleLabel} />
+              <SidebarBrand roleLabel={roleLabel} homeHref={homeHref} />
               <button
                 onClick={() => setMobileOpen(false)}
                 className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white focus-ring cursor-pointer"
@@ -157,7 +227,7 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
       )}
 
       {/* ─── Main column ───────────────────────────────────── */}
-      <div className="lg:pl-64">
+      <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[76px]" : "lg:pl-64")}>
         {/* Top bar */}
         <header className="sticky top-0 z-20 border-b border-border bg-white/85 backdrop-blur">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6">

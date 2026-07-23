@@ -1,13 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Receipt, Download, CheckCircle2, Loader2 } from "lucide-react";
+import { Receipt, Download, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
-import { setPayment, logActivity } from "@/lib/db";
+import { setPayment, logActivity, deleteReceiptForShipment } from "@/lib/db";
 import { generateReceiptPdf } from "@/lib/notify";
 import { formatCurrency } from "@/lib/utils";
 import type { Shipment, Role } from "@/lib/types";
@@ -92,6 +92,33 @@ export function PaymentReceiptCard({
       toast.error("Could not update payment");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function deleteInvoice() {
+    if (
+      !window.confirm(
+        `Delete invoice ${shipment.receipt_number}? The customer will no longer be able to download it. You can regenerate it later.`
+      )
+    )
+      return;
+    setGenerating(true);
+    try {
+      await deleteReceiptForShipment(shipment.id);
+      await logActivity({
+        actor_id: actor.id,
+        actor_name: actor.full_name,
+        actor_role: actor.role,
+        action: "deleted invoice",
+        target: shipment.tracking_number,
+        meta: { shipment_id: shipment.id },
+      });
+      await onChanged();
+      toast.success("Invoice deleted");
+    } catch {
+      toast.error("Could not delete invoice");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -193,14 +220,24 @@ export function PaymentReceiptCard({
         )}
 
         {shipment.receipt_pdf_url && (
-          <a
-            href={shipment.receipt_pdf_url}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-center gap-2 rounded-lg border border-border bg-white py-2.5 text-sm font-semibold text-navy hover:bg-surface focus-ring"
-          >
-            <Download className="h-4 w-4" /> Download {shipment.receipt_number}
-          </a>
+          <div className="flex gap-2">
+            <a
+              href={shipment.receipt_pdf_url}
+              target="_blank"
+              rel="noreferrer"
+              className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-border bg-white py-2.5 text-sm font-semibold text-navy hover:bg-surface focus-ring"
+            >
+              <Download className="h-4 w-4" /> Download {shipment.receipt_number}
+            </a>
+            <button
+              onClick={deleteInvoice}
+              disabled={generating}
+              aria-label="Delete invoice"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 focus-ring disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
         )}
 
         <p className="text-center text-xs text-ink-muted">

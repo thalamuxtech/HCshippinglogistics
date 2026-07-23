@@ -67,8 +67,8 @@ export function SiteHeader() {
             : "border-border/60 bg-white/85 backdrop-blur"
         )}
       >
-        <div className="container-page flex h-[76px] items-center justify-between gap-4">
-          <Logo size="lg" />
+        <div className="container-page flex h-[84px] items-center justify-between gap-4">
+          <Logo size="xl" />
 
           <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
             {NAV.map((item) => {

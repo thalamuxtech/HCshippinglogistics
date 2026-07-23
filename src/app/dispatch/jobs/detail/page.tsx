@@ -137,6 +137,9 @@ function DispatchJobDetailPageInner() {
   }
 
   const alreadyDone = job.current_status === "completed";
+  // The admin controls when a rider can deliver: only actionable once the
+  // shipment reaches the "delivery" stage.
+  const readyToDeliver = job.current_status === "delivery";
 
   return (
     <div className="space-y-5">
@@ -200,6 +203,17 @@ function DispatchJobDetailPageInner() {
           <span className="text-base font-semibold text-emerald-700">
             This delivery is already completed.
           </span>
+        </div>
+      ) : !readyToDeliver ? (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-amber-600" />
+          <div>
+            <p className="text-base font-semibold text-amber-800">Not ready for delivery yet</p>
+            <p className="mt-0.5 text-sm text-amber-700">
+              The office will move this shipment to the delivery stage when it is ready for you.
+              You will be able to complete it then.
+            </p>
+          </div>
         </div>
       ) : (
         <div className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-card">

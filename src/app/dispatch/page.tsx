@@ -13,6 +13,7 @@ import {
 import { useAuth } from "@/components/providers/AuthProvider";
 import { listShipments, where } from "@/lib/db";
 import type { Shipment } from "@/lib/types";
+import { StageBadge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 
 export default function DispatchJobsPage() {
@@ -27,10 +28,18 @@ export default function DispatchJobsPage() {
       setLoading(true);
       try {
         const rows = await listShipments([where("assigned_dispatcher_id", "==", user.id)]);
-        const delivery = rows
-          .filter((s) => s.current_status === "delivery")
-          .sort((a, b) => (b.updated_at?.toMillis?.() ?? 0) - (a.updated_at?.toMillis?.() ?? 0));
-        if (active) setJobs(delivery);
+        // Show every job assigned to this rider that isn't completed yet, so
+        // they can see what's coming. "delivery" stage = ready to deliver now.
+        const active_jobs = rows
+          .filter((s) => s.current_status !== "completed")
+          .sort((a, b) => {
+            // Ready-for-delivery first, then by most recently updated.
+            const ar = a.current_status === "delivery" ? 0 : 1;
+            const br = b.current_status === "delivery" ? 0 : 1;
+            if (ar !== br) return ar - br;
+            return (b.updated_at?.toMillis?.() ?? 0) - (a.updated_at?.toMillis?.() ?? 0);
+          });
+        if (active) setJobs(active_jobs);
       } catch {
         if (active) setJobs([]);
       } finally {
@@ -81,6 +90,18 @@ export default function DispatchJobsPage() {
                   {job.tracking_number}
                 </span>
                 <ChevronRight className="mt-0.5 h-6 w-6 shrink-0 text-ink-muted" />
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <StageBadge status={job.current_status} />
+                {job.current_status === "delivery" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200">
+                    Ready to deliver
+                  </span>
+                ) : (
+                  <span className="text-xs text-ink-muted">
+                    Not ready yet · awaiting stage update
+                  </span>
+                )}
               </div>
 
               <div className="mt-3 space-y-2.5">

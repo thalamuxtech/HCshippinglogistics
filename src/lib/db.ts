@@ -11,6 +11,7 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   where,
   orderBy,
@@ -221,6 +222,19 @@ export async function listAllReceipts(max = 500): Promise<DigitalReceipt[]> {
     query(collection(db, COL.receipts), orderBy("generated_at", "desc"), fbLimit(max))
   );
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as DigitalReceipt);
+}
+
+/** Delete all receipt records for a shipment and clear its receipt fields (admin). */
+export async function deleteReceiptForShipment(shipmentId: string): Promise<void> {
+  const snap = await getDocs(
+    query(collection(db, COL.receipts), where("shipment_id", "==", shipmentId))
+  );
+  await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, COL.receipts, d.id))));
+  await updateDoc(doc(db, COL.shipments, shipmentId), {
+    receipt_number: null,
+    receipt_pdf_url: null,
+    updated_at: serverTimestamp(),
+  });
 }
 
 /** All receipts across a customer's shipments, paired with the owning shipment. */
