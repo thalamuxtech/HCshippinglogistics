@@ -296,13 +296,14 @@ export default function AdminDashboardPage() {
             </Card>
           ) : (
             <ChartCard
+              raw
               title="Service mix"
               description="Sea · Air · RORO"
               caption={`Service type breakdown, ${serviceData
                 .map((d) => `${d.name}: ${d.value}`)
                 .join(", ")}.`}
             >
-              <DonutChart data={serviceData} />
+              <DonutChart data={serviceData} centerLabel="Shipments" />
             </ChartCard>
           )}
         </div>
