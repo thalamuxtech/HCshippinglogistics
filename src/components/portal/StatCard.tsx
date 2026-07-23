@@ -8,6 +8,60 @@ import { Skeleton } from "@/components/ui/misc";
 
 type Accent = "navy" | "gold" | "emerald" | "blue" | "purple" | "orange";
 
+// Animate a number from 0 → target with an ease-out curve. Respects
+// prefers-reduced-motion (jumps straight to the target). Re-runs when target
+// changes so late-loading data still animates in.
+function useCountUp(target: number, durationMs = 1100, enabled = true): number {
+  const [display, setDisplay] = React.useState(enabled ? 0 : target);
+
+  React.useEffect(() => {
+    if (!enabled) {
+      setDisplay(target);
+      return;
+    }
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || target === 0) {
+      setDisplay(target);
+      return;
+    }
+
+    let raf = 0;
+    let start: number | null = null;
+    const from = 0;
+    const step = (ts: number) => {
+      if (start === null) start = ts;
+      const t = Math.min(1, (ts - start) / durationMs);
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplay(from + (target - from) * eased);
+      if (t < 1) raf = requestAnimationFrame(step);
+      else setDisplay(target);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, durationMs, enabled]);
+
+  return display;
+}
+
+// Small internal component so the hook only runs when count-up is requested.
+function CountUpValue({
+  to,
+  format,
+  duration,
+}: {
+  to: number;
+  format?: (n: number) => string;
+  duration?: number;
+}) {
+  const n = useCountUp(to, duration);
+  const rounded = Math.round(n);
+  return <>{format ? format(rounded) : rounded.toLocaleString()}</>;
+}
+
 const accentStyles: Record<Accent, { icon: string; ring: string }> = {
   navy: { icon: "bg-navy/5 text-navy", ring: "ring-navy/10" },
   gold: { icon: "bg-gold/15 text-gold-700", ring: "ring-gold/20" },
@@ -28,6 +82,10 @@ export interface StatCardProps {
   hint?: string;
   loading?: boolean;
   className?: string;
+  /** When set, the value animates (count-up) from 0 to this number. */
+  countTo?: number;
+  /** Formats the animated number (e.g. formatCurrency). Defaults to toLocaleString. */
+  format?: (n: number) => string;
 }
 
 export function StatCard({
@@ -40,6 +98,8 @@ export function StatCard({
   hint,
   loading,
   className,
+  countTo,
+  format,
 }: StatCardProps) {
   const a = accentStyles[accent];
 
@@ -77,7 +137,13 @@ export function StatCard({
           </span>
         )}
       </div>
-      <p className="mt-3 font-mono text-3xl font-bold tracking-tight text-navy">{value}</p>
+      <p className="mt-3 font-mono text-3xl font-bold tracking-tight text-navy">
+        {typeof countTo === "number" ? (
+          <CountUpValue to={countTo} format={format} />
+        ) : (
+          value
+        )}
+      </p>
       <div className="mt-2 flex items-center gap-2">
         {hasDelta && (
           <span

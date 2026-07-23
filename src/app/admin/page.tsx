@@ -181,7 +181,9 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total revenue"
-          value={loading ? "-" : formatCurrency(totalRevenue)}
+          value="-"
+          countTo={totalRevenue}
+          format={(n) => formatCurrency(n)}
           icon={DollarSign}
           accent="navy"
           loading={loading}
@@ -189,7 +191,9 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Collected (paid)"
-          value={loading ? "-" : formatCurrency(paidRevenue)}
+          value="-"
+          countTo={paidRevenue}
+          format={(n) => formatCurrency(n)}
           icon={CheckCircle2}
           accent="emerald"
           loading={loading}
@@ -197,7 +201,9 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Outstanding"
-          value={loading ? "-" : formatCurrency(outstanding)}
+          value="-"
+          countTo={outstanding}
+          format={(n) => formatCurrency(n)}
           icon={Wallet}
           accent="orange"
           loading={loading}
@@ -205,7 +211,9 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="This month"
-          value={loading ? "-" : formatCurrency(revenueThisMonth)}
+          value="-"
+          countTo={revenueThisMonth}
+          format={(n) => formatCurrency(n)}
           icon={TrendingUp}
           accent="gold"
           loading={loading}
@@ -217,7 +225,8 @@ export default function AdminDashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label="Active shipments"
-          value={loading ? "-" : active}
+          value="-"
+          countTo={active}
           icon={Package}
           accent="navy"
           loading={loading}
@@ -225,7 +234,8 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Completed this month"
-          value={loading ? "-" : completedThisMonth}
+          value="-"
+          countTo={completedThisMonth}
           icon={CheckCircle2}
           accent="emerald"
           loading={loading}
@@ -233,7 +243,8 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Total customers"
-          value={loading ? "-" : customers.length}
+          value="-"
+          countTo={customers.length}
           icon={Users}
           accent="gold"
           loading={loading}
@@ -241,7 +252,8 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="New inquiries"
-          value={loading ? "-" : newInquiries}
+          value="-"
+          countTo={newInquiries}
           icon={Inbox}
           accent="orange"
           loading={loading}
@@ -249,7 +261,8 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="USA-side shipments"
-          value={loading ? "-" : usaSide}
+          value="-"
+          countTo={usaSide}
           icon={Flag}
           accent="blue"
           loading={loading}
@@ -257,7 +270,8 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           label="Destination-side"
-          value={loading ? "-" : destSide}
+          value="-"
+          countTo={destSide}
           icon={MapPin}
           accent="purple"
           loading={loading}
