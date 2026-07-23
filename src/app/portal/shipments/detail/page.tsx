@@ -32,7 +32,7 @@ import type {
 } from "@/lib/types";
 import { formatCurrency, formatDate, formatDateTime, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StageBadge } from "@/components/ui/badge";
+import { StageBadge, Badge } from "@/components/ui/badge";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
 
@@ -313,6 +313,23 @@ function ShipmentDetailPageInner() {
                     : "Quoted separately"}
                 </span>
               </div>
+              {shipment.total_price > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-ink-muted">Payment</span>
+                  {shipment.payment_status === "paid" ? (
+                    <Badge variant="success">Paid</Badge>
+                  ) : shipment.payment_status === "partial" ? (
+                    <span className="text-sm">
+                      <Badge variant="warning">Part-paid</Badge>
+                      <span className="ml-2 font-mono text-xs text-ink-muted">
+                        Balance {formatCurrency(shipment.balance ?? 0, shipment.currency)}
+                      </span>
+                    </span>
+                  ) : (
+                    <Badge variant="danger">Unpaid</Badge>
+                  )}
+                </div>
+              )}
               {shipment.notes && (
                 <div className="border-t border-border pt-3">
                   <p className="text-xs font-medium uppercase tracking-wider text-ink-muted">

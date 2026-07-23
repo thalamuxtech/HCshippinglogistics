@@ -11,25 +11,19 @@ import {
   Phone,
   Mail,
   ArrowRight,
-  ReceiptText,
   Clock,
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import {
-  getShipment,
-  advanceStage,
-  listStatusLogs,
-  createReceipt,
-  logNotification,
-} from "@/lib/db";
-import { generateReceiptPdf, sendStageUpdateEmail } from "@/lib/notify";
+import { getShipment, advanceStage, listStatusLogs, logNotification } from "@/lib/db";
+import { sendStageUpdateEmail } from "@/lib/notify";
 import type { Shipment, StatusLog, ShipmentStatus } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, StageBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label, Textarea } from "@/components/ui/input";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
+import { PaymentReceiptCard } from "@/components/portal/PaymentReceiptCard";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import { STAGE_MAP, stageOrder } from "@/lib/constants";
@@ -53,7 +47,6 @@ function OfficeShipmentDetailPageInner() {
   const [loading, setLoading] = React.useState(true);
   const [notes, setNotes] = React.useState("");
   const [advancing, setAdvancing] = React.useState(false);
-  const [generating, setGenerating] = React.useState(false);
 
   const load = React.useCallback(async () => {
     const [s, l] = await Promise.all([getShipment(id), listStatusLogs(id)]);
@@ -130,41 +123,6 @@ function OfficeShipmentDetailPageInner() {
     }
   }
 
-  async function handleGenerateReceipt() {
-    if (!shipment || !user) return;
-    setGenerating(true);
-    try {
-      const res = await generateReceiptPdf({ shipmentId: shipment.id });
-      if (!res.ok) throw new Error("pdf");
-      await createReceipt({
-        shipment_id: shipment.id,
-        receipt_number: res.receiptNumber || `RCT-${shipment.tracking_number}`,
-        generated_by: user.id,
-        pdf_url: res.pdfUrl,
-        amount: shipment.total_price,
-        currency: shipment.currency,
-      });
-      await sendStageUpdateEmail({
-        shipmentId: shipment.id,
-        customerId: shipment.customer_id,
-        status: shipment.current_status,
-        extraNote: "Your digital receipt is now available.",
-      });
-      await logNotification({
-        customer_id: shipment.customer_id,
-        shipment_id: shipment.id,
-        channel: "email",
-        type: "receipt",
-        subject: `Digital receipt — ${shipment.tracking_number}`,
-        status: "sent",
-      });
-      toast.success("Receipt sent", "Digital receipt generated and emailed to the customer.");
-    } catch {
-      toast.error("Receipt failed", "Could not generate the receipt. Please try again.");
-    } finally {
-      setGenerating(false);
-    }
-  }
 
   if (loading) return <PageLoader label="Loading shipment…" />;
 
@@ -335,24 +293,13 @@ function OfficeShipmentDetailPageInner() {
 
         {/* Right column: receipt action */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Digital Receipt</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-sm text-ink-muted">
-                Generate a formal digital receipt and email it to the customer.
-              </p>
-              <Button
-                variant="gold"
-                onClick={handleGenerateReceipt}
-                loading={generating}
-                className="w-full"
-              >
-                <ReceiptText className="h-4 w-4" /> Generate &amp; send receipt
-              </Button>
-            </CardContent>
-          </Card>
+          {user && (
+            <PaymentReceiptCard
+              shipment={shipment}
+              actor={{ id: user.id, full_name: user.full_name, role: "nigeria_office" }}
+              onChanged={load}
+            />
+          )}
         </div>
       </div>
     </div>

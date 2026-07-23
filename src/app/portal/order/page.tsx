@@ -92,6 +92,11 @@ export default function OrderPage() {
   const [notes, setNotes] = React.useState<string>("");
   const [declaredValue, setDeclaredValue] = React.useState<string>("");
 
+  // ---- Receiver / consignee (for the receipt) ----
+  const [rcvName, setRcvName] = React.useState<string>("");
+  const [rcvPhone, setRcvPhone] = React.useState<string>("");
+  const [rcvAddress, setRcvAddress] = React.useState<string>("");
+
   // ---- Prefill from re-order (sessionStorage) ----
   React.useEffect(() => {
     try {
@@ -185,6 +190,8 @@ export default function OrderPage() {
   // ---- Validation ----
   function validate(): string | null {
     if (!destCountry) return "Please select a destination country.";
+    if (!rcvName.trim()) return "Please enter the receiver's full name.";
+    if (!rcvPhone.trim()) return "Please enter the receiver's phone number.";
     if (doorToDoor && !pickupAddress.trim())
       return "Pickup address is required for door-to-door service.";
     if (service === "sea" && seaSelections.length === 0)
@@ -227,6 +234,17 @@ export default function OrderPage() {
         declared_value: declaredValue ? Number(declaredValue) : undefined,
         total_price: grandTotal,
         currency: "USD",
+        // Receiver / consignee for the receipt
+        receiver: {
+          full_name: rcvName.trim(),
+          phone: rcvPhone.trim(),
+          address: rcvAddress.trim() || undefined,
+          city: destCity.trim() || undefined,
+        },
+        // Payment: new orders start unpaid; balance = full total
+        payment_status: "unpaid" as const,
+        deposit: 0,
+        balance: grandTotal,
       };
 
       let payload: Record<string, unknown> = base;
@@ -402,6 +420,46 @@ export default function OrderPage() {
                     value={destCity}
                     onChange={(e) => setDestCity(e.target.value)}
                     placeholder="e.g. Lagos"
+                  />
+                </div>
+              </div>
+
+              {/* Receiver / consignee */}
+              <div className="rounded-xl border border-border bg-surface p-4">
+                <p className="text-sm font-semibold text-navy">Receiver details</p>
+                <p className="text-xs text-ink-muted">Who receives this shipment at the destination.</p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="rcv-name" required>
+                      Receiver full name
+                    </Label>
+                    <Input
+                      id="rcv-name"
+                      value={rcvName}
+                      onChange={(e) => setRcvName(e.target.value)}
+                      placeholder="e.g. Hamida Umar"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="rcv-phone" required>
+                      Receiver phone
+                    </Label>
+                    <Input
+                      id="rcv-phone"
+                      type="tel"
+                      value={rcvPhone}
+                      onChange={(e) => setRcvPhone(e.target.value)}
+                      placeholder="e.g. 0706 645 0595"
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <Label htmlFor="rcv-address">Receiver address (optional)</Label>
+                  <Textarea
+                    id="rcv-address"
+                    value={rcvAddress}
+                    onChange={(e) => setRcvAddress(e.target.value)}
+                    placeholder="Street, area, city"
                   />
                 </div>
               </div>

@@ -12,6 +12,15 @@ export type VehicleClass = "class_a" | "class_b" | "class_c";
 
 export type ShippingLine = "grimaldi" | "sallaum" | "msc";
 
+export type PaymentStatus = "unpaid" | "partial" | "paid";
+
+export interface Receiver {
+  full_name: string;
+  phone: string;
+  address?: string;
+  city?: string;
+}
+
 // 8-stage lifecycle (ordered)
 export type ShipmentStatus =
   | "collection"
@@ -85,6 +94,16 @@ export interface Shipment {
   assigned_dispatcher_id?: string | null;
   total_price: number;
   currency: string;
+  // Payment
+  payment_status?: PaymentStatus;
+  deposit?: number;
+  balance?: number;
+  paid_at?: Timestamp | null;
+  // Receiver / consignee (for the receipt)
+  receiver?: Receiver;
+  // Latest generated receipt (for quick access)
+  receipt_number?: string;
+  receipt_pdf_url?: string;
   notes?: string;
   created_at?: Timestamp | null;
   updated_at?: Timestamp | null;
@@ -120,6 +139,9 @@ export interface DigitalReceipt {
   generated_by: string;
   pdf_url?: string;
   amount: number;
+  deposit?: number;
+  balance?: number;
+  payment_status?: PaymentStatus;
   currency: string;
 }
 

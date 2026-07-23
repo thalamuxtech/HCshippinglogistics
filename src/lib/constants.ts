@@ -213,9 +213,30 @@ export const COMPANY = {
   fmcLicensedSince: "2017",
   domain: "highclassshippinglogistics.com",
   webApp: "highclassshippinglogistics.web.app",
-  usaAddress: "USA Warehouse — address on file",
-  nigeriaOffice: "Nigeria Office — Lagos",
-  email: "info@highclassshippinglogistics.com",
+  email: "shipthroughhighclass@gmail.com",
+  usa: {
+    label: "USA Office & Warehouse",
+    lines: ["6600 Foxley Road", "Gate C", "Upper Marlboro, Maryland 20772"],
+    phones: ["+1 (240) 374-8394", "+1 (240) 499-6237"],
+  },
+  nigeria: {
+    label: "Nigeria Office",
+    lines: [
+      "28 Moleye Street, Alagomeji",
+      "(Behind Sweet Sensation), Along Herbert Macaulay Way",
+      "Yaba, Lagos",
+    ],
+    phones: ["0808 029 1754", "0704 393 7111"],
+  },
+  storagePolicy: {
+    freeDays: 7,
+    dailyChargeNaira: 7000,
+  },
+  terms: [
+    "Shipment to Nigeria is solely at the shipper's risk.",
+    "The company disclaims responsibility for damage or loss during shipment.",
+    "Free storage for 7 days after arrival; ₦7,000 daily storage applies thereafter.",
+  ],
 };
 
 // ---- Air freight helper ----

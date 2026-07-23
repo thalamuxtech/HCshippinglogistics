@@ -39,8 +39,11 @@ export const metadata: Metadata = {
   applicationName: COMPANY.shortName,
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.svg",
-    apple: "/brand/icon.svg",
+    icon: [
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/brand/icon-192.png",
   },
   openGraph: {
     type: "website",

@@ -1,33 +1,35 @@
 import Link from "next/link";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────
-// Brand Logo — placeholder wordmark + monogram.
-// When the client supplies the official logo, drop it into
-// /public/brand/logo.svg (and logo-mark.svg) and swap the JSX in
-// <LogoMark /> for an <Image src="/brand/logo.svg" ... />.
-// Everything else (header, footer, favicon references) reads from here.
+// Brand Logo — official Highclass Shipping & Logistics mark.
+// File: /public/brand/logo.png (ship + plane oval crest).
+// The crest has a white background, so on dark surfaces (footer/hero)
+// pass variant="light" to wrap it in a white rounded plate.
 // ─────────────────────────────────────────────────────────────
 
-export function LogoMark({ className }: { className?: string }) {
+const LOGO_SRC = "/brand/logo.png";
+const LOGO_W = 768;
+const LOGO_H = 512;
+
+export function LogoMark({ className, size = 40 }: { className?: string; size?: number }) {
   return (
     <span
-      className={cn(
-        "relative inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy-gradient shadow-premium",
-        className
-      )}
+      className={cn("relative inline-flex items-center justify-center overflow-hidden", className)}
+      style={{ width: size, height: size }}
       aria-hidden="true"
     >
-      {/* Gold "H" monogram with a subtle vessel line */}
-      <svg viewBox="0 0 32 32" className="h-6 w-6" fill="none">
-        <path
-          d="M9 7v18M23 7v18M9 16h14"
-          stroke="#D4A017"
-          strokeWidth="2.6"
-          strokeLinecap="round"
-        />
-        <path d="M6 26h20" stroke="#D4A017" strokeWidth="1.6" strokeLinecap="round" opacity="0.5" />
-      </svg>
+      {/* Crop to the crest area for a compact square mark */}
+      <Image
+        src={LOGO_SRC}
+        alt=""
+        width={LOGO_W}
+        height={LOGO_H}
+        className="max-w-none object-cover"
+        style={{ width: size * 1.5, height: "auto" }}
+        priority
+      />
     </span>
   );
 }
@@ -44,26 +46,26 @@ export function Logo({
   showText?: boolean;
 }) {
   const content = (
-    <span className={cn("group inline-flex items-center gap-2.5", className)}>
-      <LogoMark />
-      {showText && (
-        <span className="flex flex-col leading-none">
-          <span
-            className={cn(
-              "text-[15px] font-extrabold tracking-tight",
-              variant === "light" ? "text-white" : "text-navy"
-            )}
-          >
-            Highclass
-          </span>
-          <span
-            className={cn(
-              "text-[10px] font-semibold uppercase tracking-[0.22em]",
-              variant === "light" ? "text-gold-200" : "text-gold-600"
-            )}
-          >
-            Shipping &amp; Logistics
-          </span>
+    <span className={cn("group inline-flex items-center", className)}>
+      <span
+        className={cn(
+          "inline-flex items-center rounded-lg",
+          variant === "light" ? "bg-white p-1.5 shadow-sm" : ""
+        )}
+      >
+        <Image
+          src={LOGO_SRC}
+          alt="Highclass Shipping and Logistics Inc."
+          width={LOGO_W}
+          height={LOGO_H}
+          className="h-9 w-auto sm:h-10"
+          priority
+        />
+      </span>
+      {/* The wordmark is inside the crest already; keep text off by default to avoid duplication */}
+      {showText && false && (
+        <span className="ml-2 flex flex-col leading-none">
+          <span className="text-[15px] font-extrabold tracking-tight text-navy">Highclass</span>
         </span>
       )}
     </span>

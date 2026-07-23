@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { COMPANY } from "@/lib/constants";
-import { ShieldCheck, Ship, Plane, Truck } from "lucide-react";
+import { ShieldCheck, Ship } from "lucide-react";
 import { StaffQuickLogin } from "@/components/marketing/StaffQuickLogin";
 
 const cols = [
@@ -48,11 +48,26 @@ export function SiteFooter() {
               <ShieldCheck className="h-4 w-4" />
               FMC Licensed since {COMPANY.fmcLicensedSince} · CAC Registered
             </div>
-            <div className="mt-6 flex gap-3 text-white/50">
-              <Ship className="h-5 w-5" />
-              <Plane className="h-5 w-5" />
-              <Truck className="h-5 w-5" />
+
+            <div className="mt-6 grid gap-4 text-xs text-white/70 sm:grid-cols-2 lg:grid-cols-1">
+              <div>
+                <p className="font-semibold text-gold-200">{COMPANY.usa.label}</p>
+                <p className="mt-1 leading-relaxed">{COMPANY.usa.lines.join(", ")}</p>
+                <p className="mt-1 font-mono">{COMPANY.usa.phones.join(" · ")}</p>
+              </div>
+              <div>
+                <p className="font-semibold text-gold-200">{COMPANY.nigeria.label}</p>
+                <p className="mt-1 leading-relaxed">{COMPANY.nigeria.lines.join(", ")}</p>
+                <p className="mt-1 font-mono">{COMPANY.nigeria.phones.join(" · ")}</p>
+              </div>
             </div>
+
+            <a
+              href={`mailto:${COMPANY.email}`}
+              className="mt-4 inline-flex items-center gap-2 text-xs text-white/70 hover:text-gold-200"
+            >
+              <Ship className="h-4 w-4" /> {COMPANY.email}
+            </a>
           </div>
 
           {cols.map((col) => (

@@ -15,21 +15,32 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<Pick<
     Shipment,
-    "tracking_number" | "current_status" | "service_type" | "destination_country"
+    | "tracking_number"
+    | "current_status"
+    | "service_type"
+    | "destination_country"
+    | "payment_status"
   > | null>(null);
   const [notFound, setNotFound] = React.useState(false);
 
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
-    const code = tn.trim().toUpperCase();
+    const raw = tn.trim();
+    const code = raw.toUpperCase();
     if (!code) return;
     setLoading(true);
     setNotFound(false);
     setResult(null);
     try {
-      const snap = await getDocs(
+      // Match by tracking number, then fall back to customer ID.
+      let snap = await getDocs(
         query(collection(db, "shipments"), where("tracking_number", "==", code), limit(1))
       );
+      if (snap.empty) {
+        snap = await getDocs(
+          query(collection(db, "shipments"), where("customer_id", "==", raw), limit(1))
+        );
+      }
       if (snap.empty) {
         setNotFound(true);
       } else {
@@ -39,6 +50,7 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
           current_status: d.current_status,
           service_type: d.service_type,
           destination_country: d.destination_country,
+          payment_status: d.payment_status,
         });
       }
     } catch {
@@ -118,10 +130,46 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
               />
             ))}
           </div>
-          <p className={cn("mt-3 text-xs", isHero ? "text-white/60" : "text-ink-muted")}>
-            {result.service_type.toUpperCase()} · Destination: {result.destination_country} · Stage{" "}
-            {currentOrder} of 8
-          </p>
+          <div className={cn("mt-3 flex flex-wrap items-center gap-2 text-xs", isHero ? "text-white/60" : "text-ink-muted")}>
+            <span>
+              {result.service_type.toUpperCase()} · {result.destination_country} · Stage{" "}
+              {currentOrder} of 8
+            </span>
+            {result.payment_status && (
+              <span
+                className="rounded-full px-2 py-0.5 font-semibold"
+                style={{
+                  backgroundColor:
+                    result.payment_status === "paid"
+                      ? "#16A34A22"
+                      : result.payment_status === "partial"
+                      ? "#D9770622"
+                      : "#DC262622",
+                  color:
+                    result.payment_status === "paid"
+                      ? "#16A34A"
+                      : result.payment_status === "partial"
+                      ? "#D97706"
+                      : "#DC2626",
+                }}
+              >
+                {result.payment_status === "paid"
+                  ? "PAID"
+                  : result.payment_status === "partial"
+                  ? "PART-PAID"
+                  : "UNPAID"}
+              </span>
+            )}
+          </div>
+          <a
+            href="/login"
+            className={cn(
+              "mt-3 inline-flex items-center gap-1.5 text-xs font-semibold",
+              isHero ? "text-gold-200 hover:text-gold" : "text-gold-700 hover:underline"
+            )}
+          >
+            Log in to view full details &amp; download your receipt →
+          </a>
         </div>
       )}
 

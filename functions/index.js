@@ -17,6 +17,8 @@ import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
+import { getStorage } from "firebase-admin/storage";
+import { renderReceiptPdf } from "./receipt.js";
 
 initializeApp();
 const db = getFirestore();
@@ -339,24 +341,58 @@ export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (re
 export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
   const { shipmentId } = req.data || {};
   if (!shipmentId) throw new HttpsError("invalid-argument", "shipmentId required");
-  const shipSnap = await db.collection("shipments").doc(shipmentId).get();
+  const shipRef = db.collection("shipments").doc(shipmentId);
+  const shipSnap = await shipRef.get();
   if (!shipSnap.exists) throw new HttpsError("not-found", "Shipment not found");
-  const ship = shipSnap.data();
+  const ship = { id: shipSnap.id, ...shipSnap.data() };
 
-  // Serial receipt number.
-  const counterRef = db.collection("counters").doc("receipt");
-  const receiptNumber = await db.runTransaction(async (tx) => {
-    const c = await tx.get(counterRef);
-    const val = (c.exists ? c.data().value : 5000) + 1;
-    tx.set(counterRef, { value: val }, { merge: true });
-    return `HC-RCP-${val}`;
+  // Reuse the existing receipt number for this shipment if one exists, else mint.
+  let receiptNumber = ship.receipt_number;
+  if (!receiptNumber) {
+    const counterRef = db.collection("counters").doc("receipt");
+    receiptNumber = await db.runTransaction(async (tx) => {
+      const c = await tx.get(counterRef);
+      const val = (c.exists ? c.data().value : 5000) + 1;
+      tx.set(counterRef, { value: val }, { merge: true });
+      return `HC-RCP-${val}`;
+    });
+  }
+
+  // Render the branded PDF (with QR) and upload to Storage.
+  const pdf = await renderReceiptPdf({ shipment: ship, receiptNumber, siteUrl: SITE });
+  const bucket = getStorage().bucket();
+  const path = `receipts/${shipmentId}/${receiptNumber}.pdf`;
+  const file = bucket.file(path);
+  await file.save(pdf, {
+    contentType: "application/pdf",
+    resumable: false,
+    metadata: { cacheControl: "private, max-age=0" },
+  });
+  // Long-lived signed URL for download.
+  const [pdfUrl] = await file.getSignedUrl({
+    action: "read",
+    expires: Date.now() + 1000 * 60 * 60 * 24 * 365,
   });
 
-  // In stub mode we don't render a real PDF binary; we record the receipt.
-  // A real implementation would render with a PDF lib and upload to Storage.
-  const pdfUrl = `${SITE}/receipt/${shipmentId}?rcp=${receiptNumber}`;
+  // Record the receipt + attach latest to the shipment.
+  await db.collection("digital_receipts").add({
+    shipment_id: shipmentId,
+    receipt_number: receiptNumber,
+    generated_by: req.auth?.uid || "system",
+    pdf_url: pdfUrl,
+    amount: ship.total_price || 0,
+    deposit: ship.deposit || 0,
+    balance: ship.balance != null ? ship.balance : ship.total_price || 0,
+    payment_status: ship.payment_status || "unpaid",
+    currency: ship.currency || "USD",
+    generated_at: FieldValue.serverTimestamp(),
+  });
+  await shipRef.set(
+    { receipt_number: receiptNumber, receipt_pdf_url: pdfUrl, updated_at: FieldValue.serverTimestamp() },
+    { merge: true }
+  );
 
-  return { ok: true, receiptNumber, pdfUrl, stub: !process.env.RESEND_API_KEY };
+  return { ok: true, receiptNumber, pdfUrl };
 });
 
 // ═══════════════════════════════════════════════════════════════

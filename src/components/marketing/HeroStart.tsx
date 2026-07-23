@@ -34,7 +34,14 @@ export function HeroStart() {
   const [code, setCode] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<
-    | Pick<Shipment, "tracking_number" | "current_status" | "service_type" | "destination_country">
+    | Pick<
+        Shipment,
+        | "tracking_number"
+        | "current_status"
+        | "service_type"
+        | "destination_country"
+        | "payment_status"
+      >
     | null
   >(null);
   const [notFound, setNotFound] = React.useState(false);
@@ -65,6 +72,7 @@ export function HeroStart() {
           current_status: d.current_status,
           service_type: d.service_type,
           destination_country: d.destination_country,
+          payment_status: d.payment_status,
         });
       }
     } catch {
@@ -228,10 +236,43 @@ export function HeroStart() {
                     />
                   ))}
                 </div>
-                <p className="mt-3 text-xs text-white/60">
-                  {result.service_type.toUpperCase()} · {result.destination_country} · Stage{" "}
-                  {currentOrder} of 8
-                </p>
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-white/60">
+                  <span>
+                    {result.service_type.toUpperCase()} · {result.destination_country} · Stage{" "}
+                    {currentOrder} of 8
+                  </span>
+                  {result.payment_status && (
+                    <span
+                      className="rounded-full px-2 py-0.5 font-semibold"
+                      style={{
+                        backgroundColor:
+                          result.payment_status === "paid"
+                            ? "#16A34A33"
+                            : result.payment_status === "partial"
+                            ? "#D9770633"
+                            : "#DC262633",
+                        color:
+                          result.payment_status === "paid"
+                            ? "#4ADE80"
+                            : result.payment_status === "partial"
+                            ? "#FBBF24"
+                            : "#FCA5A5",
+                      }}
+                    >
+                      {result.payment_status === "paid"
+                        ? "PAID"
+                        : result.payment_status === "partial"
+                        ? "PART-PAID"
+                        : "UNPAID"}
+                    </span>
+                  )}
+                </div>
+                <a
+                  href="/login"
+                  className="mt-2 inline-flex text-xs font-semibold text-gold-200 hover:text-gold"
+                >
+                  Log in to view details &amp; download your receipt →
+                </a>
               </div>
             )}
 

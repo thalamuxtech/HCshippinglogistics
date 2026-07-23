@@ -14,13 +14,19 @@ export const metadata: Metadata = {
 const offices = [
   {
     icon: Warehouse,
-    label: "USA Warehouse",
-    lines: ["Collection, inspection & receipting hub", COMPANY.usaAddress, "Mon–Fri, 9:00 AM – 6:00 PM ET"],
+    label: COMPANY.usa.label,
+    subtitle: "Collection, inspection & receipting hub",
+    lines: COMPANY.usa.lines,
+    phones: COMPANY.usa.phones,
+    hours: "Mon–Fri, 9:00 AM – 6:00 PM ET",
   },
   {
     icon: Building2,
-    label: "Nigeria Office",
-    lines: ["Destination clearance & delivery", COMPANY.nigeriaOffice, "Mon–Sat, 9:00 AM – 5:00 PM WAT"],
+    label: COMPANY.nigeria.label,
+    subtitle: "Destination clearance & delivery",
+    lines: COMPANY.nigeria.lines,
+    phones: COMPANY.nigeria.phones,
+    hours: "Mon–Sat, 9:00 AM – 5:00 PM WAT",
   },
 ];
 
@@ -117,21 +123,30 @@ export default function ContactPage() {
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
                       <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy text-gold">
-                        <Icon className="h-4.5 w-4.5" />
+                        <Icon className="h-5 w-5" />
                       </span>
-                      <h3 className="font-bold text-navy">{o.label}</h3>
+                      <div>
+                        <h3 className="font-bold text-navy">{o.label}</h3>
+                        <p className="text-xs text-ink-muted">{o.subtitle}</p>
+                      </div>
                     </div>
                     <ul className="mt-4 space-y-2 text-sm text-ink-muted">
-                      {o.lines.map((line, idx) => (
-                        <li key={idx} className="flex items-start gap-2">
-                          {idx === 1 ? (
-                            <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-                          ) : (
-                            <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-border" />
-                          )}
-                          {line}
+                      <li className="flex items-start gap-2">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                        <span>{o.lines.join(", ")}</span>
+                      </li>
+                      {o.phones.map((p) => (
+                        <li key={p} className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 shrink-0 text-gold" />
+                          <a href={`tel:${p.replace(/[^\d+]/g, "")}`} className="hover:text-navy">
+                            {p}
+                          </a>
                         </li>
                       ))}
+                      <li className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 shrink-0 text-gold" />
+                        {o.hours}
+                      </li>
                     </ul>
                   </Card>
                 </Reveal>

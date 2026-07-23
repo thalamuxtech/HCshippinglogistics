@@ -32,6 +32,7 @@ import { Button } from "@/components/ui/button";
 import { Select, Textarea, Label } from "@/components/ui/input";
 import { StageBadge, Badge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
+import { PaymentReceiptCard } from "@/components/portal/PaymentReceiptCard";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDateTime } from "@/lib/utils";
 import type { Timestamp } from "firebase/firestore";
@@ -473,6 +474,15 @@ function AdminShipmentDetailPageInner() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Payment & receipt */}
+          {user && (
+            <PaymentReceiptCard
+              shipment={s}
+              actor={{ id: user.id, full_name: user.full_name, role: "admin" }}
+              onChanged={load}
+            />
+          )}
 
           {/* Assign dispatcher for last-mile delivery */}
           <Card>

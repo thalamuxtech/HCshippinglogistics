@@ -112,6 +112,24 @@ export async function updateShipment(id: string, data: Partial<Shipment>): Promi
   await updateDoc(doc(db, COL.shipments, id), { ...data, updated_at: serverTimestamp() });
 }
 
+// Set payment status + deposit/balance for a shipment (admin/office).
+export async function setPayment(
+  id: string,
+  params: { total: number; deposit: number }
+): Promise<{ payment_status: "paid" | "partial" | "unpaid"; balance: number }> {
+  const deposit = Math.max(0, Math.min(params.deposit, params.total));
+  const balance = Math.round((params.total - deposit) * 100) / 100;
+  const payment_status = balance <= 0 ? "paid" : deposit > 0 ? "partial" : "unpaid";
+  await updateDoc(doc(db, COL.shipments, id), {
+    deposit,
+    balance,
+    payment_status,
+    paid_at: payment_status === "paid" ? serverTimestamp() : null,
+    updated_at: serverTimestamp(),
+  });
+  return { payment_status, balance };
+}
+
 export async function listShipmentsByCustomer(customerId: string): Promise<Shipment[]> {
   const snap = await getDocs(
     query(
