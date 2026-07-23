@@ -247,6 +247,30 @@ async function sha256Hex(input) {
   return createHash("sha256").update(input).digest("hex");
 }
 
+export const publicTrack = onCall(async (req) => {
+  const raw = String(req.data?.code || "").trim();
+  if (!raw) return { found: false };
+  const code = raw.toUpperCase();
+
+  // Match by tracking number, then fall back to customer ID.
+  let snap = await db.collection("shipments").where("tracking_number", "==", code).limit(1).get();
+  if (snap.empty) {
+    snap = await db.collection("shipments").where("customer_id", "==", raw).limit(1).get();
+  }
+  if (snap.empty) return { found: false };
+
+  const d = snap.docs[0].data();
+  // Return ONLY non-sensitive fields — never customer PII or the PDF URL.
+  return {
+    found: true,
+    tracking_number: d.tracking_number || "",
+    current_status: d.current_status || "collection",
+    service_type: d.service_type || "sea",
+    destination_country: d.destination_country || "",
+    payment_status: d.payment_status || "unpaid",
+  };
+});
+
 export const resolveAccessCode = onCall(async (req) => {
   const clean = normalizeCode(req.data?.code);
   if (clean.length < 10 || clean.length > 12) return { found: false };
@@ -339,12 +363,26 @@ export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (re
 // real PDF rendering can be added with a PDF lib later)
 // ═══════════════════════════════════════════════════════════════
 export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  // Auth guard: only admin or the destination-office staff for this shipment's
+  // country may generate a receipt (prevents IDOR against other customers' PII).
+  if (!req.auth?.uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const actorSnap = await db.collection("users").doc(req.auth.uid).get();
+  const actor = actorSnap.exists ? actorSnap.data() : null;
+  if (!actor || !["admin", "nigeria_office"].includes(actor.role)) {
+    throw new HttpsError("permission-denied", "Staff access required.");
+  }
+
   const { shipmentId } = req.data || {};
   if (!shipmentId) throw new HttpsError("invalid-argument", "shipmentId required");
   const shipRef = db.collection("shipments").doc(shipmentId);
   const shipSnap = await shipRef.get();
   if (!shipSnap.exists) throw new HttpsError("not-found", "Shipment not found");
   const ship = { id: shipSnap.id, ...shipSnap.data() };
+
+  // Office staff may only receipt shipments for their assigned country.
+  if (actor.role === "nigeria_office" && ship.destination_country !== actor.assigned_country) {
+    throw new HttpsError("permission-denied", "Shipment is outside your assigned country.");
+  }
 
   // Reuse the existing receipt number for this shipment if one exists, else mint.
   let receiptNumber = ship.receipt_number;
@@ -358,21 +396,25 @@ export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req)
     });
   }
 
-  // Render the branded PDF (with QR) and upload to Storage.
+  // Render the branded PDF (with QR) and upload to Storage with a download token.
+  // Using a Firebase download token (not getSignedUrl) avoids requiring the
+  // iam.serviceAccountTokenCreator role on the runtime service account.
   const pdf = await renderReceiptPdf({ shipment: ship, receiptNumber, siteUrl: SITE });
   const bucket = getStorage().bucket();
   const path = `receipts/${shipmentId}/${receiptNumber}.pdf`;
   const file = bucket.file(path);
+  const downloadToken = `${shipmentId}-${receiptNumber}`.replace(/[^A-Za-z0-9-]/g, "");
   await file.save(pdf, {
     contentType: "application/pdf",
     resumable: false,
-    metadata: { cacheControl: "private, max-age=0" },
+    metadata: {
+      cacheControl: "private, max-age=0",
+      metadata: { firebaseStorageDownloadTokens: downloadToken },
+    },
   });
-  // Long-lived signed URL for download.
-  const [pdfUrl] = await file.getSignedUrl({
-    action: "read",
-    expires: Date.now() + 1000 * 60 * 60 * 24 * 365,
-  });
+  const pdfUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(
+    path
+  )}?alt=media&token=${downloadToken}`;
 
   // Record the receipt + attach latest to the shipment.
   await db.collection("digital_receipts").add({

@@ -45,6 +45,26 @@ export async function sendSailingBroadcast(
   return res.data as { ok: boolean; recipientCount: number; recipientIds: string[] };
 }
 
+export interface PublicTrackResult {
+  found: boolean;
+  tracking_number?: string;
+  current_status?: string;
+  service_type?: string;
+  destination_country?: string;
+  payment_status?: string;
+}
+
+/** Public shipment lookup by tracking number OR customer ID (no auth, safe fields only). */
+export async function publicTrack(code: string): Promise<PublicTrackResult> {
+  try {
+    const fn = httpsCallable(functions, "publicTrack");
+    const res = await fn({ code });
+    return (res.data as PublicTrackResult) ?? { found: false };
+  } catch {
+    return { found: false };
+  }
+}
+
 export async function sendAccessCodeEmail(payload: {
   email: string;
   fullName: string;

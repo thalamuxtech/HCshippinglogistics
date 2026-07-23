@@ -157,6 +157,20 @@ export default function AdminShipmentsPage() {
     });
   }, [shipments, q, status, service]);
 
+  // Keep the selection scoped to what's currently visible, so a bulk action
+  // can never touch a shipment the admin filtered out of view.
+  React.useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(filtered.map((s) => s.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (visible.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
+
   return (
     <div className="space-y-5">
       {/* Filters */}

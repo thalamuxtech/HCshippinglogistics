@@ -4,8 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Ship, Plane, Truck, ArrowRight, Search, PackageSearch, MapPin } from "lucide-react";
-import { collection, getDocs, query, where, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { publicTrack } from "@/lib/notify";
 import { DESTINATION_COUNTRIES, STAGES, STAGE_MAP } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { ServiceType, Shipment } from "@/lib/types";
@@ -48,31 +47,23 @@ export function HeroStart() {
 
   async function track(e: React.FormEvent) {
     e.preventDefault();
-    const c = code.trim().toUpperCase();
+    const c = code.trim();
     if (!c) return;
     setLoading(true);
     setNotFound(false);
     setResult(null);
     try {
-      // Match by tracking number OR by customer_id (Plan: retrieve records by customer ID).
-      let snap = await getDocs(
-        query(collection(db, "shipments"), where("tracking_number", "==", c), limit(1))
-      );
-      if (snap.empty) {
-        snap = await getDocs(
-          query(collection(db, "shipments"), where("customer_id", "==", code.trim()), limit(1))
-        );
-      }
-      if (snap.empty) {
+      // Public lookup by tracking number OR customer ID (safe fields only).
+      const d = await publicTrack(c);
+      if (!d.found) {
         setNotFound(true);
       } else {
-        const d = snap.docs[0].data() as Shipment;
         setResult({
-          tracking_number: d.tracking_number,
-          current_status: d.current_status,
-          service_type: d.service_type,
-          destination_country: d.destination_country,
-          payment_status: d.payment_status,
+          tracking_number: d.tracking_number ?? "",
+          current_status: (d.current_status ?? "collection") as Shipment["current_status"],
+          service_type: (d.service_type ?? "sea") as Shipment["service_type"],
+          destination_country: d.destination_country ?? "",
+          payment_status: d.payment_status as Shipment["payment_status"],
         });
       }
     } catch {
@@ -175,7 +166,7 @@ export function HeroStart() {
               </button>
             </div>
             <p className="mt-2 px-1 text-xs text-white/50">
-              Instant pricing · door-to-door available · no account needed to get a quote
+              Instant pricing · door-to-door available · free account, ready in a minute
             </p>
           </motion.div>
         ) : (

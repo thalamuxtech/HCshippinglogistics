@@ -2,8 +2,7 @@
 
 import * as React from "react";
 import { Search, PackageSearch } from "lucide-react";
-import { collection, getDocs, query, where, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { publicTrack } from "@/lib/notify";
 import { STAGES, STAGE_MAP } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { Shipment } from "@/lib/types";
@@ -26,31 +25,21 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
   async function onSearch(e: React.FormEvent) {
     e.preventDefault();
     const raw = tn.trim();
-    const code = raw.toUpperCase();
-    if (!code) return;
+    if (!raw) return;
     setLoading(true);
     setNotFound(false);
     setResult(null);
     try {
-      // Match by tracking number, then fall back to customer ID.
-      let snap = await getDocs(
-        query(collection(db, "shipments"), where("tracking_number", "==", code), limit(1))
-      );
-      if (snap.empty) {
-        snap = await getDocs(
-          query(collection(db, "shipments"), where("customer_id", "==", raw), limit(1))
-        );
-      }
-      if (snap.empty) {
+      const d = await publicTrack(raw);
+      if (!d.found) {
         setNotFound(true);
       } else {
-        const d = snap.docs[0].data() as Shipment;
         setResult({
-          tracking_number: d.tracking_number,
-          current_status: d.current_status,
-          service_type: d.service_type,
-          destination_country: d.destination_country,
-          payment_status: d.payment_status,
+          tracking_number: d.tracking_number ?? "",
+          current_status: (d.current_status ?? "collection") as Shipment["current_status"],
+          service_type: (d.service_type ?? "sea") as Shipment["service_type"],
+          destination_country: d.destination_country ?? "",
+          payment_status: d.payment_status as Shipment["payment_status"],
         });
       }
     } catch {

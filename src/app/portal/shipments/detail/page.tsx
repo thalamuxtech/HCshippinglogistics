@@ -53,7 +53,11 @@ function ShipmentDetailPageInner() {
   const [receipts, setReceipts] = React.useState<DigitalReceipt[]>([]);
 
   React.useEffect(() => {
-    if (!id || !user) return;
+    if (!user) return;
+    if (!id) {
+      setShipment(null);
+      return;
+    }
     let active = true;
     (async () => {
       try {
