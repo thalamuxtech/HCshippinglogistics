@@ -55,11 +55,39 @@ export function PaymentReceiptCard({
         target: shipment.tracking_number,
         meta: { shipment_id: shipment.id, status: res.payment_status },
       });
+
+      // When the shipment becomes fully paid, generate the invoice ONCE and
+      // release it for download (this is the only point an invoice is created).
+      if (res.payment_status === "paid" && !shipment.receipt_number) {
+        setGenerating(true);
+        try {
+          const r = await generateReceiptPdf({ shipmentId: shipment.id });
+          if (r.ok) {
+            await logActivity({
+              actor_id: actor.id,
+              actor_name: actor.full_name,
+              actor_role: actor.role,
+              action: "generated paid invoice",
+              target: shipment.tracking_number,
+              meta: { shipment_id: shipment.id, receipt: r.receiptNumber },
+            });
+            toast.success("Marked paid + invoice ready", r.receiptNumber);
+          } else {
+            toast.info("Marked paid", "Invoice could not be generated; try Regenerate.");
+          }
+        } catch {
+          toast.info("Marked paid", "Invoice service unavailable; try Regenerate shortly.");
+        } finally {
+          setGenerating(false);
+        }
+      } else {
+        toast.success(
+          markPaid ? "Marked as paid" : "Payment updated",
+          `Balance ${formatCurrency(res.balance, shipment.currency)}`
+        );
+      }
+
       await onChanged();
-      toast.success(
-        markPaid ? "Marked as paid" : "Payment updated",
-        `Balance ${formatCurrency(res.balance, shipment.currency)}`
-      );
     } catch {
       toast.error("Could not update payment");
     } finally {
@@ -67,27 +95,20 @@ export function PaymentReceiptCard({
     }
   }
 
-  async function makeReceipt() {
+  // Manual regenerate (only relevant once paid, e.g. if the first attempt failed).
+  async function regenerateInvoice() {
     setGenerating(true);
     try {
       const res = await generateReceiptPdf({ shipmentId: shipment.id });
       if (res.ok) {
-        await logActivity({
-          actor_id: actor.id,
-          actor_name: actor.full_name,
-          actor_role: actor.role,
-          action: "generated receipt",
-          target: shipment.tracking_number,
-          meta: { shipment_id: shipment.id, receipt: res.receiptNumber },
-        });
         await onChanged();
-        toast.success("Receipt generated", res.receiptNumber);
+        toast.success("Invoice ready", res.receiptNumber);
         if (res.pdfUrl) window.open(res.pdfUrl, "_blank");
       } else {
-        toast.error("Receipt failed", "Please try again.");
+        toast.error("Invoice failed", "Please try again.");
       }
     } catch {
-      toast.error("Receipt failed", "The receipt service is unavailable.");
+      toast.error("Invoice failed", "The invoice service is unavailable.");
     } finally {
       setGenerating(false);
     }
@@ -140,32 +161,36 @@ export function PaymentReceiptCard({
           </div>
         )}
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          {status !== "paid" && (
-            <Button
-              variant="primary"
-              className="flex-1"
-              onClick={() => savePayment(true)}
-              loading={saving}
-            >
-              <CheckCircle2 className="h-4 w-4" /> Mark fully paid
-            </Button>
-          )}
+        {status !== "paid" ? (
           <Button
-            variant="gold"
-            className="flex-1"
-            onClick={makeReceipt}
+            variant="primary"
+            className="w-full"
+            onClick={() => savePayment(true)}
+            loading={saving || generating}
+            disabled={saving || generating}
+          >
+            {generating ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Generating invoice…
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="h-4 w-4" /> Mark fully paid &amp; issue invoice
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={regenerateInvoice}
             loading={generating}
             disabled={generating}
           >
-            {generating ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Receipt className="h-4 w-4" />
-            )}
-            {shipment.receipt_number ? "Regenerate receipt" : "Generate receipt"}
+            {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
+            {shipment.receipt_number ? "Regenerate invoice" : "Generate invoice"}
           </Button>
-        </div>
+        )}
 
         {shipment.receipt_pdf_url && (
           <a
@@ -174,13 +199,14 @@ export function PaymentReceiptCard({
             rel="noreferrer"
             className="flex items-center justify-center gap-2 rounded-lg border border-border bg-white py-2.5 text-sm font-semibold text-navy hover:bg-surface focus-ring"
           >
-            <Download className="h-4 w-4" /> Download {shipment.receipt_number} (
-            {badge.label})
+            <Download className="h-4 w-4" /> Download {shipment.receipt_number}
           </a>
         )}
 
         <p className="text-center text-xs text-ink-muted">
-          The receipt shows the current payment status. Regenerate after recording payment.
+          {status === "paid"
+            ? "Paid. The invoice is available to the customer to download."
+            : "The invoice is issued once you mark this shipment fully paid."}
         </p>
       </CardContent>
     </Card>
