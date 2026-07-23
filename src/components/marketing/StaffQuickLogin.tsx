@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { ShieldCheck, Building2, Truck, User, Lock, X, Loader2 } from "lucide-react";
+import { ShieldCheck, Building2, Truck, Lock, X, Loader2 } from "lucide-react";
 import { login } from "@/lib/auth-service";
 import { getUser } from "@/lib/db";
 import { ROLE_HOME } from "@/components/providers/RequireRole";
@@ -19,11 +19,11 @@ import type { Role } from "@/lib/types";
 //     the real public launch. Credentials match scripts/seed-demo-users.mjs.
 // ─────────────────────────────────────────────────────────────
 
+// Staff only. Customers do not log in; they use their Customer ID on /track.
 const DEMO: { role: Role; label: string; email: string; password: string; icon: React.ElementType }[] = [
   { role: "admin", label: "Administrator", email: "admin@highclassshippinglogistics.com", password: "HCshipping@54321", icon: ShieldCheck },
   { role: "nigeria_office", label: "Destination Office", email: "nigeria.office@highclassshippinglogistics.com", password: "HCshipping@54321", icon: Building2 },
   { role: "dispatcher", label: "Dispatcher", email: "dispatcher@highclassshippinglogistics.com", password: "HCshipping@54321", icon: Truck },
-  { role: "customer", label: "Customer", email: "customer@highclassshippinglogistics.com", password: "HCshipping@54321", icon: User },
 ];
 
 export function StaffQuickLogin() {
