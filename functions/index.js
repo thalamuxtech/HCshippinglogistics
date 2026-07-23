@@ -993,7 +993,8 @@ export const deleteReceiptPdf = onCall(async (req) => {
 // ═══════════════════════════════════════════════════════════════
 export const createStaffUser = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
   await assertAdmin(req);
-  const { email, fullName, role, phone, assignedCountry, password } = req.data || {};
+  const { email, fullName, role, phone, assignedCountry, password, allowedFeatures } =
+    req.data || {};
   if (!email || !fullName || !role) {
     throw new HttpsError("invalid-argument", "email, fullName, and role are required.");
   }
@@ -1024,6 +1025,11 @@ export const createStaffUser = onCall({ secrets: EMAIL_SECRETS }, async (req) =>
     created_at: FieldValue.serverTimestamp(),
   };
   if (role === "nigeria_office" && assignedCountry) profile.assigned_country = assignedCountry;
+  // Optional per-user menu/feature override (array of feature keys). Absent/null
+  // means the account uses its role defaults.
+  if (Array.isArray(allowedFeatures)) {
+    profile.allowed_features = allowedFeatures.filter((k) => typeof k === "string");
+  }
 
   await db.collection("users").doc(userRecord.uid).set(profile);
   await db.collection("activity_log").doc().set({
@@ -1060,15 +1066,24 @@ function hashStr(s) {
 // ═══════════════════════════════════════════════════════════════
 export const updateStaffUser = onCall(async (req) => {
   await assertAdmin(req);
-  const { uid, role, assignedCountry, isActive } = req.data || {};
+  const { uid, role, assignedCountry, isActive, allowedFeatures } = req.data || {};
   if (!uid) throw new HttpsError("invalid-argument", "uid required.");
   const patch = {};
   if (role) patch.role = role;
   if (assignedCountry !== undefined) patch.assigned_country = assignedCountry;
   if (isActive !== undefined) patch.is_active = isActive;
+  // allowedFeatures: array => set exact override; null => clear (back to role defaults).
+  if (allowedFeatures === null) {
+    patch.allowed_features = FieldValue.delete();
+  } else if (Array.isArray(allowedFeatures)) {
+    patch.allowed_features = allowedFeatures.filter((k) => typeof k === "string");
+  }
   await db.collection("users").doc(uid).set(patch, { merge: true });
+  // Build a serializable meta (never log the FieldValue.delete sentinel).
+  const logMeta = { ...patch };
+  if (allowedFeatures === null) logMeta.allowed_features = "cleared";
   await db.collection("activity_log").doc().set({
-    actor_id: req.auth.uid, action: "staff_updated", target: uid, meta: patch,
+    actor_id: req.auth.uid, action: "staff_updated", target: uid, meta: logMeta,
     created_at: FieldValue.serverTimestamp(),
   });
   return { ok: true };

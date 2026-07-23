@@ -9,6 +9,8 @@ import {
   Truck,
   Copy,
   Power,
+  SlidersHorizontal,
+  Check,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +21,12 @@ import { useToast } from "@/components/ui/toast";
 import { listUsers } from "@/lib/db";
 import { createStaffUser, updateStaffUser } from "@/lib/notify";
 import { DESTINATION_COUNTRIES } from "@/lib/constants";
+import {
+  featuresForRole,
+  defaultFeatureKeys,
+  effectiveFeatureKeys,
+  type FeatureKey,
+} from "@/lib/features";
 import { formatDate, initialsOf } from "@/lib/utils";
 import type { AppUser, Role } from "@/lib/types";
 
@@ -51,6 +59,19 @@ export default function AdminStaffPage() {
   });
   const [errors, setErrors] = React.useState<Record<string, string>>({});
 
+  // New-account feature access (defaults to the full set for the chosen role).
+  const [createFeatures, setCreateFeatures] = React.useState<Set<FeatureKey>>(
+    () => new Set(defaultFeatureKeys("nigeria_office"))
+  );
+
+  // Per-user "Manage access" modal.
+  const [accessUser, setAccessUser] = React.useState<AppUser | null>(null);
+
+  // Reset the feature selection to the role default whenever the role changes.
+  React.useEffect(() => {
+    setCreateFeatures(new Set(defaultFeatureKeys(form.role)));
+  }, [form.role]);
+
   const load = React.useCallback(async () => {
     // Staff = all users whose role is not "customer".
     const all = await listUsers();
@@ -74,12 +95,19 @@ export default function AdminStaffPage() {
     if (!validate()) return;
     setSaving(true);
     try {
+      // Only send an override when the selection differs from the full role
+      // default; otherwise leave null so the account tracks role defaults.
+      const roleDefaults = defaultFeatureKeys(form.role);
+      const isFullDefault =
+        createFeatures.size === roleDefaults.length &&
+        roleDefaults.every((k) => createFeatures.has(k));
       const res = await createStaffUser({
         email: form.email,
         fullName: form.fullName.trim(),
         role: form.role,
         phone: form.phone,
         assignedCountry: form.role === "nigeria_office" ? form.assignedCountry : undefined,
+        allowedFeatures: isFullDefault ? null : Array.from(createFeatures),
       });
       setCreated({ email: form.email.trim().toLowerCase(), tempPassword: res.tempPassword });
       setForm({ fullName: "", email: "", phone: "", role: "nigeria_office", assignedCountry: "Nigeria" });
@@ -110,6 +138,17 @@ export default function AdminStaffPage() {
       toast.success("Country updated", `${u.full_name} → ${country}`);
     } catch {
       toast.error("Could not update country");
+    }
+  }
+
+  async function saveAccess(u: AppUser, keys: FeatureKey[] | null) {
+    try {
+      await updateStaffUser({ uid: u.id, allowedFeatures: keys });
+      setAccessUser(null);
+      await load();
+      toast.success("Access updated", `${u.full_name}'s menus were saved.`);
+    } catch {
+      toast.error("Could not update access");
     }
   }
 
@@ -183,6 +222,24 @@ export default function AdminStaffPage() {
                     </Select>
                   </div>
                 )}
+
+                {/* Menu access summary */}
+                {(() => {
+                  const total = featuresForRole(u.role).length;
+                  const eff = effectiveFeatureKeys(u.role, u.allowed_features).size;
+                  const custom = u.allowed_features != null;
+                  return (
+                    <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                      <span className="text-xs text-ink-muted">
+                        <span className="font-semibold text-navy">{eff}</span> of {total} menus
+                        {custom ? " · customized" : " · role default"}
+                      </span>
+                      <Button size="sm" variant="ghost" onClick={() => setAccessUser(u)}>
+                        <SlidersHorizontal className="h-3.5 w-3.5" /> Manage access
+                      </Button>
+                    </div>
+                  );
+                })()}
 
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
                   <span className="text-xs text-ink-muted">Joined {formatDate(u.created_at)}</span>
@@ -313,12 +370,167 @@ export default function AdminStaffPage() {
                 <FieldHint>This office will only see shipments for this country.</FieldHint>
               </div>
             )}
+
+            {/* Menu / feature access for the new account */}
+            <div>
+              <Label>Menu access</Label>
+              <FieldHint>
+                Choose which back-end menus this person can use. Core menus stay on.
+              </FieldHint>
+              <div className="mt-2 space-y-1.5 rounded-lg border border-border p-3">
+                {featuresForRole(form.role).map((f) => {
+                  const checked = createFeatures.has(f.key);
+                  return (
+                    <label
+                      key={f.key}
+                      className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm ${
+                        f.required ? "opacity-60" : "cursor-pointer hover:bg-secondary/50"
+                      }`}
+                    >
+                      <span className="text-ink">
+                        {f.label}
+                        {f.required && (
+                          <span className="ml-1.5 text-[10px] uppercase tracking-wide text-ink-muted">
+                            core
+                          </span>
+                        )}
+                      </span>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 cursor-pointer accent-navy disabled:cursor-not-allowed"
+                        checked={checked}
+                        disabled={f.required}
+                        onChange={(e) =>
+                          setCreateFeatures((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(f.key);
+                            else next.delete(f.key);
+                            return next;
+                          })
+                        }
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
             <Button type="submit" variant="gold" className="w-full" loading={saving}>
               Create staff account
             </Button>
           </form>
         )}
       </Modal>
+
+      {/* Manage per-user access modal */}
+      {accessUser && (
+        <AccessModal
+          user={accessUser}
+          onClose={() => setAccessUser(null)}
+          onSave={saveAccess}
+        />
+      )}
     </div>
+  );
+}
+
+// ── Per-user "Manage access" modal ──
+function AccessModal({
+  user,
+  onClose,
+  onSave,
+}: {
+  user: AppUser;
+  onClose: () => void;
+  onSave: (u: AppUser, keys: FeatureKey[] | null) => Promise<void> | void;
+}) {
+  const features = featuresForRole(user.role);
+  const [selected, setSelected] = React.useState<Set<FeatureKey>>(
+    () => effectiveFeatureKeys(user.role, user.allowed_features)
+  );
+  const [saving, setSaving] = React.useState(false);
+
+  const roleDefaults = defaultFeatureKeys(user.role);
+  const isFullDefault =
+    selected.size === roleDefaults.length && roleDefaults.every((k) => selected.has(k));
+
+  async function handleSave() {
+    setSaving(true);
+    // Full default -> null (track role); otherwise the exact set.
+    await onSave(user, isFullDefault ? null : Array.from(selected));
+    setSaving(false);
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Menu access — ${user.full_name}`}
+      description="Turn back-end menus on or off for this account. Core menus cannot be removed."
+    >
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <Badge variant={isFullDefault ? "muted" : "gold"}>
+            {isFullDefault ? "Role default" : "Customized"}
+          </Badge>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set(roleDefaults))}
+            className="text-xs font-semibold text-gold-700 hover:underline focus-ring rounded"
+          >
+            Reset to role default
+          </button>
+        </div>
+
+        <div className="max-h-[50vh] space-y-1.5 overflow-y-auto rounded-lg border border-border p-3">
+          {features.map((f) => {
+            const checked = selected.has(f.key);
+            return (
+              <label
+                key={f.key}
+                className={`flex items-center justify-between gap-2 rounded-md px-2 py-2 text-sm ${
+                  f.required ? "opacity-60" : "cursor-pointer hover:bg-secondary/50"
+                }`}
+              >
+                <span className="flex items-center gap-2 text-ink">
+                  {checked ? (
+                    <Check className="h-4 w-4 text-emerald-600" />
+                  ) : (
+                    <span className="h-4 w-4" />
+                  )}
+                  {f.label}
+                  {f.required && (
+                    <span className="text-[10px] uppercase tracking-wide text-ink-muted">core</span>
+                  )}
+                </span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 cursor-pointer accent-navy disabled:cursor-not-allowed"
+                  checked={checked}
+                  disabled={f.required}
+                  onChange={(e) =>
+                    setSelected((prev) => {
+                      const next = new Set(prev);
+                      if (e.target.checked) next.add(f.key);
+                      else next.delete(f.key);
+                      return next;
+                    })
+                  }
+                />
+              </label>
+            );
+          })}
+        </div>
+
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button variant="gold" className="flex-1" onClick={handleSave} loading={saving}>
+            Save access
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }

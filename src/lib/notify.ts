@@ -212,6 +212,7 @@ export async function createStaffUser(payload: {
   role: "admin" | "nigeria_office" | "dispatcher";
   phone?: string;
   assignedCountry?: string;
+  allowedFeatures?: string[] | null;
 }): Promise<{ ok: boolean; uid: string; tempPassword: string }> {
   const fn = httpsCallable(functions, "createStaffUser");
   const res = await fn(payload);
@@ -223,6 +224,8 @@ export async function updateStaffUser(payload: {
   role?: "admin" | "nigeria_office" | "dispatcher" | "customer";
   assignedCountry?: string;
   isActive?: boolean;
+  // null clears the override (back to role defaults); an array sets exact access.
+  allowedFeatures?: string[] | null;
 }): Promise<{ ok: boolean }> {
   const fn = httpsCallable(functions, "updateStaffUser");
   const res = await fn(payload);

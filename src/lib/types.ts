@@ -49,6 +49,9 @@ export interface AppUser {
   age?: number | null; // computed from dob, backend record only
   address?: string; // sender full address
   customer_code?: string;
+  // Per-user menu/feature overrides for staff. null/undefined = role defaults;
+  // otherwise the exact set of FeatureKeys this user may access (bounded by role).
+  allowed_features?: string[] | null;
   is_active: boolean;
   deleted?: boolean;
   notify_email?: boolean;

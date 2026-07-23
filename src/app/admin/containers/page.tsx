@@ -10,17 +10,19 @@ import {
   Package,
   ChevronRight,
   FlaskConical,
+  Plus,
+  Search,
 } from "lucide-react";
-import { listAllShipments, listUsers, logActivity } from "@/lib/db";
+import { listAllShipments, listUsers, logActivity, updateShipment } from "@/lib/db";
 import { sendContainerBroadcast } from "@/lib/notify";
 import type { Shipment, AppUser } from "@/lib/types";
-import { COMPANY } from "@/lib/constants";
+import { COMPANY, SERVICES } from "@/lib/constants";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input, Textarea, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton, EmptyState } from "@/components/ui/misc";
+import { Skeleton, EmptyState, Modal } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 
 // A container grouped from shipments.
@@ -65,6 +67,14 @@ export default function AdminContainersPage() {
   const [testEmail, setTestEmail] = React.useState(user?.email || "");
   const [testing, setTesting] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+
+  // Create / assign container modal
+  const [assignOpen, setAssignOpen] = React.useState(false);
+  const [assignCnt, setAssignCnt] = React.useState("");
+  const [assignDate, setAssignDate] = React.useState("");
+  const [assignQuery, setAssignQuery] = React.useState("");
+  const [assignPicked, setAssignPicked] = React.useState<Set<string>>(new Set());
+  const [assigning, setAssigning] = React.useState(false);
 
   const load = React.useCallback(async () => {
     const [s, u] = await Promise.all([listAllShipments(), listUsers("customer")]);
@@ -202,13 +212,84 @@ export default function AdminContainersPage() {
     }
   }
 
+  // ── Create / assign container ──
+  function openAssign(prefillCnt?: string) {
+    setAssignCnt(prefillCnt || "");
+    setAssignDate("");
+    setAssignQuery("");
+    setAssignPicked(new Set());
+    setAssignOpen(true);
+  }
+
+  const assignMatches = React.useMemo(() => {
+    const term = assignQuery.trim().toLowerCase();
+    return shipments
+      .filter((s) => {
+        if (!term) return true;
+        return (
+          s.tracking_number?.toLowerCase().includes(term) ||
+          s.customer_name?.toLowerCase().includes(term) ||
+          s.customer_email?.toLowerCase().includes(term) ||
+          s.container_number?.toLowerCase().includes(term)
+        );
+      })
+      .slice(0, 60);
+  }, [shipments, assignQuery]);
+
+  async function handleAssign() {
+    if (!user) return;
+    const cnt = assignCnt.trim();
+    if (!cnt) {
+      toast.error("Container number required", "Enter a CNT to assign to.");
+      return;
+    }
+    if (assignPicked.size === 0) {
+      toast.error("No shipments selected", "Pick at least one shipment.");
+      return;
+    }
+    setAssigning(true);
+    try {
+      const ids = Array.from(assignPicked);
+      for (const id of ids) {
+        await updateShipment(id, {
+          container_number: cnt,
+          container_shipped_on: assignDate || null,
+        });
+      }
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: `assigned ${ids.length} shipment(s) to CNT #${cnt}`,
+        target: `CNT #${cnt}`,
+        meta: { container_number: cnt, count: ids.length },
+      });
+      setAssignOpen(false);
+      await load();
+      setSelected(cnt);
+      toast.success(
+        "Shipments assigned",
+        `${ids.length} shipment(s) added to CNT #${cnt}.`
+      );
+    } catch {
+      toast.error("Assign failed", "Could not assign the selected shipments.");
+    } finally {
+      setAssigning(false);
+    }
+  }
+
   return (
     <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
       {/* Container list */}
       <Card className="flex h-fit flex-col">
-        <CardHeader className="flex-row items-center gap-2 space-y-0">
-          <Container className="h-4 w-4 text-gold" aria-hidden />
-          <CardTitle>Containers</CardTitle>
+        <CardHeader className="flex-row items-center justify-between gap-2 space-y-0">
+          <div className="flex items-center gap-2">
+            <Container className="h-4 w-4 text-gold" aria-hidden />
+            <CardTitle>Containers</CardTitle>
+          </div>
+          <Button size="sm" variant="gold" onClick={() => openAssign()}>
+            <Plus className="h-3.5 w-3.5" /> New
+          </Button>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -270,15 +351,24 @@ export default function AdminContainersPage() {
         <div className="space-y-6">
           {/* Recipients summary */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="font-mono">CNT #{selectedGroup.cnt}</span>
-                <Badge variant="gold">{recipients.length} recipient(s)</Badge>
-              </CardTitle>
-              <CardDescription>
-                Customers with active email on this container. Soft-deleted, inactive, or
-                opted-out customers are excluded automatically.
-              </CardDescription>
+            <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <span className="font-mono">CNT #{selectedGroup.cnt}</span>
+                  <Badge variant="gold">{recipients.length} recipient(s)</Badge>
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  {selectedGroup.shipments.length} shipment(s) on this container. Soft-deleted,
+                  inactive, or opted-out customers are excluded from broadcasts automatically.
+                </CardDescription>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openAssign(selectedGroup.cnt)}
+              >
+                <Plus className="h-3.5 w-3.5" /> Add shipments
+              </Button>
             </CardHeader>
             <CardContent>
               {recipients.length === 0 ? (
@@ -479,6 +569,139 @@ export default function AdminContainersPage() {
           </div>
         </div>
       )}
+
+      {/* Create / assign container modal */}
+      <Modal
+        open={assignOpen}
+        onClose={() => !assigning && setAssignOpen(false)}
+        title="Create or assign a container"
+        description="Give the container a number, then pick the customer shipments it carries."
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="assign-cnt" required>
+                Container number (CNT)
+              </Label>
+              <Input
+                id="assign-cnt"
+                value={assignCnt}
+                onChange={(e) => setAssignCnt(e.target.value)}
+                placeholder="e.g. 19B"
+              />
+            </div>
+            <div>
+              <Label htmlFor="assign-date">Shipped on (optional)</Label>
+              <Input
+                id="assign-date"
+                type="date"
+                value={assignDate}
+                onChange={(e) => setAssignDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <Label>Shipments</Label>
+            <div className="relative mt-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+              <Input
+                value={assignQuery}
+                onChange={(e) => setAssignQuery(e.target.value)}
+                placeholder="Search tracking #, customer, or current CNT…"
+                className="pl-9"
+              />
+            </div>
+
+            <div className="mt-2 flex items-center justify-between text-xs text-ink-muted">
+              <span>{assignPicked.size} selected</span>
+              {assignPicked.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setAssignPicked(new Set())}
+                  className="font-semibold text-gold-700 hover:underline focus-ring rounded"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="mt-1 max-h-[42vh] space-y-1 overflow-y-auto rounded-lg border border-border p-2">
+              {assignMatches.length === 0 ? (
+                <p className="p-3 text-sm text-ink-muted">No shipments match.</p>
+              ) : (
+                assignMatches.map((s) => {
+                  const picked = assignPicked.has(s.id);
+                  const onOther =
+                    s.container_number && s.container_number.trim() !== assignCnt.trim();
+                  return (
+                    <label
+                      key={s.id}
+                      className={`flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm hover:bg-secondary/50 ${
+                        picked ? "bg-gold/5" : ""
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 cursor-pointer accent-navy"
+                        checked={picked}
+                        onChange={(e) =>
+                          setAssignPicked((prev) => {
+                            const next = new Set(prev);
+                            if (e.target.checked) next.add(s.id);
+                            else next.delete(s.id);
+                            return next;
+                          })
+                        }
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-semibold text-navy">
+                            {s.tracking_number || s.id.slice(0, 8)}
+                          </span>
+                          <Badge variant="outline">{SERVICES[s.service_type].label}</Badge>
+                          {s.container_number && (
+                            <Badge variant={onOther ? "warning" : "muted"}>
+                              CNT #{s.container_number}
+                            </Badge>
+                          )}
+                        </span>
+                        <span className="mt-0.5 block truncate text-xs text-ink-muted">
+                          {s.customer_name || "Customer"} · {s.destination_country}
+                        </span>
+                      </span>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+            <p className="mt-1.5 text-xs text-ink-muted">
+              Shipments already on another container show an amber tag; assigning moves them here.
+              {assignMatches.length >= 60 && " Showing the first 60 — refine your search to narrow it."}
+            </p>
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setAssignOpen(false)}
+              disabled={assigning}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="gold"
+              className="flex-1"
+              onClick={handleAssign}
+              loading={assigning}
+              disabled={assigning || !assignCnt.trim() || assignPicked.size === 0}
+            >
+              Assign {assignPicked.size || ""} to CNT #{assignCnt.trim() || "…"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

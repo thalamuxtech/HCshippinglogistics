@@ -35,23 +35,23 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 w-full">
       {/* Top utility bar (desktop) */}
-      <div className="hidden bg-navy text-white/80 lg:block">
+      <div className="hidden bg-navy text-white lg:block">
         <div className="container-page flex h-9 items-center justify-between text-xs">
           <div className="flex items-center gap-5">
             <a
               href={`tel:${COMPANY.usa.phones[0].replace(/[^\d+]/g, "")}`}
-              className="inline-flex items-center gap-1.5 transition-colors hover:text-gold-200"
+              className="inline-flex items-center gap-1.5 text-white transition-colors hover:text-gold-200"
             >
               <Phone className="h-3.5 w-3.5 text-gold-300" /> {COMPANY.usa.phones[0]}
             </a>
             <a
               href={`mailto:${COMPANY.email}`}
-              className="inline-flex items-center gap-1.5 transition-colors hover:text-gold-200"
+              className="inline-flex items-center gap-1.5 text-white transition-colors hover:text-gold-200"
             >
               <Mail className="h-3.5 w-3.5 text-gold-300" /> {COMPANY.email}
             </a>
           </div>
-          <div className="flex items-center gap-2 text-gold-200">
+          <div className="flex items-center gap-2 font-medium text-white">
             <span className="h-1.5 w-1.5 rounded-full bg-gold-300" />
             FMC Licensed since {COMPANY.fmcLicensedSince} · USA to Africa
           </div>
