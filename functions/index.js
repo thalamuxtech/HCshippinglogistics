@@ -18,6 +18,7 @@ import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
+import { randomBytes, createHash } from "node:crypto";
 import { renderReceiptPdf } from "./receipt.js";
 
 initializeApp();
@@ -252,8 +253,7 @@ function dammCheck(body) {
 function normalizeCode(code) {
   return String(code || "").trim().toUpperCase().replace(/\s+/g, "");
 }
-async function sha256Hex(input) {
-  const { createHash } = await import("node:crypto");
+function sha256Hex(input) {
   return createHash("sha256").update(input).digest("hex");
 }
 
@@ -288,7 +288,7 @@ const ID_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ";
 function randomIdChars(n) {
   // Deterministic-free randomness is fine here (runs server-side per order).
   let out = "";
-  const bytes = require("node:crypto").randomBytes(n);
+  const bytes = randomBytes(n);
   for (let i = 0; i < n; i++) out += ID_ALPHABET[bytes[i] % ID_ALPHABET.length];
   return out;
 }
