@@ -122,7 +122,7 @@ export default function ContactPage() {
                 <Reveal key={o.label} delay={0.12 + i * 0.06}>
                   <Card className="p-6">
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy text-gold">
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy text-gold-300">
                         <Icon className="h-5 w-5" />
                       </span>
                       <div>

@@ -21,7 +21,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { cn } from "@/lib/utils";
 
 const NAVY = "#0B1E3A";
-const GOLD = "#D4A017";
+const GOLD = "#0A5BE0";
 
 // ─── Wrapper card ──────────────────────────────────────────
 export interface ChartCardProps {

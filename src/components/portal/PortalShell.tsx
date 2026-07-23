@@ -61,7 +61,7 @@ function NavLinks({
             )}
           >
             <Icon
-              className={cn("h-[18px] w-[18px] shrink-0", active ? "text-navy" : "text-gold")}
+              className={cn("h-[18px] w-[18px] shrink-0", active ? "text-navy" : "text-gold-300")}
               aria-hidden
             />
             {!collapsed && <span className="truncate">{item.label}</span>}
@@ -170,7 +170,7 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
               collapsed && "justify-center px-0"
             )}
           >
-            <LogOut className="h-[18px] w-[18px] shrink-0 text-gold" aria-hidden />
+            <LogOut className="h-[18px] w-[18px] shrink-0 text-gold-300" aria-hidden />
             {!collapsed && "Sign out"}
           </button>
           <button
@@ -218,7 +218,7 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
                 onClick={() => void signOut()}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-ring cursor-pointer"
               >
-                <LogOut className="h-[18px] w-[18px] text-gold" aria-hidden />
+                <LogOut className="h-[18px] w-[18px] text-gold-300" aria-hidden />
                 Sign out
               </button>
             </div>
@@ -248,7 +248,7 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
                 aria-expanded={menuOpen}
                 aria-label="Account menu"
               >
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-bold text-gold shadow-premium">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-navy text-sm font-bold text-gold-300 shadow-premium">
                   {initials}
                 </span>
                 <span className="hidden text-left sm:block">
@@ -279,7 +279,7 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
                     }}
                     className="flex w-full items-center gap-2 px-4 py-3 text-sm font-medium text-navy transition-colors hover:bg-secondary focus-ring cursor-pointer"
                   >
-                    <LogOut className="h-4 w-4 text-gold" aria-hidden />
+                    <LogOut className="h-4 w-4 text-gold-300" aria-hidden />
                     Sign out
                   </button>
                 </div>

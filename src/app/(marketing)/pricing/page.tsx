@@ -88,7 +88,7 @@ export default function PricingPage() {
         <div className="grid gap-6 md:grid-cols-3">
           <Reveal>
             <Card className="flex h-full flex-col p-6">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                 <Ship className="h-5 w-5" />
               </span>
               <h2 className="mt-5 text-lg font-bold text-navy">Sea Cargo</h2>
@@ -107,7 +107,7 @@ export default function PricingPage() {
 
           <Reveal delay={0.06}>
             <Card className="flex h-full flex-col p-6">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                 <Plane className="h-5 w-5" />
               </span>
               <h2 className="mt-5 text-lg font-bold text-navy">Air Freight</h2>
@@ -130,7 +130,7 @@ export default function PricingPage() {
 
           <Reveal delay={0.12}>
             <Card className="flex h-full flex-col p-6">
-              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+              <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                 <Truck className="h-5 w-5" />
               </span>
               <h2 className="mt-5 text-lg font-bold text-navy">RORO Vehicles</h2>

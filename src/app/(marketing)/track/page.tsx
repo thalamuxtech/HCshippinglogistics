@@ -355,7 +355,7 @@ function ShipmentCard({
         {/* Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-gold">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-gold-300">
               <Icon className="h-5 w-5" />
             </span>
             <div>
@@ -620,7 +620,7 @@ function TrackingResult({ result }: { result: PublicTrackResult }) {
       <Card className="overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-surface px-5 py-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-gold">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-gold-300">
               <Icon className="h-5 w-5" />
             </span>
             <div>

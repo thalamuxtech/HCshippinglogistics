@@ -42,17 +42,17 @@ export function SiteHeader() {
               href={`tel:${COMPANY.usa.phones[0].replace(/[^\d+]/g, "")}`}
               className="inline-flex items-center gap-1.5 transition-colors hover:text-gold-200"
             >
-              <Phone className="h-3.5 w-3.5 text-gold" /> {COMPANY.usa.phones[0]}
+              <Phone className="h-3.5 w-3.5 text-gold-300" /> {COMPANY.usa.phones[0]}
             </a>
             <a
               href={`mailto:${COMPANY.email}`}
               className="inline-flex items-center gap-1.5 transition-colors hover:text-gold-200"
             >
-              <Mail className="h-3.5 w-3.5 text-gold" /> {COMPANY.email}
+              <Mail className="h-3.5 w-3.5 text-gold-300" /> {COMPANY.email}
             </a>
           </div>
           <div className="flex items-center gap-2 text-gold-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-gold" />
+            <span className="h-1.5 w-1.5 rounded-full bg-gold-300" />
             FMC Licensed since {COMPANY.fmcLicensedSince} · USA to Africa
           </div>
         </div>
@@ -67,10 +67,10 @@ export function SiteHeader() {
             : "border-border/60 bg-white/85 backdrop-blur"
         )}
       >
-        <div className="container-page flex h-[84px] items-center justify-between gap-4">
-          <Logo size="xl" />
+        <div className="container-page flex h-[104px] items-center justify-between gap-4">
+          <Logo size="2xl" />
 
-          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Primary">
+          <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary">
             {NAV.map((item) => {
               const active = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
@@ -78,14 +78,19 @@ export function SiteHeader() {
                   key={item.href}
                   href={item.href}
                   className={cn(
-                    "relative rounded-md px-3.5 py-2 text-[15px] font-medium transition-colors focus-ring",
-                    active ? "text-navy" : "text-ink/70 hover:text-navy"
+                    "group relative rounded-lg px-3.5 py-2 text-[15px] font-medium transition-all duration-300 focus-ring",
+                    "hover:-translate-y-0.5 hover:bg-gold/5",
+                    active ? "text-navy" : "text-ink/70 hover:text-gold-700"
                   )}
                 >
                   {item.label}
-                  {active && (
-                    <span className="absolute inset-x-3.5 -bottom-[1px] h-0.5 rounded-full bg-gold" />
-                  )}
+                  {/* Animated underline: grows from the center on hover; pinned when active. */}
+                  <span
+                    className={cn(
+                      "pointer-events-none absolute -bottom-[3px] left-1/2 h-[2px] -translate-x-1/2 rounded-full bg-gold-gradient transition-all duration-300 ease-out",
+                      active ? "w-[calc(100%-1.75rem)]" : "w-0 group-hover:w-[calc(100%-1.75rem)]"
+                    )}
+                  />
                 </Link>
               );
             })}

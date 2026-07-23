@@ -127,7 +127,7 @@ export default function AdminCustomersPage() {
                         href={`/admin/customers/detail?id=${c.id}`}
                         className="flex items-center gap-3 focus-ring"
                       >
-                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold">
+                        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold-300">
                           {initialsOf(c.full_name)}
                         </span>
                         <span className="min-w-0">

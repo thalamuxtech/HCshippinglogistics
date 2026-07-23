@@ -11,6 +11,7 @@ import { getUser } from "@/lib/db";
 import { ROLE_HOME } from "@/components/providers/RequireRole";
 import { AlertCircle, Eye, EyeOff } from "lucide-react";
 import { PageLoader } from "@/components/ui/misc";
+import { Logo } from "@/components/brand/Logo";
 
 export default function LoginPage() {
   return (
@@ -62,8 +63,15 @@ function LoginForm() {
 
   return (
     <div className="animate-fade-up">
-      <h1 className="text-2xl font-extrabold tracking-tight text-navy">Staff sign in</h1>
-      <p className="mt-2 text-sm text-ink-muted">
+      {/* Big centered brand mark */}
+      <div className="mb-8 flex justify-center">
+        <Logo href="/" size="3xl" />
+      </div>
+
+      <h1 className="text-center text-2xl font-extrabold tracking-tight text-navy">
+        Staff sign in
+      </h1>
+      <p className="mt-2 text-center text-sm text-ink-muted">
         For Highclass team members. Customers do not need an account.
       </p>
 
@@ -148,7 +156,7 @@ function LoginForm() {
                     setEmail(d.email);
                     setPassword(d.password);
                   }}
-                  className="cursor-pointer rounded-md bg-navy px-2.5 py-1 text-[11px] font-semibold text-gold hover:bg-navy-700 focus-ring"
+                  className="cursor-pointer rounded-md bg-navy px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-navy-700 focus-ring"
                 >
                   Use &amp; fill
                 </button>

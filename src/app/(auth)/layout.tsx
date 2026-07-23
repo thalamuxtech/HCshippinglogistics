@@ -17,7 +17,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <div className="relative">
-          <Logo variant="light" />
+          <Logo variant="light" size="xl" />
         </div>
 
         <div className="relative max-w-md">
@@ -48,8 +48,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
       {/* Form panel */}
       <div className="flex flex-col">
-        <div className="flex items-center justify-between border-b border-border p-5 lg:hidden">
-          <Logo />
+        <div className="flex items-center justify-end border-b border-border p-5 lg:hidden">
           <Link href="/" className="inline-flex items-center gap-1.5 text-sm text-ink-muted hover:text-navy">
             <ArrowLeft className="h-4 w-4" /> Home
           </Link>

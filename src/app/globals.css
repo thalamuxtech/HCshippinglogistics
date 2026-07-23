@@ -23,15 +23,15 @@
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%; /* text secondary #718096 */
 
-    --accent: 43 80% 46%; /* gold #D4A017 */
-    --accent-foreground: 213 68% 14%;
+    --accent: 217 91% 46%; /* brand royal blue #0A5BE0 */
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 43 80% 46%; /* gold focus ring */
+    --ring: 217 91% 46%; /* royal-blue focus ring */
 
     --radius: 0.75rem;
   }
@@ -43,19 +43,19 @@
     --card-foreground: 210 40% 98%;
     --popover: 213 55% 12%;
     --popover-foreground: 210 40% 98%;
-    --primary: 43 80% 46%;
+    --primary: 217 91% 52%;
     --primary-foreground: 213 68% 9%;
     --secondary: 213 40% 18%;
     --secondary-foreground: 210 40% 98%;
     --muted: 213 40% 18%;
     --muted-foreground: 215 20% 65%;
-    --accent: 43 80% 46%;
+    --accent: 217 91% 52%;
     --accent-foreground: 213 68% 9%;
     --destructive: 0 62% 45%;
     --destructive-foreground: 210 40% 98%;
     --border: 213 40% 20%;
     --input: 213 40% 20%;
-    --ring: 43 80% 46%;
+    --ring: 217 91% 52%;
   }
 }
 

@@ -31,18 +31,33 @@ const config: Config = {
           900: "#071427",
           950: "#040B17",
         },
+        // Brand accent ramp — the logo's royal blue (the "Shipping" wordmark and
+        // swoosh ring). Kept under the `gold` token name so the whole app re-themes
+        // from one place; there is no gold in the Highclass brand.
         gold: {
-          DEFAULT: "#D4A017",
-          50: "#FBF4E0",
-          100: "#F6E7B8",
-          200: "#EDD077",
-          300: "#E4BA3D",
-          400: "#D4A017",
-          500: "#B08512",
-          600: "#8C6A0E",
-          700: "#684F0B",
-          800: "#453407",
-          900: "#221A04",
+          DEFAULT: "#0A5BE0",
+          50: "#EAF2FE",
+          100: "#CFE0FC",
+          200: "#9EC0F9",
+          300: "#5E97F3",
+          400: "#2E74EC",
+          500: "#0A5BE0",
+          600: "#0848B4",
+          700: "#063A93",
+          800: "#052D72",
+          900: "#04204F",
+        },
+        // Silver / steel accents echoing the logo's chrome ring and the
+        // "and Logistics Inc." lettering.
+        steel: {
+          DEFAULT: "#9AA6B2",
+          50: "#F4F6F8",
+          100: "#E6EAEE",
+          200: "#CBD3DB",
+          300: "#AAB5C0",
+          400: "#8A98A6",
+          500: "#6E7C8C",
+          600: "#55606D",
         },
         surface: "#F8FAFC",
         ink: {
@@ -106,13 +121,16 @@ const config: Config = {
       },
       boxShadow: {
         premium: "0 10px 40px -12px rgba(11, 30, 58, 0.25)",
-        gold: "0 8px 30px -8px rgba(212, 160, 23, 0.4)",
+        // Accent glow now uses the brand royal blue (token name kept as `gold`).
+        gold: "0 8px 30px -8px rgba(10, 91, 224, 0.45)",
         card: "0 1px 3px rgba(11, 30, 58, 0.08), 0 1px 2px rgba(11, 30, 58, 0.04)",
       },
       backgroundImage: {
         "navy-gradient": "linear-gradient(135deg, #0B1E3A 0%, #153052 55%, #071427 100%)",
-        "gold-gradient": "linear-gradient(135deg, #E4BA3D 0%, #D4A017 60%, #B08512 100%)",
-        "hero-radial": "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(212,160,23,0.18), transparent)",
+        // Brand royal-blue gradient (bright to deep), mirroring the logo swoosh.
+        "gold-gradient": "linear-gradient(135deg, #2E74EC 0%, #0A5BE0 55%, #0848B4 100%)",
+        "steel-gradient": "linear-gradient(135deg, #E6EAEE 0%, #AAB5C0 55%, #6E7C8C 100%)",
+        "hero-radial": "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(10,91,224,0.20), transparent)",
       },
       keyframes: {
         "accordion-down": {

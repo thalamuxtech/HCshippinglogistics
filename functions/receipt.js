@@ -20,7 +20,8 @@ try {
 }
 
 const NAVY = "#0B1E3A";
-const GOLD = "#D4A017";
+// Brand accent — the logo's royal blue (constant name kept as GOLD to avoid churn).
+const GOLD = "#0A5BE0";
 const INK = "#1A202C";
 const MUTED = "#718096";
 const LINE = "#E2E8F0";

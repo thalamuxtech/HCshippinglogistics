@@ -38,7 +38,7 @@ export function AirCalculator() {
         {/* Inputs */}
         <div className="p-6 sm:p-8">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy text-gold">
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy text-gold-300">
               <Plane className="h-4.5 w-4.5" />
             </span>
             <h3 className="text-lg font-bold text-navy">Air Freight Calculator</h3>

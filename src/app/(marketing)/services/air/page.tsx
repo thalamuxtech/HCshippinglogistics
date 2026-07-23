@@ -90,7 +90,7 @@ export default function AirFreightPage() {
             return (
               <Reveal key={h.title} delay={i * 0.06}>
                 <Card className="h-full p-6">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                     <Icon className="h-5 w-5" />
                   </span>
                   <h3 className="mt-5 font-bold text-navy">{h.title}</h3>

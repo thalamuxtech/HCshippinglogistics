@@ -122,7 +122,7 @@ export default function AdminActivityPage() {
                   <tr key={a.id} className="border-b border-border last:border-0 hover:bg-secondary/40">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-gold">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-[11px] font-bold text-gold-300">
                           {initialsOf(a.actor_name)}
                         </span>
                         <div className="min-w-0">

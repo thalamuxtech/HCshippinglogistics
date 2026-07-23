@@ -109,7 +109,7 @@ export default function EnterprisePage() {
             return (
               <Reveal key={s.title} delay={i * 0.06}>
                 <Card className="h-full p-7">
-                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                     <Icon className="h-6 w-6" />
                   </span>
                   <h3 className="mt-5 text-lg font-bold text-navy">{s.title}</h3>

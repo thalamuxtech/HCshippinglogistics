@@ -54,7 +54,7 @@ export default function DispatchJobsPage() {
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3">
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold">
+        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300">
           <Truck className="h-6 w-6" />
         </span>
         <div>

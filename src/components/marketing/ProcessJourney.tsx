@@ -16,7 +16,7 @@ type Step = { title: string; desc: string; Icon: React.FC<IconProps> };
 
 const easeOut = [0.22, 1, 0.36, 1] as const;
 const S = { stroke: "currentColor", strokeWidth: 3, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
-const G = { stroke: "#D4A017", strokeWidth: 3, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
+const G = { stroke: "#0A5BE0", strokeWidth: 3, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, fill: "none" };
 // White-filled variants (fill AFTER spread so it wins over fill:"none")
 
 // ── Illustrations (all 64x64, consistent weight & padding) ──
@@ -156,7 +156,7 @@ export function ProcessJourney() {
               y1="2"
               x2="900"
               y2="2"
-              stroke="#D4A017"
+              stroke="#0A5BE0"
               strokeWidth="3"
               strokeLinecap="round"
               initial={{ pathLength: 0 }}

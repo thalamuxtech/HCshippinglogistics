@@ -234,7 +234,7 @@ export default function HomePage() {
                     className={`absolute inset-0 bg-gradient-to-br ${svc.accent} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
                   />
                   <div className="relative">
-                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                    <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                       <Icon className="h-6 w-6" />
                     </span>
                     <h3 className="mt-5 text-xl font-bold text-navy">{meta.label}</h3>
@@ -274,7 +274,7 @@ export default function HomePage() {
               return (
                 <Reveal key={step.title} delay={i * 0.06}>
                   <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-6 shadow-card">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                       <Icon className="h-5 w-5" />
                     </span>
                     <h3 className="mt-5 font-bold text-navy">{step.title}</h3>

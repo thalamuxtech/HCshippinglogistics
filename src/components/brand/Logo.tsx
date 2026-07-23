@@ -10,8 +10,8 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────
 
 const LOGO_SRC = "/brand/logo.png";
-const LOGO_W = 768;
-const LOGO_H = 512;
+const LOGO_W = 945;
+const LOGO_H = 629;
 
 // Compact square mark (staff sidebar, small placements). Uses the clean
 // square brand icon so it stays crisp at any size.
@@ -37,10 +37,18 @@ export function Logo({
   className?: string;
   variant?: "dark" | "light";
   href?: string | null;
-  size?: "md" | "lg" | "xl";
+  size?: "md" | "lg" | "xl" | "2xl" | "3xl";
 }) {
   const imgH =
-    size === "xl" ? "h-14 sm:h-16" : size === "lg" ? "h-12 sm:h-14" : "h-11 sm:h-12";
+    size === "3xl"
+      ? "h-28 sm:h-36"
+      : size === "2xl"
+      ? "h-20 sm:h-24"
+      : size === "xl"
+      ? "h-16 sm:h-20"
+      : size === "lg"
+      ? "h-12 sm:h-14"
+      : "h-11 sm:h-12";
   const content = (
     <span className={cn("group inline-flex items-center", className)}>
       <span

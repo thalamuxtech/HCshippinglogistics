@@ -106,7 +106,7 @@ export default function RoroPage() {
             return (
               <Reveal key={key} delay={i * 0.06}>
                 <Card className="flex h-full flex-col p-6">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                     <Anchor className="h-5 w-5" />
                   </span>
                   <h3 className="mt-5 font-bold text-navy">{line.label}</h3>
@@ -198,7 +198,7 @@ export default function RoroPage() {
               return (
                 <Reveal key={d.title} delay={i * 0.06}>
                   <Card className="h-full p-6">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                       <Icon className="h-5 w-5" />
                     </span>
                     <h3 className="mt-5 font-bold text-navy">{d.title}</h3>

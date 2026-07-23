@@ -109,7 +109,7 @@ export function StaffQuickLogin() {
                       "group flex items-center gap-3 rounded-xl border border-border bg-white p-3.5 text-left transition-all hover:border-gold/50 hover:shadow-card focus-ring disabled:opacity-60"
                     )}
                   >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy text-gold">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy text-gold-300">
                       {busy === d.role ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
                       ) : (

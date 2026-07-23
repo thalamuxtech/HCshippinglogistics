@@ -97,7 +97,7 @@ function ReviewCard({ r }: { r: Review }) {
       </div>
       <blockquote className="mt-4 flex-1 text-sm leading-relaxed text-ink">{r.text}</blockquote>
       <figcaption className="mt-5 flex items-center gap-3 border-t border-border pt-4">
-        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-navy text-xs font-bold text-gold-300">
           {initialsOf(r.name)}
         </span>
         <div className="min-w-0">

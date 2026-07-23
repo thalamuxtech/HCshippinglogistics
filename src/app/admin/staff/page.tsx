@@ -147,7 +147,7 @@ export default function AdminStaffPage() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-navy text-sm font-bold text-gold">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-navy text-sm font-bold text-gold-300">
                       {initialsOf(u.full_name)}
                     </span>
                     <div>

@@ -165,7 +165,7 @@ export default function AboutPage() {
               return (
                 <Reveal key={b.title} delay={i * 0.06}>
                   <Card className="h-full p-6 text-center">
-                    <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                    <span className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
                       <Icon className="h-6 w-6" />
                     </span>
                     <h3 className="mt-4 font-bold text-navy">{b.title}</h3>

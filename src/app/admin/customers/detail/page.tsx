@@ -272,7 +272,7 @@ function AdminCustomerDetailPageInner() {
       <Card>
         <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy text-lg font-bold text-gold shadow-premium">
+            <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy text-lg font-bold text-gold-300 shadow-premium">
               {initialsOf(c.full_name)}
             </span>
             <div>

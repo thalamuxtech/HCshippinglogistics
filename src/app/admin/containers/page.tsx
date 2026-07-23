@@ -511,7 +511,7 @@ function EmailPreview(props: {
       <div className="h-1 bg-gold" />
       {/* Body */}
       <div className="space-y-4 bg-white px-6 py-6 text-sm">
-        <span className="inline-block rounded-full bg-navy px-3 py-1.5 text-xs font-bold tracking-wide text-gold">
+        <span className="inline-block rounded-full bg-navy px-3 py-1.5 text-xs font-bold tracking-wide text-gold-300">
           CNT #{props.cnt}
         </span>
         <h3 className="text-lg font-bold leading-snug text-navy">

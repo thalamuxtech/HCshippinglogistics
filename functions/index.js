@@ -155,14 +155,14 @@ function emailShell({ heading, body, trackingNumber, ctaUrl }) {
   return `<!doctype html><html><body style="margin:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;color:#1A202C">
   <div style="max-width:560px;margin:0 auto;padding:24px">
     <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px;padding:28px;color:#fff">
-      <div style="font-weight:800;font-size:18px">Highclass Shipping <span style="color:#D4A017">&amp; Logistics</span></div>
-      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#D4A017;margin-top:2px">Excellence in handling your valuables</div>
+      <div style="font-weight:800;font-size:18px">Highclass Shipping <span style="color:#5E97F3">&amp; Logistics</span></div>
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#5E97F3;margin-top:2px">Excellence in handling your valuables</div>
     </div>
     <div style="background:#fff;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 16px 16px;padding:28px">
       <h1 style="font-size:20px;margin:0 0 8px;color:#0B1E3A">${heading}</h1>
       <p style="font-size:14px;line-height:1.6;color:#334155">${body}</p>
       ${trackingNumber ? `<div style="margin:18px 0;padding:14px;background:#F8FAFC;border-radius:10px;font-family:monospace;font-size:15px;color:#0B1E3A"><strong>Tracking:</strong> ${trackingNumber}</div>` : ""}
-      ${ctaUrl ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:8px;background:#D4A017;color:#0B1E3A;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px">Track your shipment</a>` : ""}
+      ${ctaUrl ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:8px;background:#0A5BE0;color:#FFFFFF;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px">Track your shipment</a>` : ""}
       <p style="font-size:12px;color:#718096;margin-top:24px;border-top:1px solid #E2E8F0;padding-top:16px">
         FMC Licensed since 2017 · CAC Registered · This is an automated message from Highclass Shipping and Logistics Inc.
       </p>
@@ -211,16 +211,16 @@ function containerNoticeEmail({
   <div style="max-width:600px;margin:0 auto;padding:24px 16px">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px 16px 0 0;padding:30px 30px 26px">
-      <div style="color:#fff;font-weight:800;font-size:20px;letter-spacing:-0.2px">Highclass Shipping <span style="color:#D4A017">&amp; Logistics</span></div>
-      <div style="font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:#D4A017;margin-top:4px">Excellence in handling your valuables</div>
+      <div style="color:#fff;font-weight:800;font-size:20px;letter-spacing:-0.2px">Highclass Shipping <span style="color:#5E97F3">&amp; Logistics</span></div>
+      <div style="font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:#5E97F3;margin-top:4px">Excellence in handling your valuables</div>
     </div>
-    <div style="height:4px;background:#D4A017"></div>
+    <div style="height:4px;background:#0A5BE0"></div>
 
     <!-- Body card -->
     <div style="background:#fff;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 16px 16px;padding:30px">
       ${
         containerLabel
-          ? `<div style="display:inline-block;background:#0B1E3A;color:#D4A017;font-weight:700;font-size:13px;letter-spacing:1px;padding:7px 14px;border-radius:999px;margin-bottom:18px">${escapeHtml(
+          ? `<div style="display:inline-block;background:#0B1E3A;color:#5E97F3;font-weight:700;font-size:13px;letter-spacing:1px;padding:7px 14px;border-radius:999px;margin-bottom:18px">${escapeHtml(
               containerLabel
             )}</div>`
           : ""
@@ -233,7 +233,7 @@ function containerNoticeEmail({
       ${
         officeAddress || officePhone
           ? `<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:16px 18px;margin:0 0 16px">
-        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#D4A017;font-weight:700;margin-bottom:8px">Pickup Location</div>
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#0848B4;font-weight:700;margin-bottom:8px">Pickup Location</div>
         ${
           officeName
             ? `<div style="font-size:14px;font-weight:700;color:#0B1E3A;margin-bottom:4px">${escapeHtml(
@@ -261,7 +261,7 @@ function containerNoticeEmail({
 
       ${
         deliveryContactName || deliveryContactPhone
-          ? `<div style="border-left:3px solid #D4A017;padding:4px 0 4px 14px;margin:0 0 16px">
+          ? `<div style="border-left:3px solid #0A5BE0;padding:4px 0 4px 14px;margin:0 0 16px">
         <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#718096;font-weight:700;margin-bottom:3px">Need delivery?</div>
         <div style="font-size:13.5px;color:#334155">Call our Logistics Manager ${
           deliveryContactName ? `<strong>${escapeHtml(deliveryContactName)}</strong>` : ""
@@ -302,7 +302,7 @@ function containerNoticeEmail({
 
       ${
         ctaUrl
-          ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:20px;background:#D4A017;color:#0B1E3A;font-weight:700;font-size:14px;text-decoration:none;padding:13px 26px;border-radius:10px">View my shipment</a>`
+          ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:20px;background:#0A5BE0;color:#FFFFFF;font-weight:700;font-size:14px;text-decoration:none;padding:13px 26px;border-radius:10px">View my shipment</a>`
           : ""
       }
 
