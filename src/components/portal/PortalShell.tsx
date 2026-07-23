@@ -56,7 +56,7 @@ function NavLinks({
               "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-ring",
               collapsed && "justify-center px-0",
               active
-                ? "bg-gold-gradient text-navy shadow-gold"
+                ? "bg-gold-gradient text-white shadow-gold"
                 : "text-white/70 hover:bg-white/10 hover:text-white"
             )}
           >

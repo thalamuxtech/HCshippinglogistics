@@ -150,7 +150,7 @@ function TrackHub() {
               <button
                 type="submit"
                 disabled={mode === "loading"}
-                className="inline-flex h-12 min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gold-gradient px-6 text-sm font-semibold text-navy shadow-gold transition hover:brightness-105 focus-ring disabled:opacity-60"
+                className="inline-flex h-12 min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gold-gradient px-6 text-sm font-semibold text-white shadow-gold transition hover:brightness-105 focus-ring disabled:opacity-60"
               >
                 {mode === "loading" ? "Checking…" : "Check status"}
               </button>

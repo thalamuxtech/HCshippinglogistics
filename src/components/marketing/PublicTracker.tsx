@@ -83,7 +83,7 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
         <button
           type="submit"
           disabled={loading}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gold-gradient px-5 text-sm font-semibold text-navy shadow-gold transition hover:brightness-105 focus-ring disabled:opacity-60"
+          className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-gold-gradient px-5 text-sm font-semibold text-white shadow-gold transition hover:brightness-105 focus-ring disabled:opacity-60"
         >
           {loading ? "Tracking…" : "Track"}
         </button>

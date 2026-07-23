@@ -11,7 +11,7 @@ type Size = "sm" | "md" | "lg" | "icon";
 const variants: Record<Variant, string> = {
   primary:
     "bg-navy text-white hover:bg-navy-700 shadow-card",
-  gold: "bg-gold-gradient text-navy font-semibold hover:brightness-105 shadow-gold",
+  gold: "bg-gold-gradient text-white font-semibold hover:brightness-105 shadow-gold",
   outline:
     "border border-navy/20 bg-white text-navy hover:bg-navy/5",
   ghost: "text-navy hover:bg-navy/5",
