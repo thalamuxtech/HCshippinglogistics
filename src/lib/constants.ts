@@ -213,7 +213,7 @@ export const COMPANY = {
   fmcLicensedSince: "2017",
   domain: "highclassshippinglogistics.com",
   webApp: "highclassshippinglogistics.web.app",
-  email: "shipthroughhighclass@gmail.com",
+  email: "info@highclassshippinglogistics.com",
   usa: {
     label: "USA Office & Warehouse",
     lines: ["6600 Foxley Road", "Gate C", "Upper Marlboro, Maryland 20772"],

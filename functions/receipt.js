@@ -28,7 +28,7 @@ const LINE = "#E2E8F0";
 const COMPANY = {
   name: "HIGHCLASS SHIPPING AND LOGISTICS INC.",
   tagline: "Shipping from the USA to Nigeria & across Africa",
-  email: "shipthroughhighclass@gmail.com",
+  email: "info@highclassshippinglogistics.com",
   site: "highclassshippinglogistics.com",
   usa: ["6600 Foxley Road, Gate C", "Upper Marlboro, Maryland 20772", "+1 (240) 374-8394"],
   nigeria: ["28 Moleye Street, Alagomeji", "Yaba, Lagos", "0808 029 1754 · 0704 393 7111"],
