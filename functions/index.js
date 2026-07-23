@@ -380,14 +380,17 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   }
 
   // Create (or reuse) a lightweight customer record keyed by email.
+  // Query by email only (single-field, no composite index needed) then filter
+  // for role === "customer" in memory.
   const email = String(d.email).trim().toLowerCase();
   let customerId;
-  const existing = await db
+  const emailMatches = await db
     .collection("users")
     .where("email", "==", email)
-    .where("role", "==", "customer")
-    .limit(1)
+    .limit(5)
     .get();
+  const existingDoc = emailMatches.docs.find((doc) => doc.data().role === "customer");
+  const existing = { empty: !existingDoc, docs: existingDoc ? [existingDoc] : [] };
   const profileExtra = {
     full_name: d.full_name,
     phone: d.phone || "",
@@ -547,15 +550,16 @@ export const resolveAccessCode = onCall(async (req) => {
   if (dammCheck(body) !== clean.slice(-1)) return { found: false };
 
   const prefix = clean.slice(0, 4);
+  // Single-field query (no composite index); role filtered in memory.
   const snap = await db
     .collection("users")
     .where("access_code_prefix", "==", prefix)
-    .where("role", "==", "customer")
-    .limit(20)
+    .limit(30)
     .get();
 
   for (const d of snap.docs) {
     const u = d.data();
+    if (u.role !== "customer") continue;
     if (!u.access_code_salt || !u.access_code_hash) continue;
     const h = await sha256Hex(`${u.access_code_salt}:${clean}`);
     if (h === u.access_code_hash) {
