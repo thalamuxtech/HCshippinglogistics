@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
-import { setPayment, logActivity, deleteReceiptForShipment } from "@/lib/db";
-import { generateReceiptPdf } from "@/lib/notify";
+import { setPayment, logActivity } from "@/lib/db";
+import { generateReceiptPdf, deleteReceiptPdf } from "@/lib/notify";
 import { formatCurrency } from "@/lib/utils";
 import type { Shipment, Role } from "@/lib/types";
 
@@ -104,7 +104,7 @@ export function PaymentReceiptCard({
       return;
     setGenerating(true);
     try {
-      await deleteReceiptForShipment(shipment.id);
+      await deleteReceiptPdf({ shipmentId: shipment.id });
       await logActivity({
         actor_id: actor.id,
         actor_name: actor.full_name,

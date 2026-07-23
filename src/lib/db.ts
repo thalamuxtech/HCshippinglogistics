@@ -11,7 +11,6 @@ import {
   setDoc,
   addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
@@ -179,14 +178,18 @@ export async function advanceStage(params: {
 }
 
 export async function listStatusLogs(shipmentId: string): Promise<StatusLog[]> {
+  // Single-field query, then sort newest-first in memory so no composite index is required.
   const snap = await getDocs(
-    query(
-      collection(db, COL.statusLogs),
-      where("shipment_id", "==", shipmentId),
-      orderBy("created_at", "desc")
-    )
+    query(collection(db, COL.statusLogs), where("shipment_id", "==", shipmentId))
   );
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as StatusLog);
+  const logs = snap.docs.map(
+    (d) => ({ id: d.id, ...(d.data() as object) }) as StatusLog
+  );
+  return logs.sort((a, b) => {
+    const ta = (a.created_at as { seconds?: number } | undefined)?.seconds ?? 0;
+    const tb = (b.created_at as { seconds?: number } | undefined)?.seconds ?? 0;
+    return tb - ta;
+  });
 }
 
 // ---- Price list ----
@@ -224,18 +227,8 @@ export async function listAllReceipts(max = 500): Promise<DigitalReceipt[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as DigitalReceipt);
 }
 
-/** Delete all receipt records for a shipment and clear its receipt fields (admin). */
-export async function deleteReceiptForShipment(shipmentId: string): Promise<void> {
-  const snap = await getDocs(
-    query(collection(db, COL.receipts), where("shipment_id", "==", shipmentId))
-  );
-  await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, COL.receipts, d.id))));
-  await updateDoc(doc(db, COL.shipments, shipmentId), {
-    receipt_number: null,
-    receipt_pdf_url: null,
-    updated_at: serverTimestamp(),
-  });
-}
+// Invoice deletion is handled server-side by the deleteReceiptPdf Cloud Function
+// (Admin SDK) so it also removes the Storage PDF and cannot be blocked by rules.
 
 /** All receipts across a customer's shipments, paired with the owning shipment. */
 export async function listReceiptsForCustomer(

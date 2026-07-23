@@ -63,7 +63,7 @@ const trustStats = [
 
 const enterprise = [
   { icon: Landmark, title: "Government Agencies", desc: "Formal digital receipts, audit trails, and the tender-ready paperwork procurement teams ask for." },
-  { icon: Stethoscope, title: "Hospitals & Medical", desc: "Medical equipment moved carefully, with a documented chain of custody at every stage." },
+  { icon: Stethoscope, title: "Hospitals & Medical", desc: "Medical and diagnostic equipment moved carefully, with a documented chain of custody at every stage." },
   { icon: Building2, title: "Embassies & Corporates", desc: "Secure portal access with defined roles and service terms for long-running contracts." },
 ];
 
@@ -123,6 +123,11 @@ export default function HomePage() {
                   Nigeria &amp; across Africa
                 </span>
               </h1>
+            </Reveal>
+            <Reveal delay={0.12}>
+              <p className="mt-4 text-base font-semibold uppercase tracking-[0.14em] text-gold-200">
+                {COMPANY.slogan}
+              </p>
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
@@ -302,7 +307,8 @@ export default function HomePage() {
             <p className="mt-4 text-ink-muted">
               Highclass gives you a portal, formal digital receipts, and a full record of every stage.
               That is the documentation agencies, hospitals, and embassies review before they can
-              award a contract, and we have handled it since our first government job.
+              award a contract, and we have handled it since our first government job. We are
+              FMC-licensed since 2017 and registered in Maryland, USA and in Nigeria (CAC).
             </p>
             <ul className="mt-6 space-y-3">
               {[

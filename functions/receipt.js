@@ -27,11 +27,11 @@ const LINE = "#E2E8F0";
 
 const COMPANY = {
   name: "HIGHCLASS SHIPPING AND LOGISTICS INC.",
-  tagline: "Shipping from the USA to Nigeria & across Africa",
+  tagline: "Excellence in handling your valuables.",
   email: "info@highclassshippinglogistics.com",
   site: "highclassshippinglogistics.com",
   usa: ["6600 Foxley Road, Gate C", "Upper Marlboro, Maryland 20772", "+1 (240) 374-8394"],
-  nigeria: ["28 Moleye Street, Alagomeji", "Yaba, Lagos", "0808 029 1754 · 0704 393 7111"],
+  nigeria: ["28 Moleye Street, Alagomeji", "Yaba, Lagos", "+234 808 029 1754 · +234 704 393 7111"],
   terms: [
     "Shipment to Nigeria is solely at the shipper's risk.",
     "The company disclaims responsibility for damage or loss during shipment.",
@@ -66,7 +66,15 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   const qrDataUrl = await QRCode.toDataURL(qrTarget, { margin: 1, width: 220, color: { dark: NAVY, light: "#FFFFFF" } });
   const qrBuffer = Buffer.from(qrDataUrl.split(",")[1], "base64");
 
-  const doc = new PDFDocument({ size: "A4", margin: 40 });
+  // bufferPages lets us stamp "Page X of Y" once the final page count is known.
+  // bottomMargin:0 disables pdfkit's automatic page breaks so pages are only ever
+  // created by our explicit doc.addPage() calls; this keeps bufferedPageRange()
+  // accurate and prevents stray blank pages when text nears the bottom edge.
+  const doc = new PDFDocument({
+    size: "A4",
+    margins: { top: 40, left: 40, right: 40, bottom: 0 },
+    bufferPages: true,
+  });
   const chunks = [];
   doc.on("data", (c) => chunks.push(c));
   const done = new Promise((resolve) => doc.on("end", () => resolve(Buffer.concat(chunks))));
@@ -168,13 +176,19 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   // ── Item table (Description / QTY / Price / Amount) ──
   const cQty = W - M - 210, cPrice = W - M - 150, cAmt = W - M - 70;
   const headH = 24;
-  doc.rect(M, y, contentW, headH).fill(NAVY);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(9);
-  doc.text("DESCRIPTION", M + 10, y + 8);
-  doc.text("QTY", cQty, y + 8, { width: 50, align: "right" });
-  doc.text("PRICE", cPrice, y + 8, { width: 70, align: "right" });
-  doc.text("AMOUNT", cAmt, y + 8, { width: 60, align: "right" });
-  y += headH;
+  // Bottom limit for table rows so we never draw over the footer/page numbers.
+  const tableBottom = doc.page.height - 90;
+
+  const drawTableHead = () => {
+    doc.rect(M, y, contentW, headH).fill(NAVY);
+    doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(9);
+    doc.text("DESCRIPTION", M + 10, y + 8);
+    doc.text("QTY", cQty, y + 8, { width: 50, align: "right" });
+    doc.text("PRICE", cPrice, y + 8, { width: 70, align: "right" });
+    doc.text("AMOUNT", cAmt, y + 8, { width: 60, align: "right" });
+    y += headH;
+  };
+  drawTableHead();
 
   const items =
     shipment.items && shipment.items.length
@@ -207,8 +221,14 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   const rowH = 22;
   doc.font("Helvetica").fontSize(9.5);
   rowsToRender.forEach((it, i) => {
+    // Break to a fresh page (with a repeated table header) before overflowing.
+    if (y + rowH > tableBottom) {
+      doc.addPage();
+      y = M;
+      drawTableHead();
+    }
     if (i % 2 === 1) doc.rect(M, y, contentW, rowH).fill("#F4F7FB");
-    doc.fillColor(INK).font("Helvetica").text(it.description || "Item", M + 10, y + 6, { width: cQty - M - 20 });
+    doc.fillColor(INK).font("Helvetica").fontSize(9.5).text(it.description || "Item", M + 10, y + 6, { width: cQty - M - 20 });
     doc.text(String(it.quantity ?? 1), cQty, y + 6, { width: 50, align: "right" });
     doc.text(money(it.unit_price, currency), cPrice, y + 6, { width: 70, align: "right" });
     doc.font("Helvetica-Bold").fillColor(NAVY).text(money(it.line_total, currency), cAmt, y + 6, { width: 60, align: "right" });
@@ -216,6 +236,14 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   });
   doc.moveTo(M, y).lineTo(W - M, y).stroke(LINE);
   y += 10;
+
+  // Keep the totals + terms block together; move to a new page if it won't fit
+  // above the footer (matters for long, multi-page item lists).
+  const totalsBlockH = 150;
+  if (y + totalsBlockH > doc.page.height - 90) {
+    doc.addPage();
+    y = M;
+  }
 
   // ── Totals ──
   const total = shipment.total_price || 0;
@@ -273,6 +301,27 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   doc.fillColor(MUTED).font("Helvetica").fontSize(7.5).text(COMPANY.usa.join("  ·  "), M, fY + 10, { width: footColW });
   doc.fillColor(GOLD).font("Helvetica-Bold").fontSize(7.5).text("NIGERIA OFFICE", M + footColW + 20, fY);
   doc.fillColor(MUTED).font("Helvetica").fontSize(7.5).text(COMPANY.nigeria.join("  ·  "), M + footColW + 20, fY + 10, { width: footColW });
+
+  // ── Page numbering: "Page X of Y" stamped on every page (handles multi-page
+  // invoices with many line items). Done in a final pass once the count is known.
+  const range = doc.bufferedPageRange(); // { start, count }
+  const totalPages = range.count;
+  for (let i = 0; i < totalPages; i++) {
+    doc.switchToPage(range.start + i);
+    // y must stay above the bottom margin, otherwise pdfkit auto-adds a page
+    // during stamping (which throws off the count). lineBreak:false is a guard.
+    doc
+      .fillColor(MUTED)
+      .font("Helvetica")
+      .fontSize(7.5)
+      .text(
+        `Page ${i + 1} of ${totalPages}`,
+        M,
+        doc.page.height - 26,
+        { width: contentW, align: "center", lineBreak: false }
+      );
+  }
+  doc.flushPages();
 
   doc.end();
   return done;

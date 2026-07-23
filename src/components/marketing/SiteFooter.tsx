@@ -38,30 +38,18 @@ export function SiteFooter() {
         <div className="grid gap-12 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
             <Logo variant="light" size="lg" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-white/70">
+            <p className="mt-4 font-semibold text-gold-200">{COMPANY.slogan}</p>
+            <p className="mt-1.5 max-w-xs text-sm leading-relaxed text-white/70">
               {COMPANY.tagline}
             </p>
             <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-1.5 text-xs font-semibold text-gold-200 ring-1 ring-gold/30">
               <ShieldCheck className="h-4 w-4" />
-              FMC Licensed since {COMPANY.fmcLicensedSince} · CAC Registered
-            </div>
-
-            <div className="mt-6 grid gap-4 text-xs text-white/70 sm:grid-cols-2 lg:grid-cols-1">
-              <div>
-                <p className="font-semibold text-gold-200">{COMPANY.usa.label}</p>
-                <p className="mt-1 leading-relaxed">{COMPANY.usa.lines.join(", ")}</p>
-                <p className="mt-1 font-mono">{COMPANY.usa.phones.join(" · ")}</p>
-              </div>
-              <div>
-                <p className="font-semibold text-gold-200">{COMPANY.nigeria.label}</p>
-                <p className="mt-1 leading-relaxed">{COMPANY.nigeria.lines.join(", ")}</p>
-                <p className="mt-1 font-mono">{COMPANY.nigeria.phones.join(" · ")}</p>
-              </div>
+              FMC Licensed since {COMPANY.fmcLicensedSince} · Registered in Maryland &amp; Nigeria
             </div>
 
             <a
               href={`mailto:${COMPANY.email}`}
-              className="mt-4 inline-flex items-center gap-2 text-xs text-white/70 hover:text-gold-200"
+              className="mt-5 inline-flex items-center gap-2 text-sm text-white/70 hover:text-gold-200"
             >
               <Ship className="h-4 w-4" /> {COMPANY.email}
             </a>
@@ -92,8 +80,21 @@ export function SiteFooter() {
           <p>
             © {year} {COMPANY.name}. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
-            <p className="font-mono text-xs">{COMPANY.domain}</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href="/privacy"
+              className="text-xs text-white/70 transition-colors hover:text-gold-200 focus-ring rounded"
+            >
+              Privacy Policy
+            </Link>
+            <a
+              href="https://thalamux-tech.web.app"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-white/50 transition-colors hover:text-gold-200 focus-ring rounded"
+            >
+              Powered by ThalamuxTech
+            </a>
             {/* Discreet staff entry point */}
             <Link
               href="/login"

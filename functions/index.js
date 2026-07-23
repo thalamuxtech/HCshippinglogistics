@@ -13,6 +13,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
+import * as logger from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
@@ -717,6 +718,56 @@ export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req)
   );
 
   return { ok: true, receiptNumber, pdfUrl };
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Callable (admin): delete a shipment's invoice.
+// Removes the digital_receipts records, deletes the Storage PDF object,
+// and clears the receipt fields on the shipment. Runs with the Admin SDK
+// so it works regardless of client-side security rules and leaves no
+// orphaned (still-downloadable) PDF behind.
+// ═══════════════════════════════════════════════════════════════
+export const deleteReceiptPdf = onCall(async (req) => {
+  if (!req.auth?.uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const actorSnap = await db.collection("users").doc(req.auth.uid).get();
+  const actor = actorSnap.exists ? actorSnap.data() : null;
+  if (!actor || actor.role !== "admin") {
+    throw new HttpsError("permission-denied", "Admin access required.");
+  }
+
+  const { shipmentId } = req.data || {};
+  if (!shipmentId) throw new HttpsError("invalid-argument", "shipmentId required");
+
+  const shipRef = db.collection("shipments").doc(shipmentId);
+  const shipSnap = await shipRef.get();
+  if (!shipSnap.exists) throw new HttpsError("not-found", "Shipment not found");
+
+  // Delete every digital_receipts record for this shipment.
+  const recSnap = await db
+    .collection("digital_receipts")
+    .where("shipment_id", "==", shipmentId)
+    .get();
+  await Promise.all(recSnap.docs.map((d) => d.ref.delete()));
+
+  // Delete the Storage PDF(s) for this shipment (whole receipts/{shipmentId}/ prefix).
+  const bucket = getStorage().bucket("highclassshippinglogistics.firebasestorage.app");
+  try {
+    await bucket.deleteFiles({ prefix: `receipts/${shipmentId}/` });
+  } catch (err) {
+    logger.warn("deleteReceiptPdf: storage cleanup failed", err);
+  }
+
+  // Clear the receipt fields on the shipment.
+  await shipRef.set(
+    {
+      receipt_number: FieldValue.delete(),
+      receipt_pdf_url: FieldValue.delete(),
+      updated_at: FieldValue.serverTimestamp(),
+    },
+    { merge: true }
+  );
+
+  return { ok: true, deleted: recSnap.size };
 });
 
 // ═══════════════════════════════════════════════════════════════

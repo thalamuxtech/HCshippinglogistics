@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { Send } from "lucide-react";
+import { Send, Check } from "lucide-react";
+import { motion } from "framer-motion";
 import { createInquiry } from "@/lib/db";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
@@ -28,9 +29,10 @@ const EMPTY: FormState = {
 };
 
 export function ContactForm() {
-  const { success, error } = useToast();
+  const { error } = useToast();
   const [form, setForm] = React.useState<FormState>(EMPTY);
   const [submitting, setSubmitting] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
   const [errors, setErrors] = React.useState<Partial<Record<keyof FormState, string>>>({});
 
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
@@ -62,14 +64,60 @@ export function ContactForm() {
         inquiry_type: form.inquiry_type,
         message: form.message.trim(),
       });
-      success("Message sent", "Thank you. Our team will respond within one business day.");
       setForm(EMPTY);
       setErrors({});
+      setSent(true);
     } catch {
       error("Could not send", "Something went wrong. Please try again or email us directly.");
     } finally {
       setSubmitting(false);
     }
+  }
+
+  if (sent) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+        className="flex flex-col items-center py-8 text-center"
+      >
+        <motion.span
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 260, damping: 16, delay: 0.1 }}
+          className="relative flex h-20 w-20 items-center justify-center rounded-full bg-emerald-50"
+        >
+          <motion.span
+            className="absolute inset-0 rounded-full ring-2 ring-emerald-300"
+            initial={{ scale: 0.6, opacity: 0.8 }}
+            animate={{ scale: 1.5, opacity: 0 }}
+            transition={{ duration: 1.1, repeat: Infinity, ease: "easeOut" }}
+          />
+          <Check className="h-10 w-10 text-emerald-600" strokeWidth={3} />
+        </motion.span>
+        <motion.h3
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.25 }}
+          className="mt-5 text-xl font-extrabold text-navy"
+        >
+          Thank you, we&apos;ve got your message
+        </motion.h3>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.32 }}
+          className="mt-2 max-w-sm text-sm text-ink-muted"
+        >
+          Our team will get back to you within one business day. For anything urgent, call the
+          office numbers listed on this page.
+        </motion.p>
+        <Button variant="outline" className="mt-6" onClick={() => setSent(false)}>
+          Send another message
+        </Button>
+      </motion.div>
+    );
   }
 
   return (

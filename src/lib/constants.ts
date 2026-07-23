@@ -209,8 +209,10 @@ export const PRICE_CATEGORIES = Array.from(new Set(SEA_PRICE_LIST.map((i) => i.c
 export const COMPANY = {
   name: "Highclass Shipping and Logistics Inc.",
   shortName: "Highclass Shipping",
+  slogan: "Excellence in handling your valuables.",
   tagline: "Shipping from the USA to Nigeria & across Africa",
   fmcLicensedSince: "2017",
+  registration: "FMC-licensed since 2017 · Registered in Maryland, USA & Nigeria (CAC)",
   domain: "highclassshippinglogistics.com",
   webApp: "highclassshippinglogistics.web.app",
   email: "info@highclassshippinglogistics.com",
@@ -226,7 +228,7 @@ export const COMPANY = {
       "(Behind Sweet Sensation), Along Herbert Macaulay Way",
       "Yaba, Lagos",
     ],
-    phones: ["0808 029 1754", "0704 393 7111"],
+    phones: ["+234 808 029 1754", "+234 704 393 7111"],
   },
   storagePolicy: {
     freeDays: 7,

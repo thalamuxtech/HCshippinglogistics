@@ -477,8 +477,8 @@ function ShipmentCard({
             )}
           </div>
 
-          {/* Receipt */}
-          {s.receipt_pdf_url && (
+          {/* Invoice — available to the customer once the shipment is fully paid */}
+          {payment === "paid" && s.receipt_pdf_url && (
             <a
               href={s.receipt_pdf_url}
               target="_blank"
@@ -487,9 +487,6 @@ function ShipmentCard({
             >
               <FileText className="h-4 w-4" />
               Download invoice
-              <span className="text-xs font-normal text-ink-muted">
-                ({payment === "paid" ? "paid" : payment === "partial" ? "part-paid" : "unpaid"})
-              </span>
             </a>
           )}
         </CardContent>

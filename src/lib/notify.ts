@@ -161,6 +161,16 @@ export async function generateReceiptPdf(payload: {
   return res.data as { ok: boolean; pdfUrl?: string; receiptNumber?: string };
 }
 
+// Admin: delete a shipment's invoice server-side (removes receipt records,
+// the Storage PDF, and clears the shipment's receipt fields).
+export async function deleteReceiptPdf(payload: {
+  shipmentId: string;
+}): Promise<{ ok: boolean; deleted?: number }> {
+  const fn = httpsCallable(functions, "deleteReceiptPdf");
+  const res = await fn(payload);
+  return res.data as { ok: boolean; deleted?: number };
+}
+
 // ── Admin: staff management (server-side, admin-guarded) ──
 export async function createStaffUser(payload: {
   email: string;

@@ -18,7 +18,7 @@ import { Reveal } from "@/components/marketing/Reveal";
 export const metadata: Metadata = {
   title: "Enterprise & B2B Freight: Government, Hospitals & Embassies",
   description:
-    "Tender-ready freight forwarding for government agencies, hospitals, and embassies. Medical equipment logistics and 60+ container project experience with full audit trails.",
+    "Tender-ready freight forwarding for government agencies, hospitals, and embassies. FMC-licensed since 2017, registered in Maryland, USA and in Nigeria (CAC). Medical equipment logistics and 60+ container project experience with full audit trails.",
 };
 
 const segments = [
@@ -40,12 +40,12 @@ const segments = [
 ];
 
 const capabilities = [
-  { icon: Boxes, title: "60+ container projects", desc: "We have run large, multi-container programs, staging inventory and sequencing deliveries so they land in the right order." },
-  { icon: Stethoscope, title: "Medical equipment", desc: "Sensitive medical and lab equipment moved carefully and documented at each step." },
+  { icon: Boxes, title: "60+ container projects", desc: "We have run programs past 60 containers, staging inventory and sequencing deliveries so they land in the right order." },
+  { icon: Stethoscope, title: "Medical equipment", desc: "Medical, diagnostic, and lab equipment moved carefully and documented at each step, work we have done for hospital clients." },
   { icon: Lock, title: "Access by role", desc: "A portal where each person sees only what their role allows, with every action logged." },
   { icon: ClipboardCheck, title: "A record you can pull up", desc: "Every stage change and receipt kept on file and ready to export when someone asks." },
   { icon: FileCheck2, title: "Formal digital receipts", desc: "Receipts issued at inspection for tender and finance use, downloadable whenever you need them." },
-  { icon: ShieldCheck, title: "Licensed and registered", desc: "FMC-licensed since 2017 and CAC-registered in Nigeria, so we can bid the day you open the tender." },
+  { icon: ShieldCheck, title: "Licensed and registered", desc: "FMC-licensed since 2017 and registered in Maryland, USA and in Nigeria (CAC), so we can bid the day you open the tender." },
 ];
 
 export default function EnterprisePage() {
@@ -72,8 +72,9 @@ export default function EnterprisePage() {
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
                 Highclass gives you a documented record of every stage, formal receipts, and portal
-                access with defined roles. That is the paperwork procurement teams at government
-                agencies, hospitals, and embassies review before they can sign.
+                access with defined roles. FMC-licensed since 2017 and registered in Maryland, USA and
+                in Nigeria (CAC), we bring the paperwork procurement teams at government agencies,
+                hospitals, and embassies review before they can sign.
               </p>
             </Reveal>
             <Reveal delay={0.22}>
@@ -166,8 +167,9 @@ export default function EnterprisePage() {
                 </h2>
                 <p className="mt-4 text-ink-muted">
                   We have coordinated programs of more than 60 containers, staging inventory,
-                  sequencing sailings, and clearing customs across several destination ports, while
-                  keeping every stakeholder looking at the same documented record.
+                  sequencing sailings, and clearing customs across several destination ports. Our
+                  Maryland warehouse and our Lagos office work the same program together, so every
+                  stakeholder is looking at the same documented record from origin to delivery.
                 </p>
                 <div className="mt-6 grid grid-cols-3 gap-4">
                   {[
