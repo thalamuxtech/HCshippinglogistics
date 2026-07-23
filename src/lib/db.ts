@@ -215,6 +215,14 @@ export async function listReceiptsForShipment(shipmentId: string): Promise<Digit
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as DigitalReceipt);
 }
 
+/** All receipts across the whole platform (admin). Newest first. */
+export async function listAllReceipts(max = 500): Promise<DigitalReceipt[]> {
+  const snap = await getDocs(
+    query(collection(db, COL.receipts), orderBy("generated_at", "desc"), fbLimit(max))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as DigitalReceipt);
+}
+
 /** All receipts across a customer's shipments, paired with the owning shipment. */
 export async function listReceiptsForCustomer(
   customerId: string

@@ -10,6 +10,8 @@ import {
   Inbox,
   FileText,
   Activity,
+  ReceiptText,
+  Boxes,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { RequireRole } from "@/components/providers/RequireRole";
@@ -18,6 +20,8 @@ import { PortalShell, type PortalNavItem } from "@/components/portal/PortalShell
 const NAV: PortalNavItem[] = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/shipments", label: "Shipments", icon: Package },
+  { href: "/admin/receipts", label: "Receipts", icon: ReceiptText },
+  { href: "/admin/inventory", label: "Inventory", icon: Boxes },
   { href: "/admin/customers", label: "Customers", icon: Users },
   { href: "/admin/staff", label: "Staff & Roles", icon: UserCog },
   { href: "/admin/pricing", label: "Pricing", icon: Tags },
@@ -30,6 +34,8 @@ const NAV: PortalNavItem[] = [
 const TITLES: Record<string, string> = {
   "/admin": "Dashboard",
   "/admin/shipments": "Shipments",
+  "/admin/receipts": "Receipts",
+  "/admin/inventory": "Inventory",
   "/admin/customers": "Customers",
   "/admin/staff": "Staff & Roles",
   "/admin/pricing": "Pricing",
