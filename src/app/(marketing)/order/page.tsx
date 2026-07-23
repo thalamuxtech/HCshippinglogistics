@@ -26,11 +26,10 @@ import {
   classifyVehicle,
   type SeaSelection,
 } from "@/lib/pricing";
+import { usePricingSettings } from "@/lib/pricing-settings";
 import {
   SEA_PRICE_LIST,
   PRICE_CATEGORIES,
-  RORO_LINES,
-  VEHICLE_CLASSES,
   DESTINATION_COUNTRIES,
   SERVICES,
 } from "@/lib/constants";
@@ -75,6 +74,7 @@ function OrderFlow() {
   const router = useRouter();
   const params = useSearchParams();
   const toast = useToast();
+  const pricing = usePricingSettings();
 
   const [service, setService] = React.useState<ServiceType>("sea");
   const [submitting, setSubmitting] = React.useState(false);
@@ -207,17 +207,21 @@ function OrderFlow() {
       ? { length: Number(airL), width: Number(airW), height: Number(airH) }
       : undefined;
   const airQuote = React.useMemo(
-    () => buildAirQuote(Number(airWeight) || 0, airDims),
+    () =>
+      buildAirQuote(Number(airWeight) || 0, airDims, {
+        ratePerLb: pricing.air.ratePerLb,
+        dimDivisor: pricing.air.dimDivisor,
+      }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [airWeight, airL, airW, airH]
+    [airWeight, airL, airW, airH, pricing.air.ratePerLb, pricing.air.dimDivisor]
   );
 
   const effectiveClass: VehicleClass = useCurbWeight
     ? classifyVehicle(Number(curbWeight) || 0)
     : roroClass;
   const roroQuote = React.useMemo(
-    () => buildRoroQuote(roroLine, effectiveClass),
-    [roroLine, effectiveClass]
+    () => buildRoroQuote(roroLine, effectiveClass, pricing.roroLines),
+    [roroLine, effectiveClass, pricing.roroLines]
   );
 
   const PICKUP_FEE = 50;
@@ -1207,6 +1211,9 @@ function RoroBuilder({
   setVehicleDetails: (v: string) => void;
   effectiveClass: VehicleClass;
 }) {
+  const pricing = usePricingSettings();
+  const lineKeys: ShippingLine[] = ["grimaldi", "sallaum", "msc"];
+  const classKeys: VehicleClass[] = ["class_a", "class_b", "class_c"];
   return (
     <Card>
       <CardHeader>
@@ -1222,9 +1229,9 @@ function RoroBuilder({
             value={line}
             onChange={(e) => setLine(e.target.value as ShippingLine)}
           >
-            {(Object.keys(RORO_LINES) as ShippingLine[]).map((k) => (
+            {lineKeys.map((k) => (
               <option key={k} value={k}>
-                {RORO_LINES[k].label}
+                {pricing.roroLines[k].label}
               </option>
             ))}
           </Select>
@@ -1259,7 +1266,7 @@ function RoroBuilder({
               <FieldHint>
                 Detected class:{" "}
                 <span className="font-semibold text-navy">
-                  {VEHICLE_CLASSES[effectiveClass].label}
+                  {pricing.vehicleClasses[effectiveClass].label}
                 </span>
               </FieldHint>
             </div>
@@ -1273,13 +1280,13 @@ function RoroBuilder({
                 value={vehicleClass}
                 onChange={(e) => setVehicleClass(e.target.value as VehicleClass)}
               >
-                {(Object.keys(VEHICLE_CLASSES) as VehicleClass[]).map((k) => (
+                {classKeys.map((k) => (
                   <option key={k} value={k}>
-                    {VEHICLE_CLASSES[k].label}
+                    {pricing.vehicleClasses[k].label}
                   </option>
                 ))}
               </Select>
-              <FieldHint>{VEHICLE_CLASSES[vehicleClass].basis}</FieldHint>
+              <FieldHint>{pricing.vehicleClasses[vehicleClass].basis}</FieldHint>
             </div>
           )}
         </div>
@@ -1309,10 +1316,11 @@ function RoroSummary({
   line: ShippingLine;
   vehicleClass: VehicleClass;
 }) {
+  const pricing = usePricingSettings();
   return (
     <ul className="space-y-2 text-sm">
-      <Row label="Shipping line" value={RORO_LINES[line].label} />
-      <Row label="Vehicle class" value={VEHICLE_CLASSES[vehicleClass].label} />
+      <Row label="Shipping line" value={pricing.roroLines[line].label} />
+      <Row label="Vehicle class" value={pricing.vehicleClasses[vehicleClass].label} />
       {quote.quoted ? (
         <li className="flex items-start gap-2 rounded-lg bg-gold/10 px-3 py-2 text-xs text-gold-700">
           <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />

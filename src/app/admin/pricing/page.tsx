@@ -1,18 +1,80 @@
 "use client";
 
 import * as React from "react";
-import { Tags, Search, Save } from "lucide-react";
-import { listPriceItems, upsertPriceItem, logActivity } from "@/lib/db";
+import { Tags, Search, Save, Ship, Truck, Plane, FileText, Plus, Trash2 } from "lucide-react";
+import {
+  listPriceItems,
+  upsertPriceItem,
+  getSiteContent,
+  setSiteContent,
+  logActivity,
+} from "@/lib/db";
 import type { PriceListItem } from "@/lib/types";
 import { SEA_PRICE_LIST } from "@/lib/constants";
+import {
+  PRICING_DEFAULTS,
+  mergePricingSettings,
+  primePricingCache,
+  type PricingSettings,
+} from "@/lib/pricing-settings";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Input, Label, Textarea } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
+import type { ShippingLine, VehicleClass } from "@/lib/types";
+
+type Tab = "sea" | "roro" | "vehicle" | "air" | "terms";
+
+const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
+  { key: "sea", label: "Sea cargo", icon: Ship },
+  { key: "roro", label: "RORO rates", icon: Truck },
+  { key: "vehicle", label: "Vehicle classes", icon: Truck },
+  { key: "air", label: "Air freight", icon: Plane },
+  { key: "terms", label: "Terms & storage", icon: FileText },
+];
+
+export default function AdminPricingPage() {
+  const [tab, setTab] = React.useState<Tab>("sea");
+
+  return (
+    <div className="space-y-5">
+      {/* Tab bar */}
+      <div className="flex flex-wrap gap-2">
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-colors focus-ring",
+                active
+                  ? "border-gold bg-gold/10 text-navy"
+                  : "border-border bg-white text-ink/70 hover:bg-secondary/50"
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {tab === "sea" && <SeaSection />}
+      {tab === "roro" && <RoroSection />}
+      {tab === "vehicle" && <VehicleSection />}
+      {tab === "air" && <AirSection />}
+      {tab === "terms" && <TermsSection />}
+    </div>
+  );
+}
+
+/* ───────────────────────── Sea cargo ───────────────────────── */
 
 interface Row {
   s_n: number;
@@ -22,7 +84,7 @@ interface Row {
   category: string;
 }
 
-export default function AdminPricingPage() {
+function SeaSection() {
   const { user } = useAuth();
   const toast = useToast();
 
@@ -183,9 +245,7 @@ export default function AdminPricingPage() {
                           min={0}
                           step="1"
                           value={r.price}
-                          onChange={(e) =>
-                            update(r.s_n, { price: e.target.valueAsNumber || 0 })
-                          }
+                          onChange={(e) => update(r.s_n, { price: e.target.valueAsNumber || 0 })}
                           className="h-9 w-28 font-mono"
                           aria-label={`Price for item ${r.s_n}`}
                         />
@@ -212,6 +272,464 @@ export default function AdminPricingPage() {
           </div>
         )}
       </Card>
+    </div>
+  );
+}
+
+/* ─────────────── Shared settings loader for the non-sea tabs ─────────────── */
+
+function useSettingsDraft() {
+  const [loading, setLoading] = React.useState(true);
+  const [draft, setDraft] = React.useState<PricingSettings>(PRICING_DEFAULTS);
+  const [dirty, setDirty] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const d = await getSiteContent("pricing");
+        if (alive) setDraft(mergePricingSettings(d as Partial<PricingSettings> | null));
+      } catch {
+        if (alive) setDraft(PRICING_DEFAULTS);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const patch = React.useCallback((updater: (d: PricingSettings) => PricingSettings) => {
+    setDraft((d) => updater(d));
+    setDirty(true);
+  }, []);
+
+  return { loading, draft, setDraft, dirty, setDirty, saving, setSaving, patch };
+}
+
+function SectionSaveBar({
+  dirty,
+  saving,
+  onSave,
+}: {
+  dirty: boolean;
+  saving: boolean;
+  onSave: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-end">
+      <Button variant="gold" onClick={onSave} loading={saving} disabled={saving || !dirty}>
+        <Save className="h-4 w-4" /> Save changes
+      </Button>
+    </div>
+  );
+}
+
+async function persist(
+  draft: PricingSettings,
+  user: { id: string; full_name: string } | null,
+  section: string
+) {
+  // Persist the whole settings object (single doc) so partial sections merge safely.
+  await setSiteContent("pricing", draft as unknown as Record<string, unknown>);
+  primePricingCache(draft);
+  if (user) {
+    await logActivity({
+      actor_id: user.id,
+      actor_name: user.full_name,
+      actor_role: "admin",
+      action: `updated pricing settings (${section})`,
+      target: section,
+    });
+  }
+}
+
+/* ───────────────────────── RORO rates ───────────────────────── */
+
+function RoroSection() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const { loading, draft, dirty, saving, setSaving, setDirty, patch } = useSettingsDraft();
+
+  const lines: ShippingLine[] = ["grimaldi", "sallaum", "msc"];
+
+  async function save() {
+    setSaving(true);
+    try {
+      await persist(draft, user, "RORO rates");
+      setDirty(false);
+      toast.success("Saved", "RORO rates updated for new quotes.");
+    } catch {
+      toast.error("Save failed", "Could not save RORO rates.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <Skeleton className="h-64 w-full" />;
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle>RORO rates by shipping line</CardTitle>
+          <CardDescription>
+            Set the Class A and Class B flat rates (USD) per line, and the Class C note. These feed
+            the RORO estimator and the order form.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {lines.map((key) => {
+          const l = draft.roroLines[key];
+          return (
+            <Card key={key}>
+              <CardContent className="space-y-3 p-5">
+                <div>
+                  <Label>Line name</Label>
+                  <Input
+                    value={l.label}
+                    onChange={(e) =>
+                      patch((d) => ({
+                        ...d,
+                        roroLines: { ...d.roroLines, [key]: { ...d.roroLines[key], label: e.target.value } },
+                      }))
+                    }
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label>Class A (USD)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={l.classA}
+                      onChange={(e) =>
+                        patch((d) => ({
+                          ...d,
+                          roroLines: {
+                            ...d.roroLines,
+                            [key]: { ...d.roroLines[key], classA: e.target.valueAsNumber || 0 },
+                          },
+                        }))
+                      }
+                      className="font-mono"
+                    />
+                  </div>
+                  <div>
+                    <Label>Class B (USD)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={l.classB}
+                      onChange={(e) =>
+                        patch((d) => ({
+                          ...d,
+                          roroLines: {
+                            ...d.roroLines,
+                            [key]: { ...d.roroLines[key], classB: e.target.valueAsNumber || 0 },
+                          },
+                        }))
+                      }
+                      className="font-mono"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Class C note</Label>
+                  <Input
+                    value={l.classC}
+                    onChange={(e) =>
+                      patch((d) => ({
+                        ...d,
+                        roroLines: { ...d.roroLines, [key]: { ...d.roroLines[key], classC: e.target.value } },
+                      }))
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <SectionSaveBar dirty={dirty} saving={saving} onSave={save} />
+    </div>
+  );
+}
+
+/* ───────────────────────── Vehicle classes ───────────────────────── */
+
+function VehicleSection() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const { loading, draft, dirty, saving, setSaving, setDirty, patch } = useSettingsDraft();
+
+  const classes: VehicleClass[] = ["class_a", "class_b", "class_c"];
+
+  async function save() {
+    setSaving(true);
+    try {
+      await persist(draft, user, "vehicle classes");
+      setDirty(false);
+      toast.success("Saved", "Vehicle class rules updated.");
+    } catch {
+      toast.error("Save failed", "Could not save vehicle classes.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <Skeleton className="h-64 w-full" />;
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle>Vehicle class rules</CardTitle>
+          <CardDescription>
+            The label and rule/basis text shown for each RORO vehicle class on the site and order
+            form.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {classes.map((key) => {
+          const c = draft.vehicleClasses[key];
+          return (
+            <Card key={key}>
+              <CardContent className="space-y-3 p-5">
+                <Badge variant="navy">{key.replace("_", " ").toUpperCase()}</Badge>
+                <div>
+                  <Label>Label</Label>
+                  <Input
+                    value={c.label}
+                    onChange={(e) =>
+                      patch((d) => ({
+                        ...d,
+                        vehicleClasses: {
+                          ...d.vehicleClasses,
+                          [key]: { ...d.vehicleClasses[key], label: e.target.value },
+                        },
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <Label>Rule / basis</Label>
+                  <Textarea
+                    value={c.basis}
+                    onChange={(e) =>
+                      patch((d) => ({
+                        ...d,
+                        vehicleClasses: {
+                          ...d.vehicleClasses,
+                          [key]: { ...d.vehicleClasses[key], basis: e.target.value },
+                        },
+                      }))
+                    }
+                    className="min-h-[70px]"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <SectionSaveBar dirty={dirty} saving={saving} onSave={save} />
+    </div>
+  );
+}
+
+/* ───────────────────────── Air freight ───────────────────────── */
+
+function AirSection() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const { loading, draft, dirty, saving, setSaving, setDirty, patch } = useSettingsDraft();
+
+  async function save() {
+    setSaving(true);
+    try {
+      await persist(draft, user, "air freight");
+      setDirty(false);
+      toast.success("Saved", "Air freight rate updated for new quotes.");
+    } catch {
+      toast.error("Save failed", "Could not save the air rate.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <Skeleton className="h-48 w-full" />;
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle>Air freight rate</CardTitle>
+          <CardDescription>
+            The per-pound rate and dimensional-weight divisor used by the air freight calculator and
+            order form.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label>Rate per lb (USD)</Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={draft.air.ratePerLb}
+              onChange={(e) =>
+                patch((d) => ({ ...d, air: { ...d.air, ratePerLb: e.target.valueAsNumber || 0 } }))
+              }
+              className="font-mono"
+            />
+          </div>
+          <div>
+            <Label>Dimensional weight divisor</Label>
+            <Input
+              type="number"
+              min={1}
+              value={draft.air.dimDivisor}
+              onChange={(e) =>
+                patch((d) => ({ ...d, air: { ...d.air, dimDivisor: e.target.valueAsNumber || 1 } }))
+              }
+              className="font-mono"
+            />
+            <p className="mt-1.5 text-xs text-ink-muted">
+              Cubic inches per lb (industry standard is 166).
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <SectionSaveBar dirty={dirty} saving={saving} onSave={save} />
+    </div>
+  );
+}
+
+/* ───────────────────────── Terms & storage ───────────────────────── */
+
+function TermsSection() {
+  const { user } = useAuth();
+  const toast = useToast();
+  const { loading, draft, dirty, saving, setSaving, setDirty, patch } = useSettingsDraft();
+
+  async function save() {
+    setSaving(true);
+    try {
+      // Drop empty term lines before saving.
+      const cleaned = {
+        ...draft,
+        terms: draft.terms.map((t) => t.trim()).filter(Boolean),
+      };
+      await persist(cleaned, user, "terms & storage");
+      setDirty(false);
+      toast.success("Saved", "Terms and storage policy updated.");
+    } catch {
+      toast.error("Save failed", "Could not save terms.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <Skeleton className="h-64 w-full" />;
+
+  return (
+    <div className="space-y-5">
+      <Card>
+        <CardHeader>
+          <CardTitle>Terms &amp; storage policy</CardTitle>
+          <CardDescription>
+            Shipment terms shown on the site and invoice, plus the free-storage window and daily
+            storage charge.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label>Free storage (days)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={draft.storage.freeDays}
+              onChange={(e) =>
+                patch((d) => ({
+                  ...d,
+                  storage: { ...d.storage, freeDays: e.target.valueAsNumber || 0 },
+                }))
+              }
+              className="font-mono"
+            />
+          </div>
+          <div>
+            <Label>Daily storage charge (₦)</Label>
+            <Input
+              type="number"
+              min={0}
+              value={draft.storage.dailyChargeNaira}
+              onChange={(e) =>
+                patch((d) => ({
+                  ...d,
+                  storage: { ...d.storage, dailyChargeNaira: e.target.valueAsNumber || 0 },
+                }))
+              }
+              className="font-mono"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex-row items-center justify-between space-y-0">
+          <CardTitle>Shipment terms</CardTitle>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => patch((d) => ({ ...d, terms: [...d.terms, ""] }))}
+          >
+            <Plus className="h-3.5 w-3.5" /> Add term
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {draft.terms.map((t, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <Textarea
+                value={t}
+                onChange={(e) =>
+                  patch((d) => {
+                    const terms = [...d.terms];
+                    terms[i] = e.target.value;
+                    return { ...d, terms };
+                  })
+                }
+                className="min-h-[52px] flex-1"
+                placeholder="Term text…"
+              />
+              <button
+                onClick={() =>
+                  patch((d) => ({ ...d, terms: d.terms.filter((_, idx) => idx !== i) }))
+                }
+                aria-label={`Remove term ${i + 1}`}
+                className="mt-1 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-destructive/30 text-destructive hover:bg-destructive/5 focus-ring"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
+          {draft.terms.length === 0 && (
+            <p className="text-sm text-ink-muted">No terms yet. Add one above.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      <SectionSaveBar dirty={dirty} saving={saving} onSave={save} />
     </div>
   );
 }

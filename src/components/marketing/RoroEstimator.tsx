@@ -3,15 +3,16 @@
 import * as React from "react";
 import { Truck, Scale, Anchor } from "lucide-react";
 import { buildRoroQuote, classifyVehicle } from "@/lib/pricing";
-import { RORO_LINES, VEHICLE_CLASSES } from "@/lib/constants";
+import { usePricingSettings } from "@/lib/pricing-settings";
 import type { ShippingLine } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input, Label, Select, FieldHint } from "@/components/ui/input";
 
-const LINES = Object.keys(RORO_LINES) as ShippingLine[];
+const LINES: ShippingLine[] = ["grimaldi", "sallaum", "msc"];
 
 export function RoroEstimator() {
+  const settings = usePricingSettings();
   const [line, setLine] = React.useState<ShippingLine>("grimaldi");
   const [curbWeight, setCurbWeight] = React.useState("");
 
@@ -21,8 +22,11 @@ export function RoroEstimator() {
   }, [curbWeight]);
 
   const vehicleClass = classifyVehicle(weight);
-  const quote = React.useMemo(() => buildRoroQuote(line, vehicleClass), [line, vehicleClass]);
-  const classMeta = VEHICLE_CLASSES[vehicleClass];
+  const quote = React.useMemo(
+    () => buildRoroQuote(line, vehicleClass, settings.roroLines),
+    [line, vehicleClass, settings.roroLines]
+  );
+  const classMeta = settings.vehicleClasses[vehicleClass];
 
   return (
     <Card className="overflow-hidden shadow-premium">
@@ -53,7 +57,7 @@ export function RoroEstimator() {
               >
                 {LINES.map((key) => (
                   <option key={key} value={key}>
-                    {RORO_LINES[key].label}
+                    {settings.roroLines[key].label}
                   </option>
                 ))}
               </Select>
@@ -91,7 +95,7 @@ export function RoroEstimator() {
               {quote.quoted ? "Custom" : formatCurrency(quote.total)}
             </div>
             <p className="mt-1 text-xs text-white/60">
-              {RORO_LINES[line].label}
+              {settings.roroLines[line].label}
             </p>
 
             <dl className="mt-6 space-y-3 text-sm">

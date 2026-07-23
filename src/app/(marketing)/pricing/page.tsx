@@ -14,21 +14,18 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
-import {
-  SEA_PRICE_LIST,
-  PRICE_CATEGORIES,
-  AIR_RATE_PER_LB,
-  RORO_LINES,
-} from "@/lib/constants";
+import { SEA_PRICE_LIST, PRICE_CATEGORIES } from "@/lib/constants";
+import { usePricingSettings } from "@/lib/pricing-settings";
 import type { ShippingLine } from "@/lib/types";
 import { formatCurrency, cn } from "@/lib/utils";
 
 type SortKey = "s_n" | "price" | "dimensions";
 type SortDir = "asc" | "desc";
 
-const lineKeys = Object.keys(RORO_LINES) as ShippingLine[];
+const lineKeys: ShippingLine[] = ["grimaldi", "sallaum", "msc"];
 
 export default function PricingPage() {
+  const pricing = usePricingSettings();
   const [category, setCategory] = React.useState<string>("All");
   const [sortKey, setSortKey] = React.useState<SortKey>("s_n");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
@@ -116,7 +113,7 @@ export default function PricingPage() {
               <p className="mt-1 text-sm text-ink-muted">Flat rate on billable weight, 7–10 days.</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-mono text-3xl font-bold text-navy">
-                  {formatCurrency(AIR_RATE_PER_LB)}
+                  {formatCurrency(pricing.air.ratePerLb)}
                 </span>
                 <span className="text-sm text-ink-muted">/ lb</span>
               </div>
@@ -140,9 +137,9 @@ export default function PricingPage() {
               <ul className="mt-4 space-y-1.5 text-sm">
                 {lineKeys.map((key) => (
                   <li key={key} className="flex items-center justify-between gap-2">
-                    <span className="text-ink-muted">{RORO_LINES[key].label.split(" ")[0]}</span>
+                    <span className="text-ink-muted">{pricing.roroLines[key].label.split(" ")[0]}</span>
                     <span className="font-mono font-semibold text-navy">
-                      ${RORO_LINES[key].classA.toLocaleString()}
+                      ${pricing.roroLines[key].classA.toLocaleString()}
                     </span>
                   </li>
                 ))}

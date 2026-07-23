@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Plane, Scale, Ruler, Package } from "lucide-react";
 import { buildAirQuote } from "@/lib/pricing";
-import { AIR_RATE_PER_LB, DIM_WEIGHT_DIVISOR } from "@/lib/constants";
+import { usePricingSettings } from "@/lib/pricing-settings";
 import { formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Input, Label, FieldHint } from "@/components/ui/input";
@@ -14,6 +14,7 @@ function toNum(v: string): number {
 }
 
 export function AirCalculator() {
+  const settings = usePricingSettings();
   const [weight, setWeight] = React.useState("");
   const [length, setLength] = React.useState("");
   const [width, setWidth] = React.useState("");
@@ -26,8 +27,12 @@ export function AirCalculator() {
   const hasDims = l > 0 && wd > 0 && h > 0;
 
   const quote = React.useMemo(
-    () => buildAirQuote(w, hasDims ? { length: l, width: wd, height: h } : undefined),
-    [w, l, wd, h, hasDims]
+    () =>
+      buildAirQuote(w, hasDims ? { length: l, width: wd, height: h } : undefined, {
+        ratePerLb: settings.air.ratePerLb,
+        dimDivisor: settings.air.dimDivisor,
+      }),
+    [w, l, wd, h, hasDims, settings.air.ratePerLb, settings.air.dimDivisor]
   );
 
   const dimApplies = quote.dimWeight > quote.actualWeight;
@@ -94,7 +99,7 @@ export function AirCalculator() {
                   />
                 ))}
               </div>
-              <FieldHint>Dimensional weight = (L × W × H) ÷ {DIM_WEIGHT_DIVISOR}</FieldHint>
+              <FieldHint>Dimensional weight = (L × W × H) ÷ {settings.air.dimDivisor}</FieldHint>
             </div>
           </div>
         </div>
@@ -110,7 +115,7 @@ export function AirCalculator() {
               {formatCurrency(quote.total)}
             </div>
             <p className="mt-1 text-xs text-white/60">
-              at {formatCurrency(AIR_RATE_PER_LB)}/lb · billable weight
+              at {formatCurrency(settings.air.ratePerLb)}/lb · billable weight
             </p>
 
             <dl className="mt-6 space-y-3 text-sm">

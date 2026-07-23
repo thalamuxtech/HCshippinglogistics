@@ -55,17 +55,31 @@ export interface AirQuote {
   total: number;
 }
 
+// Optional live rate/divisor (admin-editable). Falls back to constants.
 export function buildAirQuote(
   weightLb: number,
-  dims?: { length: number; width: number; height: number }
+  dims?: { length: number; width: number; height: number },
+  opts?: { ratePerLb?: number; dimDivisor?: number }
 ): AirQuote {
-  const { billableWeight, dimWeight, price } = computeAirPrice(weightLb, dims);
+  const ratePerLb = opts?.ratePerLb ?? AIR_RATE_PER_LB;
+  const actual = Math.max(0, weightLb || 0);
+  let dimWeight = 0;
+  if (opts?.dimDivisor && dims && dims.length && dims.width && dims.height) {
+    dimWeight =
+      Math.round(((dims.length * dims.width * dims.height) / opts.dimDivisor) * 100) / 100;
+  }
+  if (!opts?.dimDivisor) {
+    // Use the constant-based helper when no live divisor is supplied.
+    const c = computeAirPrice(weightLb, dims);
+    dimWeight = c.dimWeight;
+  }
+  const billableWeight = Math.round(Math.max(actual, dimWeight) * 100) / 100;
   return {
-    actualWeight: Math.max(0, weightLb || 0),
+    actualWeight: actual,
     dimWeight,
     billableWeight,
-    ratePerLb: AIR_RATE_PER_LB,
-    total: price,
+    ratePerLb,
+    total: Math.round(billableWeight * ratePerLb * 100) / 100,
   };
 }
 
@@ -77,8 +91,14 @@ export interface RoroQuote {
   label: string;
 }
 
-export function buildRoroQuote(line: ShippingLine, vehicleClass: VehicleClass): RoroQuote {
-  const cfg = RORO_LINES[line];
+// Accepts an optional live rate table (admin-editable). Falls back to the
+// compiled RORO_LINES constants when not provided.
+export function buildRoroQuote(
+  line: ShippingLine,
+  vehicleClass: VehicleClass,
+  lines: Record<ShippingLine, { classA: number; classB: number; classC: string }> = RORO_LINES
+): RoroQuote {
+  const cfg = lines[line] || RORO_LINES[line];
   if (vehicleClass === "class_c") {
     return { line, vehicleClass, quoted: true, total: 0, label: cfg.classC };
   }
