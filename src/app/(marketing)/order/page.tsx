@@ -144,6 +144,9 @@ function OrderFlow() {
         items?: ShipmentItem[];
         full_name?: string;
         email?: string;
+        phone?: string;
+        dob?: string;
+        address?: string;
         destination_country?: string;
         destination_city?: string;
         weight?: number;
@@ -155,6 +158,9 @@ function OrderFlow() {
       };
       if (data.full_name) setSenderName(data.full_name);
       if (data.email) setSenderEmail(data.email);
+      if (data.phone) setSenderPhone(data.phone);
+      if (data.dob) setSenderDob(data.dob);
+      if (data.address) setSenderAddress(data.address);
       if (data.service_type) setService(data.service_type);
       if (data.destination_country) setDestCountry(data.destination_country);
       if (data.destination_city) setDestCity(data.destination_city);

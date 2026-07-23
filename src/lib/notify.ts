@@ -77,7 +77,14 @@ export async function submitPublicOrder(
 
 export interface CustomerView {
   found: boolean;
-  customer?: { id: string; full_name: string; email: string };
+  customer?: {
+    id: string;
+    full_name: string;
+    email: string;
+    phone?: string;
+    dob?: string;
+    address?: string;
+  };
   shipments?: Array<{
     id: string;
     tracking_number: string;

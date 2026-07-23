@@ -259,8 +259,13 @@ function CustomerResults({ view }: { view: CustomerView }) {
     // if the customer confirms it's going to the same person.
     const last = shipments[0];
     const payload: Record<string, unknown> = {
+      // Full sender details, so a returning customer only fills the new items.
+      customer_id: view.customer?.id || "",
       full_name: view.customer?.full_name || "",
       email: view.customer?.email || "",
+      phone: view.customer?.phone || "",
+      dob: view.customer?.dob || "",
+      address: view.customer?.address || "",
       destination_country: last?.destination_country,
       destination_city: last?.destination_city,
       service_type: last?.service_type,

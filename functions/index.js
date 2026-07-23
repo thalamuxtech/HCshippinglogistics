@@ -538,7 +538,14 @@ export const viewByCustomerId = onCall(async (req) => {
   const u = userSnap.exists ? userSnap.data() : {};
   return {
     found: true,
-    customer: { id, full_name: u.full_name || (shipments[0]?.receiver ? "" : ""), email: u.email || "" },
+    customer: {
+      id,
+      full_name: u.full_name || "",
+      email: u.email || "",
+      phone: u.phone || "",
+      dob: u.dob || "",
+      address: u.address || "",
+    },
     shipments,
   };
 });
