@@ -50,9 +50,11 @@ export interface PublicOrderInput {
   full_name: string;
   email: string;
   phone?: string;
+  dob?: string; // YYYY-MM-DD (age computed server-side)
+  address?: string; // sender full address
   destination_country: string;
   destination_city?: string;
-  door_to_door?: boolean;
+  door_to_door?: boolean; // pickup requested (+$50)
   pickup_address?: string;
   notes?: string;
   declared_value?: number;

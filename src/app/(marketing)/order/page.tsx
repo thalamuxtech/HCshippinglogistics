@@ -84,6 +84,8 @@ function OrderFlow() {
   const [senderName, setSenderName] = React.useState("");
   const [senderEmail, setSenderEmail] = React.useState("");
   const [senderPhone, setSenderPhone] = React.useState("");
+  const [senderDob, setSenderDob] = React.useState("");
+  const [senderAddress, setSenderAddress] = React.useState("");
 
   // ---- Sea state: s_n -> quantity ----
   const [seaQty, setSeaQty] = React.useState<Record<number, number>>({});
@@ -110,9 +112,10 @@ function OrderFlow() {
   const [notes, setNotes] = React.useState<string>("");
   const [declaredValue, setDeclaredValue] = React.useState<string>("");
 
-  // ---- Receiver / consignee (for the receipt) ----
+  // ---- Receiver / consignee (for the receipt & delivery) ----
   const [rcvName, setRcvName] = React.useState<string>("");
   const [rcvPhone, setRcvPhone] = React.useState<string>("");
+  const [rcvAltPhone, setRcvAltPhone] = React.useState<string>("");
   const [rcvAddress, setRcvAddress] = React.useState<string>("");
 
   // ---- Prefill from query (?dest=&service=) ----
@@ -207,8 +210,13 @@ function OrderFlow() {
     [roroLine, effectiveClass]
   );
 
-  const grandTotal =
+  const PICKUP_FEE = 50;
+  const baseTotal =
     service === "sea" ? seaQuote.total : service === "air" ? airQuote.total : roroQuote.total;
+  // Pickup fee applies only when there is a priced base (RORO Class C is quoted).
+  const isQuotedOnly = service === "roro" && roroQuote.quoted;
+  const pickupFee = doorToDoor && baseTotal > 0 ? PICKUP_FEE : 0;
+  const grandTotal = baseTotal + pickupFee;
 
   // ---- Sea helpers ----
   const filteredSea =
@@ -233,8 +241,9 @@ function OrderFlow() {
     if (!destCountry) return "Please select a destination country.";
     if (!rcvName.trim()) return "Please enter the receiver's full name.";
     if (!rcvPhone.trim()) return "Please enter the receiver's phone number.";
+    if (!rcvAddress.trim()) return "Please enter the receiver's full delivery address.";
     if (doorToDoor && !pickupAddress.trim())
-      return "Pickup address is required for door-to-door service.";
+      return "Please enter the pickup address for your requested pickup.";
     if (service === "sea" && seaSelections.length === 0)
       return "Add at least one item to your sea cargo order.";
     if (service === "air" && (Number(airWeight) || 0) <= 0)
@@ -260,6 +269,8 @@ function OrderFlow() {
         full_name: senderName.trim(),
         email: senderEmail.trim(),
         phone: senderPhone.trim() || undefined,
+        dob: senderDob || undefined,
+        address: senderAddress.trim() || undefined,
         destination_country: destCountry,
         destination_city: destCity.trim() || undefined,
         door_to_door: doorToDoor,
@@ -268,8 +279,8 @@ function OrderFlow() {
         declared_value: declaredValue ? Number(declaredValue) : undefined,
         receiver: {
           full_name: rcvName.trim(),
-          phone: rcvPhone.trim(),
-          address: rcvAddress.trim() || undefined,
+          phone: rcvAltPhone.trim() ? `${rcvPhone.trim()} / ${rcvAltPhone.trim()}` : rcvPhone.trim(),
+          address: rcvAddress.trim(),
         },
       };
 
@@ -419,15 +430,38 @@ function OrderFlow() {
                     />
                   </div>
                 </div>
-                <div className="sm:max-w-[calc(50%-0.625rem)]">
-                  <Label htmlFor="sender-phone">Phone (optional)</Label>
-                  <Input
-                    id="sender-phone"
-                    type="tel"
-                    value={senderPhone}
-                    onChange={(e) => setSenderPhone(e.target.value)}
-                    placeholder="e.g. +1 240 374 8394"
-                    autoComplete="tel"
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor="sender-phone">Phone (optional)</Label>
+                    <Input
+                      id="sender-phone"
+                      type="tel"
+                      value={senderPhone}
+                      onChange={(e) => setSenderPhone(e.target.value)}
+                      placeholder="e.g. +1 240 374 8394"
+                      autoComplete="tel"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="sender-dob">Date of birth</Label>
+                    <Input
+                      id="sender-dob"
+                      type="date"
+                      value={senderDob}
+                      onChange={(e) => setSenderDob(e.target.value)}
+                      autoComplete="bday"
+                    />
+                    <FieldHint>Used for your account record only.</FieldHint>
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="sender-address">Your address</Label>
+                  <Textarea
+                    id="sender-address"
+                    value={senderAddress}
+                    onChange={(e) => setSenderAddress(e.target.value)}
+                    placeholder="Street, city, state, ZIP"
+                    autoComplete="street-address"
                   />
                 </div>
               </CardContent>
@@ -507,11 +541,12 @@ function OrderFlow() {
                   </div>
                 </div>
 
-                {/* Receiver / consignee */}
+                {/* Receiver / consignee — all required for delivery */}
                 <div className="rounded-xl border border-border bg-surface p-4">
                   <p className="text-sm font-semibold text-navy">Receiver details</p>
                   <p className="text-xs text-ink-muted">
-                    Who receives this shipment at the destination.
+                    Who receives this shipment at the destination. All fields are required so we can
+                    deliver.
                   </p>
                   <div className="mt-4 grid gap-4 sm:grid-cols-2">
                     <div>
@@ -539,31 +574,66 @@ function OrderFlow() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Label htmlFor="rcv-address">Receiver address (optional)</Label>
+                    <Label htmlFor="rcv-alt-phone">Alternate phone (optional)</Label>
+                    <Input
+                      id="rcv-alt-phone"
+                      type="tel"
+                      value={rcvAltPhone}
+                      onChange={(e) => setRcvAltPhone(e.target.value)}
+                      placeholder="Second number in case the first is unreachable"
+                    />
+                  </div>
+                  <div className="mt-4">
+                    <Label htmlFor="rcv-address" required>
+                      Full delivery address
+                    </Label>
                     <Textarea
                       id="rcv-address"
                       value={rcvAddress}
                       onChange={(e) => setRcvAddress(e.target.value)}
-                      placeholder="Street, area, city"
+                      placeholder="House number, street, area, landmark, city and state"
                     />
+                    <FieldHint>Include a nearby landmark to help our delivery team.</FieldHint>
                   </div>
                 </div>
 
+                {/* Handoff: warehouse drop-off (free) vs pickup (+$50) */}
                 <div className="rounded-xl border border-border bg-surface p-4">
-                  <label className="flex cursor-pointer items-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={doorToDoor}
-                      onChange={(e) => setDoorToDoor(e.target.checked)}
-                      className="mt-0.5 h-5 w-5 cursor-pointer rounded border-input text-navy focus-ring"
-                    />
-                    <span>
-                      <span className="text-sm font-semibold text-navy">Door-to-door pickup</span>
-                      <span className="block text-xs text-ink-muted">
-                        We collect from your address instead of warehouse drop-off.
+                  <p className="text-sm font-semibold text-navy">How will we get your items?</p>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      onClick={() => setDoorToDoor(false)}
+                      className={cn(
+                        "flex cursor-pointer flex-col rounded-xl border-2 p-4 text-left transition-colors focus-ring",
+                        !doorToDoor ? "border-gold bg-gold/5" : "border-border hover:border-navy/30"
+                      )}
+                    >
+                      <span className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-navy">Drop off at warehouse</span>
+                        <span className="text-xs font-bold text-emerald-600">Free</span>
                       </span>
-                    </span>
-                  </label>
+                      <span className="mt-1 text-xs text-ink-muted">
+                        Bring your items to our Maryland warehouse.
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDoorToDoor(true)}
+                      className={cn(
+                        "flex cursor-pointer flex-col rounded-xl border-2 p-4 text-left transition-colors focus-ring",
+                        doorToDoor ? "border-gold bg-gold/5" : "border-border hover:border-navy/30"
+                      )}
+                    >
+                      <span className="flex items-center justify-between">
+                        <span className="text-sm font-semibold text-navy">Request a pickup</span>
+                        <span className="text-xs font-bold text-gold-700">+{formatCurrency(PICKUP_FEE)}</span>
+                      </span>
+                      <span className="mt-1 text-xs text-ink-muted">
+                        We collect from your address. A {formatCurrency(PICKUP_FEE)} fee applies.
+                      </span>
+                    </button>
+                  </div>
                   {doorToDoor && (
                     <div className="mt-4">
                       <Label htmlFor="pickup" required>
@@ -573,7 +643,7 @@ function OrderFlow() {
                         id="pickup"
                         value={pickupAddress}
                         onChange={(e) => setPickupAddress(e.target.value)}
-                        placeholder="Street, city, state, ZIP"
+                        placeholder="Street, city, state, ZIP where we should collect"
                       />
                     </div>
                   )}
@@ -634,10 +704,31 @@ function OrderFlow() {
                   <RoroSummary quote={roroQuote} line={roroLine} vehicleClass={effectiveClass} />
                 )}
 
-                <div className="flex items-center justify-between border-t border-border pt-4">
+                {/* Price breakdown */}
+                {!isQuotedOnly && (
+                  <div className="space-y-1.5 border-t border-border pt-4 text-sm">
+                    <div className="flex items-center justify-between text-ink-muted">
+                      <span>Shipping subtotal</span>
+                      <span className="font-mono">{formatCurrency(baseTotal)}</span>
+                    </div>
+                    {pickupFee > 0 && (
+                      <div className="flex items-center justify-between text-ink-muted">
+                        <span>Door-to-door pickup</span>
+                        <span className="font-mono">{formatCurrency(pickupFee)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div
+                  className={cn(
+                    "flex items-center justify-between",
+                    isQuotedOnly && "border-t border-border pt-4"
+                  )}
+                >
                   <span className="text-sm font-semibold text-navy">Estimated total</span>
                   <span className="font-mono text-lg font-bold text-navy">
-                    {service === "roro" && roroQuote.quoted ? (
+                    {isQuotedOnly ? (
                       "Quoted separately"
                     ) : (
                       <AnimatedNumber value={grandTotal} />

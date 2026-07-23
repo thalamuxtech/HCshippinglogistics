@@ -10,6 +10,7 @@ import {
   Mail,
   Phone,
   Hash,
+  MapPin,
   Package,
   Send,
   KeyRound,
@@ -329,14 +330,15 @@ function AdminCustomerDetailPageInner() {
           <InfoRow icon={Mail} label="Email" value={c.email} />
           <InfoRow icon={Phone} label="Phone" value={c.phone || "-"} />
           <InfoRow
+            icon={Users}
+            label="Age"
+            value={typeof c.age === "number" ? `${c.age} years` : "-"}
+          />
+          <InfoRow icon={MapPin} label="Address" value={c.address || "-"} />
+          <InfoRow
             icon={Hash}
             label="Access code prefix"
             value={c.access_code_prefix ? `${c.access_code_prefix}…` : "-"}
-          />
-          <InfoRow
-            icon={KeyRound}
-            label="Code version"
-            value={String(c.access_code_version ?? 1)}
           />
           <InfoRow icon={Users} label="Joined" value={formatDate(tsToDate(c.created_at))} />
           <InfoRow

@@ -45,6 +45,10 @@ export interface AppUser {
   access_code_version?: number;
   birth_year_month?: string; // YYMM
   zip_code?: string;
+  dob?: string; // YYYY-MM-DD (public order flow)
+  age?: number | null; // computed from dob, backend record only
+  address?: string; // sender full address
+  customer_code?: string;
   is_active: boolean;
   notify_email?: boolean;
   notify_sms?: boolean;

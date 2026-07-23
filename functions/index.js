@@ -360,6 +360,25 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     total = d.vehicle_class === "class_c" ? 0 : RORO_RATE[line];
   }
 
+  // Door-to-door pickup fee (only added when there is a priced base; Class C is
+  // quoted separately, so we still record the pickup request without a fee here).
+  const PICKUP_FEE = 50;
+  const wantsPickup = !!d.door_to_door;
+  if (wantsPickup && total > 0) total += PICKUP_FEE;
+
+  // Compute age from date of birth (YYYY-MM-DD) for the backend record.
+  let age = null;
+  if (d.dob) {
+    const dobDate = new Date(d.dob);
+    if (!isNaN(dobDate.getTime())) {
+      const now = new Date();
+      age = now.getFullYear() - dobDate.getFullYear();
+      const m = now.getMonth() - dobDate.getMonth();
+      if (m < 0 || (m === 0 && now.getDate() < dobDate.getDate())) age -= 1;
+      if (age < 0 || age > 130) age = null;
+    }
+  }
+
   // Create (or reuse) a lightweight customer record keyed by email.
   const email = String(d.email).trim().toLowerCase();
   let customerId;
@@ -369,23 +388,27 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     .where("role", "==", "customer")
     .limit(1)
     .get();
+  const profileExtra = {
+    full_name: d.full_name,
+    phone: d.phone || "",
+    address: d.address || "",
+    dob: d.dob || "",
+    age: age,
+    updated_at: FieldValue.serverTimestamp(),
+  };
   if (!existing.empty) {
     customerId = existing.docs[0].id;
-    await existing.docs[0].ref.set(
-      { full_name: d.full_name, phone: d.phone || "", updated_at: FieldValue.serverTimestamp() },
-      { merge: true }
-    );
+    await existing.docs[0].ref.set(profileExtra, { merge: true });
   } else {
     customerId = makeCustomerId(d.full_name);
     await db.collection("users").doc(customerId).set({
       customer_code: customerId,
       email,
-      full_name: d.full_name,
-      phone: d.phone || "",
       role: "customer",
       is_active: true,
       notify_email: true,
       created_at: FieldValue.serverTimestamp(),
+      ...profileExtra,
     });
   }
 
@@ -409,10 +432,12 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     customer_phone: d.phone || "",
     service_type: svc,
     current_status: "collection",
+    sender_address: d.address || "",
     destination_country: d.destination_country,
     destination_city: d.destination_city || "",
-    door_to_door: !!d.door_to_door,
-    pickup_address: d.door_to_door ? d.pickup_address || "" : "",
+    door_to_door: wantsPickup,
+    pickup_fee: wantsPickup && total > 0 ? PICKUP_FEE : 0,
+    pickup_address: wantsPickup ? d.pickup_address || d.address || "" : "",
     receiver: {
       full_name: d.receiver.full_name,
       phone: d.receiver.phone,
