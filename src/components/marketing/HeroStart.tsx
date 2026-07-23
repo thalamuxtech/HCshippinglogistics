@@ -26,7 +26,7 @@ export function HeroStart() {
 
   function startShipping() {
     const params = new URLSearchParams({ dest, service });
-    router.push(`/signup?${params.toString()}`);
+    router.push(`/order?${params.toString()}`);
   }
 
   // ── track flow ──
@@ -138,7 +138,7 @@ export function HeroStart() {
             {/* Destination + CTA */}
             <div className="mt-3 flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
-                <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/50" />
+                <MapPin className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/70" />
                 <select
                   value={dest}
                   onChange={(e) => setDest(e.target.value)}
@@ -165,8 +165,8 @@ export function HeroStart() {
                 Start shipping <ArrowRight className="h-4 w-4" />
               </button>
             </div>
-            <p className="mt-2 px-1 text-xs text-white/50">
-              Instant pricing · door-to-door available · free account, ready in a minute
+            <p className="mt-2 px-1 text-xs text-white/70">
+              Instant pricing · door-to-door available · no account needed
             </p>
           </motion.div>
         ) : (
@@ -180,13 +180,13 @@ export function HeroStart() {
           >
             <form onSubmit={track} className="flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/50" />
+                <Search className="pointer-events-none absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/70" />
                 <input
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="Tracking number or Customer ID"
                   aria-label="Tracking number or Customer ID"
-                  className="h-12 w-full rounded-xl border border-white/15 bg-white/5 pl-11 pr-3 font-mono text-sm text-white placeholder:text-white/40 focus-ring"
+                  className="h-12 w-full rounded-xl border border-white/15 bg-white/5 pl-11 pr-3 font-mono text-sm text-white placeholder:text-white/70 focus-ring"
                 />
               </div>
               <button
@@ -259,10 +259,10 @@ export function HeroStart() {
                   )}
                 </div>
                 <a
-                  href="/login"
+                  href="/track"
                   className="mt-2 inline-flex text-xs font-semibold text-gold-200 hover:text-gold"
                 >
-                  Log in to view details &amp; download your receipt →
+                  Enter your Customer ID for full details &amp; receipt →
                 </a>
               </div>
             )}

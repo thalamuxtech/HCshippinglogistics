@@ -90,7 +90,7 @@ export function StaffQuickLogin() {
               </div>
               <button
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-1.5 text-ink-muted hover:bg-secondary focus-ring"
+                className="-mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-secondary focus-ring"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />

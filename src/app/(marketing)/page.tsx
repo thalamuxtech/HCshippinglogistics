@@ -6,7 +6,6 @@ import {
   Truck,
   ShieldCheck,
   BadgeCheck,
-  Boxes,
   Clock,
   MapPin,
   ArrowRight,
@@ -14,13 +13,19 @@ import {
   Stethoscope,
   Landmark,
   Container,
+  Scale,
+  Camera,
+  Receipt,
+  Warehouse,
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/Reveal";
 import { HeroStart } from "@/components/marketing/HeroStart";
 import { ProcessJourney } from "@/components/marketing/ProcessJourney";
+import { StageJourney } from "@/components/marketing/StageJourney";
+import { Testimonials } from "@/components/marketing/Testimonials";
 import { ManagedText } from "@/components/marketing/ManagedText";
-import { COMPANY, SERVICES, STAGES } from "@/lib/constants";
+import { COMPANY, SERVICES } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "Shipping from the USA to Nigeria & across Africa",
@@ -57,9 +62,32 @@ const trustStats = [
 ];
 
 const enterprise = [
-  { icon: Landmark, title: "Government Agencies", desc: "Formal digital receipts, audit trails, and tender-ready documentation." },
-  { icon: Stethoscope, title: "Hospitals & Medical", desc: "Medical equipment shipping with full chain-of-custody tracking." },
-  { icon: Building2, title: "Embassies & Corporates", desc: "Secure, role-isolated portal access with enterprise SLAs." },
+  { icon: Landmark, title: "Government Agencies", desc: "Formal digital receipts, audit trails, and the tender-ready paperwork procurement teams ask for." },
+  { icon: Stethoscope, title: "Hospitals & Medical", desc: "Medical equipment moved carefully, with a documented chain of custody at every stage." },
+  { icon: Building2, title: "Embassies & Corporates", desc: "Secure portal access with defined roles and service terms for long-running contracts." },
+];
+
+const careSteps = [
+  {
+    icon: Scale,
+    title: "Weighed and measured",
+    desc: "Every box, barrel, and bag is weighed and measured at our Maryland warehouse, so the rate you pay matches what you actually ship.",
+  },
+  {
+    icon: Camera,
+    title: "Photographed before it sails",
+    desc: "We photograph your items on arrival at the warehouse. What you drop off is exactly what your family or team receives in Africa.",
+  },
+  {
+    icon: Receipt,
+    title: "Receipted the same day",
+    desc: "You get a formal receipt the moment we log your shipment, not a screenshot and not a promise to send one later.",
+  },
+  {
+    icon: Warehouse,
+    title: "Consolidated with care",
+    desc: "Small shipments share container space to keep costs down, and we pack them so nothing shifts on the crossing to Lagos.",
+  },
 ];
 
 export default function HomePage() {
@@ -95,7 +123,7 @@ export default function HomePage() {
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
                 <ManagedText
                   field="hero_subtitle"
-                  fallback="Sea cargo, air freight, and vehicle (RORO) shipping. Track every box, barrel, and vehicle through all 8 stages, and download your receipt online."
+                  fallback="We have shipped the USA-to-Africa corridor since 2017. Send a box, a barrel, or a vehicle, follow it through all 8 stages, and download your receipt with the Customer ID we give you."
                 />
               </p>
             </Reveal>
@@ -140,7 +168,7 @@ export default function HomePage() {
       <section className="border-b border-border bg-white">
         <div className="container-page py-8">
           <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-ink-muted">
-            Trusted for government, hospital &amp; embassy freight across Africa
+            The freight partner government, hospital &amp; embassy teams keep coming back to
           </p>
           <div className="mt-6 flex flex-wrap items-center justify-center gap-x-10 gap-y-4 text-navy/70">
             {[
@@ -175,7 +203,7 @@ export default function HomePage() {
           <p className="mt-4 text-ink-muted">
             <ManagedText
               field="services_subheading"
-              fallback="From a single suitcase to a 60-container medical project. Rates are published up front and every shipment is tracked to your door."
+              fallback="We have moved everything from a single suitcase to a 60-container medical program. Our rates are published up front, and we track every shipment to your door."
             />
           </p>
         </Reveal>
@@ -214,41 +242,47 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─── How it works — animated journey ──────────────── */}
-      <ProcessJourney />
-
-      {/* ─── 8-Stage lifecycle ────────────────────────────── */}
-      <section className="bg-surface py-20 sm:py-24">
+      {/* ─── How we handle your cargo ─────────────────────── */}
+      <section className="bg-white py-20 sm:py-24">
         <div className="container-page">
           <Reveal className="mx-auto max-w-2xl text-center">
-            <span className="eyebrow">Tracking</span>
+            <span className="eyebrow">How we handle your cargo</span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-              Every shipment, tracked through 8 stages
+              What you ship is what arrives
             </h2>
             <p className="mt-4 text-ink-muted">
-              You get an email and SMS update every time your shipment moves to the next stage.
+              Most shipping goes wrong before the container ever leaves port. Here is what we do at
+              our Maryland warehouse so nothing about your shipment is a surprise later.
             </p>
           </Reveal>
 
-          <div className="mt-14 grid grid-cols-2 gap-4 sm:grid-cols-4 lg:grid-cols-8">
-            {STAGES.map((stage, i) => (
-              <Reveal key={stage.key} delay={i * 0.04}>
-                <div className="flex flex-col items-center rounded-xl border border-border bg-surface p-4 text-center">
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-full font-mono text-sm font-bold text-white"
-                    style={{ backgroundColor: stage.color }}
-                  >
-                    {stage.order}
-                  </span>
-                  <p className="mt-3 text-xs font-semibold leading-tight text-navy">
-                    {stage.short}
-                  </p>
-                </div>
-              </Reveal>
-            ))}
+          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {careSteps.map((step, i) => {
+              const Icon = step.icon;
+              return (
+                <Reveal key={step.title} delay={i * 0.06}>
+                  <div className="flex h-full flex-col rounded-2xl border border-border bg-surface p-6 shadow-card">
+                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold shadow-premium">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <h3 className="mt-5 font-bold text-navy">{step.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-ink-muted">{step.desc}</p>
+                  </div>
+                </Reveal>
+              );
+            })}
           </div>
         </div>
       </section>
+
+      {/* ─── How it works — animated journey ──────────────── */}
+      <ProcessJourney />
+
+      {/* ─── 8-Stage lifecycle (animated) ─────────────────── */}
+      <StageJourney />
+
+      {/* ─── Customer reviews (auto-slider) ───────────────── */}
+      <Testimonials />
 
       {/* ─── Enterprise ───────────────────────────────────── */}
       <section className="container-page py-20 sm:py-24">
@@ -256,18 +290,18 @@ export default function HomePage() {
           <Reveal>
             <span className="eyebrow">Built for Enterprise</span>
             <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-              Documentation that clears government and hospital tenders.
+              Paperwork that clears government and hospital tenders.
             </h2>
             <p className="mt-4 text-ink-muted">
-              Highclass gives you a customer portal, formal digital receipts, and full audit trails.
-              That is the paperwork agencies, hospitals, and embassies need before they can award a
-              contract, and we have it ready from day one.
+              Highclass gives you a portal, formal digital receipts, and a full record of every stage.
+              That is the documentation agencies, hospitals, and embassies review before they can
+              award a contract, and we have handled it since our first government job.
             </p>
             <ul className="mt-6 space-y-3">
               {[
-                "Encrypted, role-isolated portal with full audit logging",
-                "Digital receipts archived permanently and downloadable anytime",
-                "Medical equipment & 60+ container project experience",
+                "A portal with defined roles and a log of every action taken",
+                "Digital receipts kept on file and downloadable whenever finance asks",
+                "Medical equipment and 60+ container projects already on our record",
               ].map((point) => (
                 <li key={point} className="flex items-start gap-3 text-sm text-ink">
                   <BadgeCheck className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
@@ -314,19 +348,19 @@ export default function HomePage() {
                 Ready to send your first shipment?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Create your free account, get an instant quote, and track every barrel, box, and
-                vehicle from pickup to delivery.
+                Tell us what you are shipping and where it is going. You will get a quote, a receipt,
+                and a Customer ID to follow it from our warehouse to delivery.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/order" variant="gold" size="lg">
-                  Create your account <ArrowRight className="h-4 w-4" />
+                <ButtonLink href="/order" variant="gold" size="lg" className="w-full sm:w-auto">
+                  Start a shipment <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
                   href="/contact"
                   size="lg"
-                  className="border border-white/20 bg-white/5 text-white hover:bg-white/10"
+                  className="w-full border border-white/20 bg-white/5 text-white hover:bg-white/10 sm:w-auto"
                 >
-                  Talk to sales
+                  Talk to our team
                 </ButtonLink>
               </div>
               <p className="mt-6 inline-flex items-center gap-2 text-xs text-white/70">

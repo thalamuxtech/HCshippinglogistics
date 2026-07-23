@@ -32,17 +32,17 @@ const capabilities = [
   {
     icon: Landmark,
     title: "Government agencies",
-    desc: "Tender-ready documentation, formal digital receipts, and complete audit trails that satisfy procurement and compliance requirements.",
+    desc: "Tender-ready documentation, formal digital receipts, and a complete record of every stage that holds up to procurement and audit review.",
   },
   {
     icon: Stethoscope,
     title: "Hospitals & medical",
-    desc: "Careful handling of medical equipment and supplies with full chain-of-custody tracking from pickup to delivery.",
+    desc: "Careful handling of medical equipment and supplies, with a documented chain of custody from our warehouse to the ward.",
   },
   {
     icon: Building2,
     title: "Embassies & corporates",
-    desc: "Secure, role-isolated portal access, enterprise SLAs, and a documented record that stands up to procurement review.",
+    desc: "Portal access with defined roles, clear service terms, and a paper trail that stands up when finance or procurement asks questions.",
   },
 ];
 
@@ -86,20 +86,22 @@ export default function AboutPage() {
             </h2>
             <div className="mt-5 space-y-4 text-ink-muted">
               <p>
-                {COMPANY.name} has connected families, businesses, and institutions across the
-                USA–Nigeria corridor since {COMPANY.fmcLicensedSince}. As a licensed freight
-                forwarder, we handle everything from a single suitcase to multi-container medical
-                and infrastructure projects.
+                {COMPANY.name} has shipped for families, businesses, and institutions on the
+                USA-to-Nigeria route since {COMPANY.fmcLicensedSince}. We started as a licensed freight
+                forwarder and have grown by doing the small things right, from a single barrel going
+                home to a hospital's multi-container equipment order.
               </p>
               <p>
-                Every shipment comes with a formal digital receipt, an 8-stage tracking lifecycle,
-                and automated updates, so you always have an audit-ready record instead of a string
-                of chat messages. That is the documentation government, hospital, and embassy clients
-                ask for, and it is what makes us bid-eligible from day one.
+                Every shipment is weighed, measured, photographed, and receipted before it leaves our
+                Maryland warehouse, then tracked through 8 stages until it is in the recipient's hands.
+                You get a formal receipt and a record you can pull up later, not a string of chat
+                messages. That record is exactly what government, hospital, and embassy buyers ask to
+                see before they sign.
               </p>
               <p>
-                Today we operate established lanes to Nigeria, Ghana, Kenya, South Africa, Cameroon,
-                and Senegal, backed by a USA warehouse and a Lagos office working in lockstep.
+                Today we run regular lanes to Nigeria, Ghana, Kenya, South Africa, Cameroon, and
+                Senegal, with our Maryland warehouse and our Lagos office in daily contact so nothing
+                falls through the cracks between the two.
               </p>
             </div>
             <div className="mt-8">
@@ -111,9 +113,9 @@ export default function AboutPage() {
 
           <Reveal delay={0.08}>
             <Card className="bg-surface p-8">
-              <h3 className="font-bold text-navy">Corridor expertise</h3>
+              <h3 className="font-bold text-navy">Where we ship</h3>
               <p className="mt-1 text-sm text-ink-muted">
-                Deep specialization on the routes that matter most to our clients.
+                The African destinations we handle week in and week out.
               </p>
               <ul className="mt-5 grid grid-cols-2 gap-3">
                 {DESTINATION_COUNTRIES.map((c) => (
@@ -126,7 +128,7 @@ export default function AboutPage() {
                 ))}
               </ul>
               <p className="mt-5 flex items-center gap-2 text-xs text-ink-muted">
-                <BadgeCheck className="h-4 w-4 text-gold" /> Primary focus: the USA–Nigeria lane.
+                <BadgeCheck className="h-4 w-4 text-gold" /> Most of what we move runs the USA-to-Nigeria lane.
               </p>
             </Card>
           </Reveal>
@@ -166,11 +168,11 @@ export default function AboutPage() {
         <Reveal className="mx-auto max-w-2xl text-center">
           <span className="eyebrow">Who we serve</span>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-navy sm:text-4xl">
-            Built for institutional clients
+            Ready for institutional clients
           </h2>
           <p className="mt-4 text-ink-muted">
-            The documentation, security, and reliability that government, hospital, and embassy
-            clients need.
+            The documentation and careful handling that government, hospital, and embassy buyers
+            expect, from the first quote to the final signature.
           </p>
         </Reveal>
         <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -201,12 +203,12 @@ export default function AboutPage() {
                 Send your next shipment with us
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Join the families, businesses, and institutions we ship for across the USA to Africa
-                corridor.
+                Join the families, businesses, and institutions we ship for between the USA and
+                Africa. We will handle it the same way we handle every load.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <ButtonLink href="/order" variant="gold" size="lg">
-                  Create your account <ArrowRight className="h-4 w-4" />
+                  Start a shipment <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
                   href="/contact"

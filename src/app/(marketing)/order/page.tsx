@@ -142,6 +142,8 @@ function OrderFlow() {
       const data = JSON.parse(raw) as {
         service_type?: ServiceType;
         items?: ShipmentItem[];
+        full_name?: string;
+        email?: string;
         destination_country?: string;
         destination_city?: string;
         weight?: number;
@@ -151,6 +153,8 @@ function OrderFlow() {
         vehicle_details?: string;
         receiver?: { full_name?: string; phone?: string; address?: string };
       };
+      if (data.full_name) setSenderName(data.full_name);
+      if (data.email) setSenderEmail(data.email);
       if (data.service_type) setService(data.service_type);
       if (data.destination_country) setDestCountry(data.destination_country);
       if (data.destination_city) setDestCity(data.destination_city);
@@ -751,6 +755,25 @@ function OrderFlow() {
             </Card>
           </div>
         </div>
+
+        {/* Mobile sticky mini quote bar (so price + submit stay visible) */}
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-premium backdrop-blur lg:hidden">
+          <div className="container-page flex items-center justify-between gap-3 px-0">
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-wide text-ink-muted">
+                {SERVICES[service].label} total
+              </p>
+              <p className="font-mono text-lg font-bold text-navy">
+                {isQuotedOnly ? "Quoted" : <AnimatedNumber value={grandTotal} />}
+              </p>
+            </div>
+            <Button variant="gold" onClick={handleSubmit} loading={submitting} className="shrink-0">
+              Submit order <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        {/* spacer so content isn't hidden behind the mobile bar */}
+        <div className="h-20 lg:hidden" aria-hidden />
       </section>
     </>
   );
@@ -922,7 +945,7 @@ function SeaBuilder({
                       onClick={() => setQty(item.s_n, q - 1)}
                       disabled={q <= 0}
                       aria-label={`Remove one ${item.description}`}
-                      className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 focus-ring disabled:opacity-40"
+                      className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border border-border text-navy transition-colors hover:bg-navy/5 focus-ring disabled:opacity-40"
                     >
                       <Minus className="h-4 w-4" />
                     </button>
@@ -942,7 +965,7 @@ function SeaBuilder({
                       onClick={() => setQty(item.s_n, q + 1)}
                       aria-label={`Add one ${item.description}`}
                       className={cn(
-                        "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border transition-colors focus-ring",
+                        "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg border transition-colors focus-ring",
                         selected
                           ? "border-gold bg-gold/15 text-gold-700 hover:bg-gold/25"
                           : "border-border text-navy hover:bg-navy/5"

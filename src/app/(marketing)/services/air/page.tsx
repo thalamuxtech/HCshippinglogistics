@@ -191,7 +191,7 @@ export default function AirFreightPage() {
                 Need it there in days?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Create your account and book an air shipment today, with a digital receipt and
+                Start your air shipment today and get a digital receipt and
                 real-time tracking included.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

@@ -222,7 +222,7 @@ export default function RoroPage() {
                 Ready to ship your vehicle?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Create your account to book a RORO sailing, upload your documents, and track your
+                Start your order to book a RORO sailing, submit your documents, and track your
                 vehicle to the destination port.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

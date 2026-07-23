@@ -268,17 +268,17 @@ export default function PricingPage() {
                 Ready to lock in a rate?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Create your account to build a full quote, book a pickup, and track your shipment
+                Start your order to build a full quote, request a pickup, and track your shipment
                 through all 8 stages.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <ButtonLink href="/order" variant="gold" size="lg">
-                  Create your account <ArrowRight className="h-4 w-4" />
+                <ButtonLink href="/order" variant="gold" size="lg" className="w-full sm:w-auto">
+                  Start your order <ArrowRight className="h-4 w-4" />
                 </ButtonLink>
                 <ButtonLink
                   href="/contact"
                   size="lg"
-                  className="border border-white/20 bg-white/5 text-white hover:bg-white/10"
+                  className="w-full border border-white/20 bg-white/5 text-white hover:bg-white/10 sm:w-auto"
                 >
                   Talk to sales
                 </ButtonLink>

@@ -25,27 +25,27 @@ const segments = [
   {
     icon: Landmark,
     title: "Government agencies",
-    desc: "Procurement-compliant documentation, formal digital receipts, and complete audit trails built for tenders and public accountability.",
+    desc: "Procurement-compliant documentation, formal digital receipts, and a full record of every stage, ready for tenders and public accountability.",
   },
   {
     icon: Stethoscope,
     title: "Hospitals & health systems",
-    desc: "Specialized handling of medical equipment, diagnostic devices, and supplies with chain-of-custody tracking from pickup to delivery.",
+    desc: "Careful handling of medical equipment, diagnostic devices, and supplies, with a documented chain of custody from our warehouse to the ward.",
   },
   {
     icon: Building2,
     title: "Embassies & corporates",
-    desc: "Secure, role-isolated portal access with enterprise SLAs and a documented record for long-term contracts.",
+    desc: "Portal access with defined roles, clear service terms, and a documented record built to carry a long-term contract.",
   },
 ];
 
 const capabilities = [
-  { icon: Boxes, title: "60+ container projects", desc: "Proven execution on large-scale, multi-container programs and staged deliveries." },
-  { icon: Stethoscope, title: "Medical equipment", desc: "Sensitive medical and lab equipment moved with careful handling and documentation." },
-  { icon: Lock, title: "Role-isolated access", desc: "Encrypted portal with least-privilege roles and full activity logging." },
-  { icon: ClipboardCheck, title: "Audit-ready records", desc: "Every stage transition and receipt archived permanently and exportable." },
-  { icon: FileCheck2, title: "Formal digital receipts", desc: "Receipts issued at inspection for tender and finance use, downloadable anytime." },
-  { icon: ShieldCheck, title: "Licensed & registered", desc: "FMC-licensed and CAC-registered, so we are bid-eligible from day one." },
+  { icon: Boxes, title: "60+ container projects", desc: "We have run large, multi-container programs, staging inventory and sequencing deliveries so they land in the right order." },
+  { icon: Stethoscope, title: "Medical equipment", desc: "Sensitive medical and lab equipment moved carefully and documented at each step." },
+  { icon: Lock, title: "Access by role", desc: "A portal where each person sees only what their role allows, with every action logged." },
+  { icon: ClipboardCheck, title: "A record you can pull up", desc: "Every stage change and receipt kept on file and ready to export when someone asks." },
+  { icon: FileCheck2, title: "Formal digital receipts", desc: "Receipts issued at inspection for tender and finance use, downloadable whenever you need them." },
+  { icon: ShieldCheck, title: "Licensed and registered", desc: "FMC-licensed since 2017 and CAC-registered in Nigeria, so we can bid the day you open the tender." },
 ];
 
 export default function EnterprisePage() {
@@ -71,9 +71,9 @@ export default function EnterprisePage() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
-                Highclass gives you audit trails, formal receipts, and secure portal access. That is
-                the paperwork procurement teams at government agencies, hospitals, and embassies need
-                before they can sign a contract.
+                Highclass gives you a documented record of every stage, formal receipts, and portal
+                access with defined roles. That is the paperwork procurement teams at government
+                agencies, hospitals, and embassies review before they can sign.
               </p>
             </Reveal>
             <Reveal delay={0.22}>
@@ -129,8 +129,8 @@ export default function EnterprisePage() {
               Everything a tender asks for
             </h2>
             <p className="mt-4 text-ink-muted">
-              From medical equipment logistics to 60+ container programs, with the licensing,
-              documentation, and audit trails enterprise contracts call for.
+              From medical equipment to 60+ container programs, with the licensing, documentation,
+              and stage-by-stage record a large contract asks for.
             </p>
           </Reveal>
           <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -166,8 +166,8 @@ export default function EnterprisePage() {
                 </h2>
                 <p className="mt-4 text-ink-muted">
                   We have coordinated programs of more than 60 containers, staging inventory,
-                  sequencing sailings, and clearing customs across multiple destination ports while
-                  keeping every stakeholder informed through a single audit-ready record.
+                  sequencing sailings, and clearing customs across several destination ports, while
+                  keeping every stakeholder looking at the same documented record.
                 </p>
                 <div className="mt-6 grid grid-cols-3 gap-4">
                   {[

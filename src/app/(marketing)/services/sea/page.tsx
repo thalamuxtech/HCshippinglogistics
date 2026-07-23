@@ -46,7 +46,7 @@ const highlights = [
 ];
 
 const process = [
-  { step: "01", title: "Book & schedule", desc: "Create your account and request a pickup or drop-off at our USA warehouse." },
+  { step: "01", title: "Book & schedule", desc: "Start your order and request a pickup or drop off at our USA warehouse." },
   { step: "02", title: "Inspect & receipt", desc: "We weigh, measure, and document each piece, then issue a digital receipt." },
   { step: "03", title: "Load & sail", desc: "Your cargo is consolidated, loaded, and sails to the destination port." },
   { step: "04", title: "Clear & deliver", desc: "We manage destination customs clearance and last-mile delivery or pickup." },
@@ -240,7 +240,7 @@ export default function SeaCargoPage() {
                 Ready to ship by sea?
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-white/75">
-                Create your free account to book a pickup, get a digital receipt, and track your
+                Start your order to request a pickup, get a digital receipt, and track your
                 container every step of the way.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">

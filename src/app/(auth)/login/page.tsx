@@ -45,7 +45,7 @@ function LoginForm() {
         return;
       }
       toast.success("Welcome back", profile?.full_name ? `Signed in as ${profile.full_name}` : undefined);
-      const dest = next || (profile ? ROLE_HOME[profile.role] : "/portal");
+      const dest = next || (profile ? ROLE_HOME[profile.role] : "/");
       router.push(dest);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";

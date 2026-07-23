@@ -14,6 +14,7 @@ import {
   Truck,
   ArrowRight,
   Info,
+  PackagePlus,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -252,28 +253,68 @@ function IdleHelp() {
 
 function CustomerResults({ view }: { view: CustomerView }) {
   const shipments = view.shipments ?? [];
+
+  function sendAnother(reuseReceiver: boolean) {
+    // Prefill the order form with saved details. Sender always; receiver only
+    // if the customer confirms it's going to the same person.
+    const last = shipments[0];
+    const payload: Record<string, unknown> = {
+      full_name: view.customer?.full_name || "",
+      email: view.customer?.email || "",
+      destination_country: last?.destination_country,
+      destination_city: last?.destination_city,
+      service_type: last?.service_type,
+    };
+    if (reuseReceiver && last?.receiver) payload.receiver = last.receiver;
+    try {
+      sessionStorage.setItem("hc_reorder", JSON.stringify(payload));
+    } catch {
+      /* ignore */
+    }
+    window.location.href = "/order";
+  }
+
   return (
     <div className="space-y-6">
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-        className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-white p-5 shadow-card"
+        className="rounded-2xl border border-border bg-white p-5 shadow-card"
       >
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
-            Customer account
-          </p>
-          <h2 className="mt-0.5 truncate text-xl font-extrabold tracking-tight text-navy">
-            {view.customer?.full_name ?? "Your shipments"}
-          </h2>
-          {view.customer?.id && (
-            <p className="mt-0.5 font-mono text-xs text-ink-muted">ID: {view.customer.id}</p>
-          )}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-muted">
+              My Shipments
+            </p>
+            <h2 className="mt-0.5 truncate text-xl font-extrabold tracking-tight text-navy">
+              {view.customer?.full_name
+                ? `Welcome back, ${view.customer.full_name.split(" ")[0]}`
+                : "Your shipments"}
+            </h2>
+            {view.customer?.id && (
+              <p className="mt-0.5 font-mono text-xs text-ink-muted">
+                Customer ID: {view.customer.id}
+              </p>
+            )}
+          </div>
+          <Badge variant="navy">
+            {shipments.length} shipment{shipments.length !== 1 ? "s" : ""}
+          </Badge>
         </div>
-        <Badge variant="navy">
-          {shipments.length} shipment{shipments.length !== 1 ? "s" : ""}
-        </Badge>
+
+        {/* Send another item */}
+        <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-ink-muted">Sending something else?</p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="gold" onClick={() => sendAnother(true)}>
+              <PackagePlus className="h-4 w-4" /> Send to the same receiver
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => sendAnother(false)}>
+              New receiver
+            </Button>
+          </div>
+        </div>
       </motion.div>
 
       <div className="space-y-5">
@@ -475,16 +516,21 @@ function StageProgress({ currentOrder }: { currentOrder: number }) {
             <li key={s.key} className="flex flex-col items-center text-center">
               <span
                 className={cn(
-                  "flex h-6 w-6 items-center justify-center rounded-full font-mono text-[10px] font-bold transition-colors",
-                  done ? "text-white" : "bg-secondary text-ink-muted"
+                  "flex h-7 w-7 items-center justify-center rounded-full font-mono text-xs font-bold transition-colors",
+                  done ? "text-white" : "bg-secondary text-ink-muted",
+                  current && "ring-2 ring-offset-2"
                 )}
-                style={done ? { backgroundColor: s.color } : undefined}
+                style={
+                  done
+                    ? { backgroundColor: s.color, ...(current ? { boxShadow: `0 0 0 2px #fff, 0 0 0 4px ${s.color}` } : {}) }
+                    : undefined
+                }
               >
                 {s.order}
               </span>
               <span
                 className={cn(
-                  "mt-1 text-[10px] leading-tight",
+                  "mt-1.5 text-[11px] leading-tight sm:text-xs",
                   current ? "font-semibold text-navy" : "text-ink-muted"
                 )}
               >

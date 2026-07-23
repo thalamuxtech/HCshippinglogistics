@@ -361,7 +361,7 @@ export default function AdminShipmentsPage() {
       {/* Bulk action bar */}
       {selected.size > 0 && (
         <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="flex items-center gap-3 rounded-2xl border border-border bg-white px-4 py-3 shadow-premium animate-fade-up">
+          <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-2 rounded-2xl border border-border bg-white px-4 py-3 shadow-premium animate-fade-up sm:gap-3">
             <span className="inline-flex items-center gap-2 text-sm font-semibold text-navy">
               <Layers className="h-4 w-4 text-gold-700" />
               {selected.size} selected
