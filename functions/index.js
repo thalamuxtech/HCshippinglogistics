@@ -13,6 +13,7 @@
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { onDocumentUpdated } from "firebase-functions/v2/firestore";
 import { setGlobalOptions } from "firebase-functions/v2";
+import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
@@ -20,6 +21,22 @@ import { getAuth } from "firebase-admin/auth";
 initializeApp();
 const db = getFirestore();
 setGlobalOptions({ region: "us-central1", maxInstances: 10 });
+
+// ---- Secrets (Google Secret Manager) ----
+// Set with: firebase functions:secrets:set RESEND_API_KEY  (etc.)
+// Bound per-function via `secrets: [...]` so they're injected into
+// process.env at runtime ONLY for functions that need them. Until they
+// are set, the functions run in stub mode (log-only, still succeed).
+const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+const RESEND_FROM_EMAIL = defineSecret("RESEND_FROM_EMAIL");
+const TWILIO_ACCOUNT_SID = defineSecret("TWILIO_ACCOUNT_SID");
+const TWILIO_AUTH_TOKEN = defineSecret("TWILIO_AUTH_TOKEN");
+const TWILIO_FROM_NUMBER = defineSecret("TWILIO_FROM_NUMBER");
+
+// Convenience arrays for binding to functions.
+const EMAIL_SECRETS = [RESEND_API_KEY, RESEND_FROM_EMAIL];
+const SMS_SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER];
+const ALL_SECRETS = [...EMAIL_SECRETS, ...SMS_SECRETS];
 
 // ---- Auth guard: require the caller to be an admin ----
 async function assertAdmin(req) {
@@ -67,42 +84,56 @@ function stageMessage(status, destination) {
   }
 }
 
-// ---- Providers (lazy, only if keys present) ----
-const RESEND_KEY = process.env.RESEND_API_KEY;
-const RESEND_FROM = process.env.RESEND_FROM_EMAIL || "Highclass Shipping <noreply@highclassshippinglogistics.com>";
-const TWILIO_SID = process.env.TWILIO_ACCOUNT_SID;
-const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
-const TWILIO_FROM = process.env.TWILIO_FROM_NUMBER;
+// ---- Providers ----
+// Keys are read at CALL TIME from process.env. Firebase injects bound
+// secrets into process.env at runtime, so this reads the live values when
+// the secrets are set + bound, and cleanly falls back to stub mode otherwise.
+const DEFAULT_FROM = "Highclass Shipping <noreply@highclassshippinglogistics.com>";
 
 async function sendEmail({ to, subject, html }) {
-  if (!RESEND_KEY) {
+  const key = process.env.RESEND_API_KEY;
+  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_FROM;
+  if (!key) {
     console.log(`[STUB EMAIL] to=${to} subject="${subject}"`);
     return { ok: true, stub: true };
   }
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${RESEND_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ from: RESEND_FROM, to, subject, html }),
-  });
-  return { ok: res.ok, stub: false };
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject, html }),
+    });
+    return { ok: res.ok, stub: false };
+  } catch (e) {
+    console.error("sendEmail error", e);
+    return { ok: false, stub: false };
+  }
 }
 
 async function sendSms({ to, body }) {
-  if (!TWILIO_SID || !TWILIO_TOKEN || !TWILIO_FROM) {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_FROM_NUMBER;
+  if (!sid || !token || !fromNumber) {
     console.log(`[STUB SMS] to=${to} body="${body}"`);
     return { ok: true, stub: true };
   }
-  const creds = Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString("base64");
-  const params = new URLSearchParams({ To: to, From: TWILIO_FROM, Body: body });
-  const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`, {
-    method: "POST",
-    headers: { Authorization: `Basic ${creds}`, "Content-Type": "application/x-www-form-urlencoded" },
-    body: params.toString(),
-  });
-  return { ok: res.ok, stub: false };
+  try {
+    const creds = Buffer.from(`${sid}:${token}`).toString("base64");
+    const params = new URLSearchParams({ To: to, From: fromNumber, Body: body });
+    const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
+      method: "POST",
+      headers: { Authorization: `Basic ${creds}`, "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
+    });
+    return { ok: res.ok, stub: false };
+  } catch (e) {
+    console.error("sendSms error", e);
+    return { ok: false, stub: false };
+  }
 }
 
 // ---- Branded email template (inline, no external deps) ----
@@ -130,7 +161,7 @@ const SITE = process.env.SITE_URL || "https://highclassshippinglogistics.com";
 // ═══════════════════════════════════════════════════════════════
 // Callable: send a stage-update email (+ SMS) for one shipment
 // ═══════════════════════════════════════════════════════════════
-export const sendStageUpdateEmail = onCall(async (req) => {
+export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req) => {
   const { shipmentId, customerId, status, extraNote } = req.data || {};
   if (!shipmentId || !status) throw new HttpsError("invalid-argument", "shipmentId and status required");
 
@@ -242,7 +273,7 @@ export const resolveAccessCode = onCall(async (req) => {
 // ═══════════════════════════════════════════════════════════════
 // Callable: send access-code email
 // ═══════════════════════════════════════════════════════════════
-export const sendAccessCodeEmail = onCall(async (req) => {
+export const sendAccessCodeEmail = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
   const { email, fullName, code } = req.data || {};
   if (!email) throw new HttpsError("invalid-argument", "email required");
   const heading = "Your Highclass Access Code";
@@ -264,7 +295,7 @@ export const sendAccessCodeEmail = onCall(async (req) => {
 // ═══════════════════════════════════════════════════════════════
 // Callable: sailing broadcast to active customers with active shipments
 // ═══════════════════════════════════════════════════════════════
-export const sendSailingBroadcast = onCall(async (req) => {
+export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
   const { subject, body, filters } = req.data || {};
   if (!subject || !body) throw new HttpsError("invalid-argument", "subject and body required");
 
@@ -305,7 +336,7 @@ export const sendSailingBroadcast = onCall(async (req) => {
 // Callable: generate a digital receipt (stub returns a data ref;
 // real PDF rendering can be added with a PDF lib later)
 // ═══════════════════════════════════════════════════════════════
-export const generateReceiptPdf = onCall(async (req) => {
+export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
   const { shipmentId } = req.data || {};
   if (!shipmentId) throw new HttpsError("invalid-argument", "shipmentId required");
   const shipSnap = await db.collection("shipments").doc(shipmentId).get();
@@ -325,7 +356,7 @@ export const generateReceiptPdf = onCall(async (req) => {
   // A real implementation would render with a PDF lib and upload to Storage.
   const pdfUrl = `${SITE}/receipt/${shipmentId}?rcp=${receiptNumber}`;
 
-  return { ok: true, receiptNumber, pdfUrl, stub: !RESEND_KEY };
+  return { ok: true, receiptNumber, pdfUrl, stub: !process.env.RESEND_API_KEY };
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -333,7 +364,7 @@ export const generateReceiptPdf = onCall(async (req) => {
 // Creates the Firebase Auth user + Firestore profile WITHOUT signing the
 // admin out (the client SDK can't do this). Emails a temp password.
 // ═══════════════════════════════════════════════════════════════
-export const createStaffUser = onCall(async (req) => {
+export const createStaffUser = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
   await assertAdmin(req);
   const { email, fullName, role, phone, assignedCountry, password } = req.data || {};
   if (!email || !fullName || !role) {
@@ -420,7 +451,9 @@ export const updateStaffUser = onCall(async (req) => {
 // Trigger: auto-notify on shipment status change (Module 10)
 // Fires whenever a shipment's current_status changes.
 // ═══════════════════════════════════════════════════════════════
-export const onShipmentStatusChange = onDocumentUpdated("shipments/{shipmentId}", async (event) => {
+export const onShipmentStatusChange = onDocumentUpdated(
+  { document: "shipments/{shipmentId}", secrets: ALL_SECRETS },
+  async (event) => {
   const before = event.data?.before.data();
   const after = event.data?.after.data();
   if (!before || !after) return;
@@ -464,4 +497,5 @@ export const onShipmentStatusChange = onDocumentUpdated("shipments/{shipmentId}"
       stub: !!res.stub, created_at: FieldValue.serverTimestamp(),
     });
   }
-});
+  }
+);
