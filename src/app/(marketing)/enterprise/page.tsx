@@ -14,6 +14,7 @@ import {
 import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/marketing/Reveal";
+import { BrandPattern } from "@/components/marketing/BrandPattern";
 
 export const metadata: Metadata = {
   title: "Enterprise & B2B Freight: Government, Hospitals & Embassies",
@@ -54,6 +55,7 @@ export default function EnterprisePage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+        <BrandPattern variant="compact" />
         <div className="container-page relative py-20 sm:py-28">
           <div className="mx-auto max-w-3xl text-center">
             <Reveal>
@@ -188,6 +190,7 @@ export default function EnterprisePage() {
               </div>
               <div className="relative flex h-full min-h-[220px] items-center justify-center overflow-hidden bg-navy-gradient p-10">
                 <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+                <BrandPattern variant="compact" />
                 <Container className="relative h-24 w-24 text-gold" />
               </div>
             </div>
@@ -200,6 +203,7 @@ export default function EnterprisePage() {
         <Reveal>
           <div className="relative overflow-hidden rounded-3xl bg-navy-gradient px-8 py-14 text-center text-white sm:px-16 sm:py-20">
             <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+            <BrandPattern variant="compact" />
             <div className="relative mx-auto max-w-2xl">
               <Building2 className="mx-auto h-10 w-10 text-gold" />
               <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">

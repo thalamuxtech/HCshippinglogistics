@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { COMPANY } from "@/lib/constants";
 import { ShieldCheck, Ship, Lock } from "lucide-react";
+import { BrandPattern } from "@/components/marketing/BrandPattern";
 
 const cols = [
   {
@@ -33,8 +34,9 @@ const cols = [
 export function SiteFooter() {
   const year = new Date().getFullYear();
   return (
-    <footer className="mt-24 bg-navy-gradient text-white">
-      <div className="container-page py-16">
+    <footer className="relative mt-24 overflow-hidden bg-navy-gradient text-white">
+      <BrandPattern variant="footer" />
+      <div className="container-page relative py-16">
         <div className="grid gap-12 lg:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
             <Logo variant="light" size="lg" />

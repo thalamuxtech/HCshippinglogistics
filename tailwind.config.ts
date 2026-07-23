@@ -148,12 +148,50 @@ const config: Config = {
         shimmer: {
           "100%": { transform: "translateX(100%)" },
         },
+        // ── Animated brand backdrop (BrandPattern) ──
+        // Slow diagonal drift of the "shipping route" sweeps.
+        "route-drift": {
+          "0%": { backgroundPosition: "0 0" },
+          "100%": { backgroundPosition: "480px -220px" },
+        },
+        // Gentle parallax pan of the blueprint grid.
+        "grid-pan": {
+          "0%": { backgroundPosition: "0 0" },
+          "100%": { backgroundPosition: "56px 56px" },
+        },
+        // Soft breathing glow.
+        "glow-pulse": {
+          "0%, 100%": { opacity: "0.55", transform: "translate(-50%, 0) scale(1)" },
+          "50%": { opacity: "0.9", transform: "translate(-50%, 0) scale(1.08)" },
+        },
+        // A light sweep that travels across the band.
+        "beam-sweep": {
+          "0%": { transform: "translateX(-120%) skewX(-14deg)", opacity: "0" },
+          "12%": { opacity: "0.5" },
+          "50%": { opacity: "0.5" },
+          "70%, 100%": { transform: "translateX(220%) skewX(-14deg)", opacity: "0" },
+        },
+        // Drifting cargo/orbit dots.
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-14px)" },
+        },
+        "float-slower": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-22px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "fade-up": "fade-up 0.5s ease-out both",
         shimmer: "shimmer 1.5s infinite",
+        "route-drift": "route-drift 28s linear infinite",
+        "grid-pan": "grid-pan 24s linear infinite",
+        "glow-pulse": "glow-pulse 9s ease-in-out infinite",
+        "beam-sweep": "beam-sweep 11s ease-in-out infinite",
+        "float-slow": "float-slow 8s ease-in-out infinite",
+        "float-slower": "float-slower 12s ease-in-out infinite",
       },
     },
   },

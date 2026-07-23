@@ -98,7 +98,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
         {/* Premium brand backdrop: blueprint grid + accent dots + route sweeps */}
-        <BrandPattern intensity="hero" />
+        <BrandPattern variant="hero" />
         {/* subtle gradient fade into the next section */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-navy-950/30" />
         <div className="container-page relative py-20 sm:py-28 lg:py-32">

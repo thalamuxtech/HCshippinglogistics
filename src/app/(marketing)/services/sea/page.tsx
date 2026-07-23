@@ -13,6 +13,7 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/marketing/Reveal";
+import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { SEA_PRICE_LIST, SERVICES } from "@/lib/constants";
 import { formatCurrency } from "@/lib/utils";
 
@@ -59,6 +60,7 @@ export default function SeaCargoPage() {
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+        <BrandPattern variant="compact" />
         <div className="container-page relative py-20 sm:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <Reveal>
@@ -234,6 +236,7 @@ export default function SeaCargoPage() {
         <Reveal>
           <div className="relative overflow-hidden rounded-3xl bg-navy-gradient px-8 py-14 text-center text-white sm:px-16 sm:py-16">
             <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
+            <BrandPattern variant="compact" />
             <div className="relative mx-auto max-w-2xl">
               <PackageCheck className="mx-auto h-10 w-10 text-gold" />
               <h2 className="mt-5 text-3xl font-extrabold tracking-tight sm:text-4xl">

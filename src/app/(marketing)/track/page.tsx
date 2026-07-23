@@ -106,7 +106,7 @@ function TrackHub() {
       {/* Hero band + input */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
-        <BrandPattern intensity="hero" />
+        <BrandPattern variant="hero" />
         <div className="container-page relative py-16 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <Reveal>

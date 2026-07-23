@@ -10,7 +10,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Brand panel */}
       <div className="relative hidden overflow-hidden bg-navy-gradient p-12 text-white lg:flex lg:flex-col lg:justify-between">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
-        <BrandPattern intensity="panel" />
+        <BrandPattern variant="panel" />
         <div className="relative">
           <Logo variant="light" size="xl" />
         </div>
