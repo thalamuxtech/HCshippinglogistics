@@ -154,14 +154,20 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   metaRow(`${docTitle} #`, receiptNumber, y);
   metaRow("DATE", issued, y + 15);
   metaRow("DUE DATE", status === "paid" ? "Paid" : due, y + 30);
+  const container = (shipment.container_number || "").trim();
+  let metaBottom = y + 45;
+  if (container) {
+    metaRow("CONTAINER", `CNT #${container}`, y + 45);
+    metaBottom = y + 60;
+  }
   // Status badge under the meta
   doc.save();
-  doc.roundedRect(metaX + 110, y + 46, 100, 22, 5).fill(badge.color);
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text(badge.label, metaX + 110, y + 51, { width: 100, align: "center" });
+  doc.roundedRect(metaX + 110, metaBottom + 1, 100, 22, 5).fill(badge.color);
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(11).text(badge.label, metaX + 110, metaBottom + 6, { width: 100, align: "center" });
   doc.restore();
 
-  // QR + tracking (left, below bill-to)
-  y = Math.max(by, y + 74) + 6;
+  // QR + tracking (left, below bill-to). Clear the status badge / meta block too.
+  y = Math.max(by, metaBottom + 30) + 6;
   doc.image(qrBuffer, M, y, { width: 66, height: 66 });
   doc.fillColor(MUTED).font("Helvetica").fontSize(8).text("SHIP TO", M + 78, y + 2);
   doc.fillColor(INK).font("Helvetica-Bold").fontSize(10).text(rcv.full_name || "Receiver", M + 78, y + 14, { width: 240 });
@@ -172,6 +178,37 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   );
   doc.fillColor(NAVY).font("Courier-Bold").fontSize(9).text(`Tracking: ${shipment.tracking_number || "-"}`, M + 78, y + 52);
   y += 80;
+
+  // ── Do-Not-Release banner ──
+  // DNR follows payment (held until fully paid; covers pay-on-delivery) unless an
+  // admin set a manual override (dnr_override true/false), mirrored to `dnr`.
+  const dnr =
+    shipment.dnr_override === true
+      ? true
+      : shipment.dnr_override === false
+      ? false
+      : typeof shipment.dnr === "boolean"
+      ? shipment.dnr
+      : status !== "paid";
+  if (dnr) {
+    const bh = 30;
+    doc.save();
+    doc.roundedRect(M, y, contentW, bh, 6).fill("#FEF2F2").stroke("#DC2626");
+    doc.fillColor("#DC2626").font("Helvetica-Bold").fontSize(10).text(
+      "DO NOT RELEASE (DNR)",
+      M + 12,
+      y + 6,
+      { width: 180 }
+    );
+    doc.fillColor("#7F1D1D").font("Helvetica").fontSize(8).text(
+      "Packages must not be released until the outstanding balance is settled.",
+      M + 180,
+      y + 8,
+      { width: contentW - 192 }
+    );
+    doc.restore();
+    y += bh + 12;
+  }
 
   // ── Item table (Description / QTY / Price / Amount) ──
   const cQty = W - M - 210, cPrice = W - M - 150, cAmt = W - M - 70;

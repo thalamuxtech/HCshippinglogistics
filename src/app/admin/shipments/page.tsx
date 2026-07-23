@@ -152,7 +152,8 @@ export default function AdminShipmentsPage() {
       return (
         s.tracking_number?.toLowerCase().includes(term) ||
         s.customer_name?.toLowerCase().includes(term) ||
-        s.customer_email?.toLowerCase().includes(term)
+        s.customer_email?.toLowerCase().includes(term) ||
+        s.container_number?.toLowerCase().includes(term)
       );
     });
   }, [shipments, q, status, service]);
@@ -308,6 +309,11 @@ export default function AdminShipmentsPage() {
                       >
                         {s.tracking_number || s.id.slice(0, 8)}
                       </Link>
+                      {s.container_number && (
+                        <div className="mt-1 font-mono text-[10px] text-ink-muted">
+                          CNT #{s.container_number}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="max-w-[180px] truncate font-medium text-ink">

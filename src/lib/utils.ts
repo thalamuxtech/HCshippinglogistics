@@ -48,3 +48,27 @@ export function initialsOf(name?: string): string {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
 }
+
+// ── Do Not Release (DNR) ──
+// A shipment is on Do-Not-Release when the balance is not fully settled (covers
+// pay-on-delivery), unless an admin has manually overridden the state.
+// dnr_override: null/undefined = follow payment; true = force hold; false = force release.
+// Precedence is identical across the client (this helper), the receipt PDF, and
+// the viewByCustomerId function: override wins, then the materialized `dnr`
+// boolean, then the payment fallback.
+export function isDnr(s: {
+  payment_status?: string;
+  dnr?: boolean;
+  dnr_override?: boolean | null;
+}): boolean {
+  if (s.dnr_override === true) return true;
+  if (s.dnr_override === false) return false;
+  if (typeof s.dnr === "boolean") return s.dnr;
+  return (s.payment_status || "unpaid") !== "paid";
+}
+
+// Container label for display, e.g. "CNT #19B". Returns "" when unassigned.
+export function containerLabel(container?: string | null): string {
+  const c = (container || "").trim();
+  return c ? `CNT #${c}` : "";
+}

@@ -97,6 +97,14 @@ export interface Shipment {
   pickup_address?: string;
   delivery_address?: string;
   assigned_dispatcher_id?: string | null;
+  // Container assignment: the vessel container carrying this shipment, e.g. "15" / "19B".
+  container_number?: string | null;
+  container_shipped_on?: string | null; // ISO date the container sailed (YYYY-MM-DD)
+  // Do Not Release: packages must be withheld at the destination warehouse until
+  // cleared (typically pay-on-delivery / unpaid balance). Auto-set from payment,
+  // with a manual admin override.
+  dnr?: boolean;
+  dnr_override?: boolean | null; // null = follow payment; true/false = manual lock
   total_price: number;
   currency: string;
   // Payment
@@ -166,7 +174,12 @@ export interface SailingNotice {
   sent_by: string;
   subject: string;
   body: string;
-  filters: { service_type?: ServiceType; shipping_line?: ShippingLine; destination?: string };
+  filters: {
+    service_type?: ServiceType;
+    shipping_line?: ShippingLine;
+    destination?: string;
+    container_number?: string;
+  };
   recipient_count: number;
   recipient_ids: string[];
   sent_at?: Timestamp | null;

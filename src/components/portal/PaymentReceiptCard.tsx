@@ -46,6 +46,8 @@ export function PaymentReceiptCard({
       const res = await setPayment(shipment.id, {
         total,
         deposit: markPaid ? total : depositNum,
+        // Preserve any manual Do-Not-Release override; otherwise DNR follows payment.
+        dnr_override: shipment.dnr_override ?? null,
       });
       await logActivity({
         actor_id: actor.id,

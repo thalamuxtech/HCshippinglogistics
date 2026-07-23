@@ -102,6 +102,10 @@ export interface CustomerView {
     balance: number;
     payment_status: string;
     currency: string;
+    container_number?: string | null;
+    container_shipped_on?: string | null;
+    dnr?: boolean;
+    dnr_override?: boolean | null;
     receipt_number?: string | null;
     receipt_pdf_url?: string | null;
     created_at?: number | null;
@@ -169,6 +173,36 @@ export async function deleteReceiptPdf(payload: {
   const fn = httpsCallable(functions, "deleteReceiptPdf");
   const res = await fn(payload);
   return res.data as { ok: boolean; deleted?: number };
+}
+
+// Admin: broadcast a premium container-availability notice to all customers on a
+// container. Pass testEmail to deliver a single preview to that address instead.
+export interface ContainerBroadcastInput {
+  containerNumber: string;
+  subject: string;
+  body: string;
+  officeName?: string;
+  officeAddress?: string;
+  officePhone?: string;
+  deliveryContactName?: string;
+  deliveryContactPhone?: string;
+  nextLoadingDate?: string;
+  nextLoadingNote?: string;
+  usPhones?: string;
+  testEmail?: string;
+}
+
+export async function sendContainerBroadcast(
+  payload: ContainerBroadcastInput
+): Promise<{ ok: boolean; test?: boolean; recipientCount: number; recipientIds: string[] }> {
+  const fn = httpsCallable(functions, "sendContainerBroadcast");
+  const res = await fn(payload);
+  return res.data as {
+    ok: boolean;
+    test?: boolean;
+    recipientCount: number;
+    recipientIds: string[];
+  };
 }
 
 // ── Admin: staff management (server-side, admin-guarded) ──

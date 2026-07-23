@@ -156,7 +156,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl }) {
   <div style="max-width:560px;margin:0 auto;padding:24px">
     <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px;padding:28px;color:#fff">
       <div style="font-weight:800;font-size:18px">Highclass Shipping <span style="color:#D4A017">&amp; Logistics</span></div>
-      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#D4A017;margin-top:2px">White-Glove Freight · USA → Africa</div>
+      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#D4A017;margin-top:2px">Excellence in handling your valuables</div>
     </div>
     <div style="background:#fff;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 16px 16px;padding:28px">
       <h1 style="font-size:20px;margin:0 0 8px;color:#0B1E3A">${heading}</h1>
@@ -171,6 +171,148 @@ function emailShell({ heading, body, trackingNumber, ctaUrl }) {
 }
 
 const SITE = process.env.SITE_URL || "https://highclassshippinglogistics.com";
+
+// ---- Premium container-availability broadcast email ----
+// The admin-authored `body` (plain text, newlines) is placed inside a branded,
+// professionally laid-out shell with the office address, delivery contact, and
+// next-loading reminder rendered as structured blocks. Every value is optional
+// so the template degrades gracefully.
+function escapeHtml(str) {
+  return String(str == null ? "" : str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function containerNoticeEmail({
+  heading,
+  body,
+  containerLabel,
+  officeName,
+  officeAddress,
+  officePhone,
+  deliveryContactName,
+  deliveryContactPhone,
+  nextLoadingDate,
+  nextLoadingNote,
+  usPhones,
+  ctaUrl,
+}) {
+  const bodyHtml = escapeHtml(body).replace(/\n/g, "<br/>");
+  const row = (label, value) =>
+    value
+      ? `<tr><td style="padding:2px 0;color:#718096;font-size:12px;width:120px;vertical-align:top">${escapeHtml(
+          label
+        )}</td><td style="padding:2px 0;color:#1A202C;font-size:13px;font-weight:600">${escapeHtml(
+          value
+        )}</td></tr>`
+      : "";
+  return `<!doctype html><html><body style="margin:0;background:#F1F5F9;font-family:Inter,Segoe UI,Arial,sans-serif;color:#1A202C">
+  <div style="max-width:600px;margin:0 auto;padding:24px 16px">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px 16px 0 0;padding:30px 30px 26px">
+      <div style="color:#fff;font-weight:800;font-size:20px;letter-spacing:-0.2px">Highclass Shipping <span style="color:#D4A017">&amp; Logistics</span></div>
+      <div style="font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:#D4A017;margin-top:4px">Excellence in handling your valuables</div>
+    </div>
+    <div style="height:4px;background:#D4A017"></div>
+
+    <!-- Body card -->
+    <div style="background:#fff;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 16px 16px;padding:30px">
+      ${
+        containerLabel
+          ? `<div style="display:inline-block;background:#0B1E3A;color:#D4A017;font-weight:700;font-size:13px;letter-spacing:1px;padding:7px 14px;border-radius:999px;margin-bottom:18px">${escapeHtml(
+              containerLabel
+            )}</div>`
+          : ""
+      }
+      <h1 style="font-size:21px;line-height:1.3;margin:0 0 14px;color:#0B1E3A">${escapeHtml(
+        heading
+      )}</h1>
+      <p style="font-size:14.5px;line-height:1.7;color:#334155;margin:0 0 22px">${bodyHtml}</p>
+
+      ${
+        officeAddress || officePhone
+          ? `<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:12px;padding:16px 18px;margin:0 0 16px">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#D4A017;font-weight:700;margin-bottom:8px">Pickup Location</div>
+        ${
+          officeName
+            ? `<div style="font-size:14px;font-weight:700;color:#0B1E3A;margin-bottom:4px">${escapeHtml(
+                officeName
+              )}</div>`
+            : ""
+        }
+        ${
+          officeAddress
+            ? `<div style="font-size:13px;line-height:1.6;color:#334155">${escapeHtml(
+                officeAddress
+              ).replace(/\n/g, "<br/>")}</div>`
+            : ""
+        }
+        ${
+          officePhone
+            ? `<div style="font-size:13px;color:#0B1E3A;font-weight:600;margin-top:6px">${escapeHtml(
+                officePhone
+              )}</div>`
+            : ""
+        }
+      </div>`
+          : ""
+      }
+
+      ${
+        deliveryContactName || deliveryContactPhone
+          ? `<div style="border-left:3px solid #D4A017;padding:4px 0 4px 14px;margin:0 0 16px">
+        <div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#718096;font-weight:700;margin-bottom:3px">Need delivery?</div>
+        <div style="font-size:13.5px;color:#334155">Call our Logistics Manager ${
+          deliveryContactName ? `<strong>${escapeHtml(deliveryContactName)}</strong>` : ""
+        }${deliveryContactPhone ? ` on <strong>${escapeHtml(deliveryContactPhone)}</strong>` : ""}.</div>
+      </div>`
+          : ""
+      }
+
+      ${
+        nextLoadingDate || nextLoadingNote
+          ? `<div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px 18px;margin:0 0 16px">
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:#B45309;font-weight:700;margin-bottom:6px">Reminder</div>
+        ${
+          nextLoadingDate
+            ? `<div style="font-size:14px;font-weight:700;color:#78350F;margin-bottom:4px">Next loading date: ${escapeHtml(
+                nextLoadingDate
+              )}</div>`
+            : ""
+        }
+        ${
+          nextLoadingNote
+            ? `<div style="font-size:13px;line-height:1.6;color:#92400E">${escapeHtml(
+                nextLoadingNote
+              )}</div>`
+            : ""
+        }
+      </div>`
+          : ""
+      }
+
+      ${
+        usPhones
+          ? `<p style="font-size:13px;color:#475569;margin:18px 0 0">For more information please call <strong style="color:#0B1E3A">${escapeHtml(
+              usPhones
+            )}</strong>.</p>`
+          : ""
+      }
+
+      ${
+        ctaUrl
+          ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:20px;background:#D4A017;color:#0B1E3A;font-weight:700;font-size:14px;text-decoration:none;padding:13px 26px;border-radius:10px">View my shipment</a>`
+          : ""
+      }
+
+      <p style="font-size:11.5px;color:#94A3B8;margin-top:26px;border-top:1px solid #E2E8F0;padding-top:16px;line-height:1.6">
+        FMC Licensed since 2017 · Registered in Maryland, USA &amp; Nigeria (CAC)<br/>
+        Highclass Shipping and Logistics Inc. This message was sent to customers with cargo on this container.
+      </p>
+    </div>
+  </div></body></html>`;
+}
 
 // ═══════════════════════════════════════════════════════════════
 // Callable: send a stage-update email (+ SMS) for one shipment
@@ -529,6 +671,16 @@ export const viewByCustomerId = onCall(async (req) => {
         balance: s.balance != null ? s.balance : s.total_price || 0,
         payment_status: s.payment_status || "unpaid",
         currency: s.currency || "USD",
+        container_number: s.container_number || null,
+        container_shipped_on: s.container_shipped_on || null,
+        dnr:
+          s.dnr_override === true
+            ? true
+            : s.dnr_override === false
+            ? false
+            : typeof s.dnr === "boolean"
+            ? s.dnr
+            : (s.payment_status || "unpaid") !== "paid",
         receipt_number: s.receipt_number || null,
         receipt_pdf_url: s.receipt_pdf_url || null,
         created_at: s.created_at ? s.created_at.toMillis() : null,
@@ -633,6 +785,70 @@ export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (re
         html: emailShell({ heading: subject, body: body.replace(/\n/g, "<br/>"), ctaUrl: `${SITE}/portal` }),
       })
     );
+  }
+  await Promise.allSettled(sends);
+
+  return { ok: true, recipientCount: recipientIds.length, recipientIds };
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Callable (admin): broadcast a premium container-availability notice to
+// every customer who has a shipment on a given container (CNT). Supports a
+// test send (testEmail) that delivers only to that address for preview.
+// ═══════════════════════════════════════════════════════════════
+export const sendContainerBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  await assertAdmin(req);
+  const d = req.data || {};
+  const containerNumber = (d.containerNumber || "").trim();
+  const subject = (d.subject || "").trim();
+  const body = (d.body || "").trim();
+  const testEmail = (d.testEmail || "").trim();
+  if (!containerNumber) throw new HttpsError("invalid-argument", "containerNumber required");
+  if (!subject || !body) throw new HttpsError("invalid-argument", "subject and body required");
+
+  const cntLabel = `CNT #${containerNumber}`;
+  const html = containerNoticeEmail({
+    heading: subject,
+    body,
+    containerLabel: cntLabel,
+    officeName: d.officeName || "",
+    officeAddress: d.officeAddress || "",
+    officePhone: d.officePhone || "",
+    deliveryContactName: d.deliveryContactName || "",
+    deliveryContactPhone: d.deliveryContactPhone || "",
+    nextLoadingDate: d.nextLoadingDate || "",
+    nextLoadingNote: d.nextLoadingNote || "",
+    usPhones: d.usPhones || "",
+    ctaUrl: `${SITE}/track`,
+  });
+
+  // Test send: deliver only to the given address, do not touch customers.
+  if (testEmail) {
+    const res = await sendEmail({ to: testEmail, subject: `[TEST] ${subject}`, html });
+    return { ok: res.ok !== false, test: true, recipientCount: 1, recipientIds: [] };
+  }
+
+  // Find shipments assigned to this container, then their (active) customers.
+  const shipSnap = await db
+    .collection("shipments")
+    .where("container_number", "==", containerNumber)
+    .get();
+  const customerIds = new Set();
+  shipSnap.forEach((doc) => {
+    const s = doc.data();
+    if (s.customer_id) customerIds.add(s.customer_id);
+  });
+
+  const recipientIds = [];
+  const sends = [];
+  for (const cid of customerIds) {
+    const uSnap = await db.collection("users").doc(cid).get();
+    if (!uSnap.exists) continue;
+    const u = uSnap.data();
+    if (u.is_active === false || u.deleted === true || u.role !== "customer" || !u.email) continue;
+    if (u.notify_email === false) continue;
+    recipientIds.push(cid);
+    sends.push(sendEmail({ to: u.email, subject, html }));
   }
   await Promise.allSettled(sends);
 

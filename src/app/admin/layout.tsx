@@ -12,6 +12,7 @@ import {
   Activity,
   ReceiptText,
   Boxes,
+  Container,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { RequireRole } from "@/components/providers/RequireRole";
@@ -26,6 +27,7 @@ const NAV: PortalNavItem[] = [
   { href: "/admin/staff", label: "Staff & Roles", icon: UserCog },
   { href: "/admin/pricing", label: "Pricing", icon: Tags },
   { href: "/admin/sailing", label: "Sailing Notices", icon: Mail },
+  { href: "/admin/containers", label: "Containers", icon: Container },
   { href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
   { href: "/admin/content", label: "Content", icon: FileText },
   { href: "/admin/activity", label: "Activity", icon: Activity },
@@ -40,6 +42,7 @@ const TITLES: Record<string, string> = {
   "/admin/staff": "Staff & Roles",
   "/admin/pricing": "Pricing",
   "/admin/sailing": "Sailing Notices",
+  "/admin/containers": "Container Broadcasts",
   "/admin/inquiries": "Inquiries",
   "/admin/content": "Site Content",
   "/admin/activity": "Activity Log",

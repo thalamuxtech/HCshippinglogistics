@@ -113,21 +113,26 @@ export async function updateShipment(id: string, data: Partial<Shipment>): Promi
 }
 
 // Set payment status + deposit/balance for a shipment (admin/office).
+// Also keeps the materialized `dnr` (Do-Not-Release) flag in sync with payment
+// unless an admin has manually overridden it (dnr_override is a boolean).
 export async function setPayment(
   id: string,
-  params: { total: number; deposit: number }
-): Promise<{ payment_status: "paid" | "partial" | "unpaid"; balance: number }> {
+  params: { total: number; deposit: number; dnr_override?: boolean | null }
+): Promise<{ payment_status: "paid" | "partial" | "unpaid"; balance: number; dnr: boolean }> {
   const deposit = Math.max(0, Math.min(params.deposit, params.total));
   const balance = Math.round((params.total - deposit) * 100) / 100;
   const payment_status = balance <= 0 ? "paid" : deposit > 0 ? "partial" : "unpaid";
+  const override = params.dnr_override;
+  const dnr = override === true ? true : override === false ? false : payment_status !== "paid";
   await updateDoc(doc(db, COL.shipments, id), {
     deposit,
     balance,
     payment_status,
+    dnr,
     paid_at: payment_status === "paid" ? serverTimestamp() : null,
     updated_at: serverTimestamp(),
   });
-  return { payment_status, balance };
+  return { payment_status, balance, dnr };
 }
 
 export async function listShipmentsByCustomer(customerId: string): Promise<Shipment[]> {

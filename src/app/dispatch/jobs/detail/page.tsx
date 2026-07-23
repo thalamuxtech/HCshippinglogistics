@@ -13,6 +13,8 @@ import {
   AlertTriangle,
   X,
   Truck,
+  Lock,
+  Container,
 } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
@@ -24,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { Label, Textarea } from "@/components/ui/input";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
+import { isDnr } from "@/lib/utils";
 
 function DispatchJobDetailPageInner() {
   const searchParams = useSearchParams();
@@ -83,6 +86,10 @@ function DispatchJobDetailPageInner() {
 
   async function handleDelivered() {
     if (!job || !user) return;
+    if (isDnr(job)) {
+      toast.error("On hold", "This shipment is Do-Not-Release until the office clears it.");
+      return;
+    }
     setSubmitting(true);
     try {
       // Upload proof-of-delivery photos to Storage.
@@ -137,9 +144,10 @@ function DispatchJobDetailPageInner() {
   }
 
   const alreadyDone = job.current_status === "completed";
+  const onHold = isDnr(job);
   // The admin controls when a rider can deliver: only actionable once the
-  // shipment reaches the "delivery" stage.
-  const readyToDeliver = job.current_status === "delivery";
+  // shipment reaches the "delivery" stage AND it is not on a Do-Not-Release hold.
+  const readyToDeliver = job.current_status === "delivery" && !onHold;
 
   return (
     <div className="space-y-5">
@@ -152,9 +160,14 @@ function DispatchJobDetailPageInner() {
 
       {/* Job summary */}
       <div className="rounded-2xl border border-border bg-white p-5 shadow-card">
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Truck className="h-5 w-5 text-gold" />
           <span className="font-mono text-lg font-bold text-navy">{job.tracking_number}</span>
+          {job.container_number && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs font-semibold text-secondary-foreground">
+              <Container className="h-3.5 w-3.5" /> CNT #{job.container_number}
+            </span>
+          )}
         </div>
 
         <div className="mt-4 space-y-3">
@@ -203,6 +216,19 @@ function DispatchJobDetailPageInner() {
           <span className="text-base font-semibold text-emerald-700">
             This delivery is already completed.
           </span>
+        </div>
+      ) : onHold ? (
+        <div className="flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <Lock className="mt-0.5 h-6 w-6 shrink-0 text-red-600" />
+          <div>
+            <p className="text-base font-semibold text-red-800">
+              Do Not Release (DNR) &mdash; payment outstanding
+            </p>
+            <p className="mt-0.5 text-sm text-red-700">
+              Do not hand over these packages. The office must clear the hold (once the
+              customer settles the balance) before you can complete this delivery.
+            </p>
+          </div>
         </div>
       ) : !readyToDeliver ? (
         <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-4">

@@ -15,6 +15,8 @@ import {
   ArrowRight,
   Info,
   PackagePlus,
+  Container,
+  Lock,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -364,7 +366,15 @@ function ShipmentCard({
               </p>
             </div>
           </div>
-          <StageBadge status={status} />
+          <div className="flex flex-wrap items-center gap-2">
+            {s.container_number && (
+              <Badge variant="muted">
+                <Container className="mr-1 h-3.5 w-3.5" />
+                CNT #{s.container_number}
+              </Badge>
+            )}
+            <StageBadge status={status} />
+          </div>
         </div>
 
         <CardContent className="space-y-6 pt-5">
@@ -473,6 +483,16 @@ function ShipmentCard({
                     {formatCurrency(s.balance, s.currency)}
                   </span>
                 </div>
+              </div>
+            )}
+            {s.dnr && (
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                <Lock className="mt-0.5 h-4 w-4 shrink-0" />
+                <p>
+                  <span className="font-semibold">On hold (Do Not Release).</span> This
+                  shipment will be released once the outstanding balance is settled. Please
+                  contact us to complete payment.
+                </p>
               </div>
             )}
           </div>
