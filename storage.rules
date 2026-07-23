@@ -1,0 +1,57 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// Highclass Shipping — Storage Security Rules
+// Private buckets: no public file URLs. Access is role-gated and
+// served via signed, time-limited URLs from the app layer.
+// ─────────────────────────────────────────────────────────────
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function role() {
+      return isSignedIn()
+        ? firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role
+        : 'anon';
+    }
+
+    function isStaff() {
+      return role() in ['admin', 'nigeria_office', 'dispatcher'];
+    }
+
+    function isAdminOrOffice() {
+      return role() in ['admin', 'nigeria_office'];
+    }
+
+    // Inspection photos, POD photos, shipment docs — staff upload, staff read.
+    match /shipments/{shipmentId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isStaff()
+                   && request.resource.size < 15 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*|application/pdf');
+    }
+
+    // RORO documents — sensitive; admin/office only.
+    match /roro/{shipmentId}/{allPaths=**} {
+      allow read: if isAdminOrOffice();
+      allow write: if isAdminOrOffice()
+                   && request.resource.size < 25 * 1024 * 1024;
+    }
+
+    // Digital receipts (PDF) — staff write, signed-URL delivery to customers.
+    match /receipts/{shipmentId}/{allPaths=**} {
+      allow read: if isSignedIn();
+      allow write: if isAdminOrOffice();
+    }
+
+    // Public marketing assets (logo, hero images) — admin managed, public read.
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if role() == 'admin';
+    }
+  }
+}

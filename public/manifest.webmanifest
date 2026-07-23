@@ -1,0 +1,26 @@
+{
+  "name": "Highclass Shipping and Logistics",
+  "short_name": "Highclass",
+  "description": "White-Glove Freight Management. Seamlessly Connecting USA to Africa.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0B1E3A",
+  "theme_color": "#0B1E3A",
+  "categories": ["business", "productivity", "logistics"],
+  "icons": [
+    {
+      "src": "/brand/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

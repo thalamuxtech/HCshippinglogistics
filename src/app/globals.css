@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* shadcn-style semantic tokens tuned to the High Class brand */
+    --background: 210 40% 98%; /* surface #F8FAFC */
+    --foreground: 222 47% 11%; /* ink #1A202C */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 213 68% 14%; /* navy #0B1E3A */
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 213 68% 14%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%; /* text secondary #718096 */
+
+    --accent: 43 80% 46%; /* gold #D4A017 */
+    --accent-foreground: 213 68% 14%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 43 80% 46%; /* gold focus ring */
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 213 68% 9%;
+    --foreground: 210 40% 98%;
+    --card: 213 55% 12%;
+    --card-foreground: 210 40% 98%;
+    --popover: 213 55% 12%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 43 80% 46%;
+    --primary-foreground: 213 68% 9%;
+    --secondary: 213 40% 18%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 213 40% 18%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 43 80% 46%;
+    --accent-foreground: 213 68% 9%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 213 40% 20%;
+    --input: 213 40% 20%;
+    --ring: 43 80% 46%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  ::selection {
+    @apply bg-gold/25;
+  }
+}
+
+@layer components {
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  /* Premium focus-visible ring */
+  .focus-ring {
+    @apply outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  /* Subtle eyebrow label used across marketing + portals.
+     Uses gold-700 for WCAG AA contrast on light backgrounds; on-navy
+     usages override with text-gold-200 at the call site. */
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gold-700;
+  }
+}
+
+/* Respect reduced motion globally */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom scrollbar for a premium feel (non-critical) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(11, 30, 58, 0.2);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(11, 30, 58, 0.35);
+}

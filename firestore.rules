@@ -1,0 +1,191 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// Highclass Shipping — Firestore Security Rules
+// Role-based access control (RBAC) enforced at the database layer.
+// Roles: admin | nigeria_office | dispatcher | customer
+// This is the equivalent of Postgres Row-Level Security described
+// in the implementation plan — even a buggy client cannot read
+// records it is not authorized to see.
+// ─────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- helpers ----
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function role() {
+      return isSignedIn() ? userDoc().role : 'anon';
+    }
+
+    function isAdmin() {
+      return role() == 'admin';
+    }
+
+    function isNigeriaOffice() {
+      return role() == 'nigeria_office';
+    }
+
+    function isDispatcher() {
+      return role() == 'dispatcher';
+    }
+
+    function isStaff() {
+      return isAdmin() || isNigeriaOffice() || isDispatcher();
+    }
+
+    function assignedCountry() {
+      return userDoc().assigned_country;
+    }
+
+    // ---- users ----
+    match /users/{userId} {
+      // A user can read their own record; staff can read any user.
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      // Anyone signed in can create their OWN user doc (signup); role is
+      // constrained to 'customer' at creation to prevent privilege escalation.
+      allow create: if isSignedIn()
+                    && request.auth.uid == userId
+                    && request.resource.data.role == 'customer';
+      // Users can update limited profile fields on their own doc;
+      // they may NOT change their own role or active flag.
+      allow update: if isSignedIn() && (
+        isAdmin() ||
+        (request.auth.uid == userId
+          && request.resource.data.role == resource.data.role
+          && request.resource.data.is_active == resource.data.is_active)
+      );
+      allow delete: if isAdmin();
+    }
+
+    // ---- shipments ----
+    match /shipments/{shipmentId} {
+      // Customer: only their own. Dispatcher: only assigned to them.
+      // Nigeria office: only their assigned destination country.
+      // Admin: all.
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        resource.data.customer_id == request.auth.uid ||
+        (isDispatcher() && resource.data.assigned_dispatcher_id == request.auth.uid) ||
+        (isNigeriaOffice() && resource.data.destination_country == assignedCountry())
+      );
+      // Customers may create their own orders; staff may create for anyone.
+      allow create: if isSignedIn() && (
+        isStaff() ||
+        request.resource.data.customer_id == request.auth.uid
+      );
+      // Only staff advance shipment state.
+      allow update: if isStaff();
+      allow delete: if isAdmin();
+    }
+
+    // ---- shipment_status_logs (append-only audit trail) ----
+    match /shipment_status_logs/{logId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        get(/databases/$(database)/documents/shipments/$(resource.data.shipment_id)).data.customer_id == request.auth.uid
+      );
+      allow create: if isStaff();
+      // Immutable: no updates or deletes, ever.
+      allow update, delete: if false;
+    }
+
+    // ---- price_list (public read, admin write) ----
+    match /price_list/{itemId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---- site_content (marketing content managed by admin, public read) ----
+    match /site_content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---- inventory (usa + destination) ----
+    // USA warehouse: Admin only per plan (Nigeria office & dispatchers cannot see it).
+    match /usa_inventory/{itemId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /destination_inventory/{itemId} {
+      allow read: if isSignedIn() && (
+        isAdmin() ||
+        (isNigeriaOffice() && resource.data.destination_country == assignedCountry())
+      );
+      allow write: if isAdmin() ||
+        (isNigeriaOffice() && request.resource.data.destination_country == assignedCountry());
+    }
+
+    // ---- digital_receipts ----
+    match /digital_receipts/{receiptId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        get(/databases/$(database)/documents/shipments/$(resource.data.shipment_id)).data.customer_id == request.auth.uid
+      );
+      allow create, update: if isAdmin() || isNigeriaOffice();
+      allow delete: if isAdmin();
+    }
+
+    // ---- roro_documents ----
+    match /roro_documents/{docId} {
+      allow read: if isStaff();
+      allow write: if isAdmin() || isNigeriaOffice();
+    }
+
+    // ---- sailing_notices ----
+    match /sailing_notices/{noticeId} {
+      allow read: if isStaff();
+      allow write: if isAdmin();
+    }
+
+    // ---- notifications log ----
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && (
+        isStaff() ||
+        resource.data.customer_id == request.auth.uid
+      );
+      // Staff may log any notification; a customer may log notifications
+      // tied to their own account (e.g. order-confirmation record).
+      allow create: if isSignedIn() && (
+        isStaff() ||
+        request.resource.data.customer_id == request.auth.uid
+      );
+      allow update, delete: if false;
+    }
+
+    // ---- activity_log (append-only) ----
+    match /activity_log/{logId} {
+      allow read: if isAdmin();
+      // Signed-in users may append, but only attributed to themselves —
+      // prevents forging another user's audit entries. Append-only.
+      allow create: if isSignedIn()
+                    && request.resource.data.actor_id == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // ---- contact_inquiries (public submit, staff read) ----
+    match /contact_inquiries/{inquiryId} {
+      allow create: if true;
+      allow read, update, delete: if isStaff();
+    }
+
+    // ---- counters (serial numbers for tracking codes + access codes) ----
+    // Any signed-in user needs to increment counters during signup
+    // (customer serial) and order creation (shipment serial). The value
+    // is a non-secret monotonic integer, so read/write is safe for all
+    // authenticated users; server-side receipt counters run via Admin SDK.
+    match /counters/{counterId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+  }
+}
