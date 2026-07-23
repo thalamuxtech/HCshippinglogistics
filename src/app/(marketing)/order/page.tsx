@@ -757,18 +757,23 @@ function OrderFlow() {
         </div>
 
         {/* Mobile sticky mini quote bar (so price + submit stay visible) */}
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 px-4 py-3 shadow-premium backdrop-blur lg:hidden">
-          <div className="container-page flex items-center justify-between gap-3 px-0">
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-wide text-ink-muted">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white/95 shadow-premium backdrop-blur lg:hidden">
+          <div className="mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] uppercase tracking-wide text-ink-muted">
                 {SERVICES[service].label} total
               </p>
               <p className="font-mono text-lg font-bold text-navy">
                 {isQuotedOnly ? "Quoted" : <AnimatedNumber value={grandTotal} />}
               </p>
             </div>
-            <Button variant="gold" onClick={handleSubmit} loading={submitting} className="shrink-0">
-              Submit order <ArrowRight className="h-4 w-4" />
+            <Button
+              variant="gold"
+              onClick={handleSubmit}
+              loading={submitting}
+              className="shrink-0 whitespace-nowrap"
+            >
+              Submit <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
