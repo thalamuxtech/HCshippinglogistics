@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { PageLoader } from "@/components/ui/misc";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -18,6 +18,7 @@ import {
   UserCheck,
   UserX,
   Copy,
+  Trash2,
 } from "lucide-react";
 import {
   getUser,
@@ -50,6 +51,7 @@ function tsToDate(ts?: Timestamp | null): Date | null {
 
 function AdminCustomerDetailPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const toast = useToast();
@@ -99,6 +101,33 @@ function AdminCustomerDetailPageInner() {
     } catch {
       toast.error("Action failed", "Could not update the account status.");
     } finally {
+      setBusy(null);
+    }
+  }
+
+  async function deleteCustomer() {
+    if (!customer || !user) return;
+    if (
+      !window.confirm(
+        `Delete ${customer.full_name}? Their account will be hidden and deactivated. Shipment and receipt records are kept for your files. This can be restored by support if needed.`
+      )
+    )
+      return;
+    setBusy("delete");
+    try {
+      await updateUserDoc(customer.id, { is_active: false, deleted: true });
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: "deleted customer",
+        target: customer.full_name,
+        meta: { customer_id: customer.id },
+      });
+      toast.success("Customer deleted", `${customer.full_name} has been hidden.`);
+      router.push("/admin/customers");
+    } catch {
+      toast.error("Delete failed", "Could not delete the customer.");
       setBusy(null);
     }
   }
@@ -284,6 +313,15 @@ function AdminCustomerDetailPageInner() {
               disabled={busy !== null}
             >
               <KeyRound className="h-4 w-4" /> Re-send code
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={deleteCustomer}
+              loading={busy === "delete"}
+              disabled={busy !== null}
+            >
+              <Trash2 className="h-4 w-4" /> Delete
             </Button>
             <Button
               variant="gold"

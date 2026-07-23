@@ -93,9 +93,12 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   doc.fillColor(GOLD).font("Helvetica").fontSize(8.5).text(COMPANY.tagline, textX, 48, { width: 300 });
   doc.fillColor("#FFFFFF").fontSize(8).text(`${COMPANY.site}  ·  ${COMPANY.email}`, textX, 64, { width: 300 });
 
-  // Receipt title (right)
-  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(16).text("RECEIPT", W - M - 160, 30, { width: 160, align: "right" });
-  doc.fillColor(GOLD).font("Helvetica").fontSize(9).text(`No. ${receiptNumber}`, W - M - 160, 52, { width: 160, align: "right" });
+  // Title: INVOICE when payment is still due, RECEIPT once fully paid.
+  const docTitle = status === "paid" ? "RECEIPT" : "INVOICE";
+  const issued = new Date().toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(16).text(docTitle, W - M - 180, 26, { width: 180, align: "right" });
+  doc.fillColor(GOLD).font("Helvetica").fontSize(9).text(`No. ${receiptNumber}`, W - M - 180, 48, { width: 180, align: "right" });
+  doc.fillColor("#FFFFFF").fontSize(8).text(`Issued ${issued}`, W - M - 180, 62, { width: 180, align: "right" });
 
   let y = 118;
 

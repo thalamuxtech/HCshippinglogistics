@@ -27,6 +27,7 @@ function LoginForm() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
+  const [showDemoPw, setShowDemoPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -118,28 +119,47 @@ function LoginForm() {
         </Button>
       </form>
 
-      {/* Demo access: fill credentials for each staff role (remove before launch) */}
+      {/* Demo access: full credentials per staff role (remove before launch) */}
       <div className="mt-6 rounded-xl border border-dashed border-gold/40 bg-gold-50/50 p-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-gold-700">
-          Demo access
-        </p>
-        <p className="mt-0.5 text-xs text-ink-muted">
-          Tap a role to fill its login, then press Log in.
-        </p>
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gold-700">
+            Demo access
+          </p>
+          <button
+            type="button"
+            onClick={() => setShowDemoPw((v) => !v)}
+            className="inline-flex items-center gap-1 text-xs font-semibold text-gold-700 hover:underline focus-ring rounded"
+          >
+            {showDemoPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {showDemoPw ? "Hide" : "Show"} passwords
+          </button>
+        </div>
+        <div className="mt-3 space-y-2">
           {DEMO_STAFF.map((d) => (
-            <button
+            <div
               key={d.role}
-              type="button"
-              onClick={() => {
-                setEmail(d.email);
-                setPassword(d.password);
-                setShowPassword(true);
-              }}
-              className="cursor-pointer rounded-lg border border-border bg-white px-3 py-2 text-center text-xs font-semibold text-navy transition-colors hover:border-gold/50 hover:bg-gold/5 focus-ring"
+              className="rounded-lg border border-border bg-white p-3"
             >
-              {d.label}
-            </button>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-navy">{d.label}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail(d.email);
+                    setPassword(d.password);
+                  }}
+                  className="cursor-pointer rounded-md bg-navy px-2.5 py-1 text-[11px] font-semibold text-gold hover:bg-navy-700 focus-ring"
+                >
+                  Use &amp; fill
+                </button>
+              </div>
+              <p className="mt-1.5 break-all font-mono text-[11px] text-ink-muted">
+                {d.email}
+              </p>
+              <p className="font-mono text-[11px] text-ink-muted">
+                {showDemoPw ? d.password : "•".repeat(d.password.length)}
+              </p>
+            </div>
           ))}
         </div>
       </div>

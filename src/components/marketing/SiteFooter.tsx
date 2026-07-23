@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { COMPANY } from "@/lib/constants";
-import { ShieldCheck, Ship } from "lucide-react";
-import { StaffQuickLogin } from "@/components/marketing/StaffQuickLogin";
+import { ShieldCheck, Ship, Lock } from "lucide-react";
 
 const cols = [
   {
@@ -15,20 +14,18 @@ const cols = [
     ],
   },
   {
+    title: "Customers",
+    links: [
+      { href: "/order", label: "Start an Order" },
+      { href: "/track", label: "My Shipments" },
+    ],
+  },
+  {
     title: "Company",
     links: [
       { href: "/about", label: "About & Licensing" },
       { href: "/enterprise", label: "Enterprise & B2B" },
       { href: "/contact", label: "Contact" },
-      { href: "/track", label: "Track a Shipment" },
-    ],
-  },
-  {
-    title: "Customers",
-    links: [
-      { href: "/order", label: "Start an Order" },
-      { href: "/track", label: "Track a Shipment" },
-      { href: "/pricing", label: "Price List" },
     ],
   },
 ];
@@ -95,10 +92,16 @@ export function SiteFooter() {
           <p>
             © {year} {COMPANY.name}. All rights reserved.
           </p>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <p className="font-mono text-xs">{COMPANY.domain}</p>
-            {/* Low-opacity staff / admin access */}
-            <StaffQuickLogin />
+            {/* Discreet staff entry point */}
+            <Link
+              href="/login"
+              className="inline-flex items-center gap-1.5 text-xs text-white/40 transition-colors hover:text-gold-200 focus-ring rounded"
+              aria-label="Staff sign in"
+            >
+              <Lock className="h-3.5 w-3.5" /> Staff
+            </Link>
           </div>
         </div>
       </div>

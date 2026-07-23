@@ -32,7 +32,8 @@ export default function AdminCustomersPage() {
     (async () => {
       try {
         const u = await listUsers("customer");
-        if (alive) setCustomers(u);
+        // Hide soft-deleted customers from the list.
+        if (alive) setCustomers(u.filter((c) => !c.deleted));
       } catch {
         if (alive) setError(true);
       } finally {

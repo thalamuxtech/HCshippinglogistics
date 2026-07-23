@@ -50,6 +50,7 @@ export interface AppUser {
   address?: string; // sender full address
   customer_code?: string;
   is_active: boolean;
+  deleted?: boolean;
   notify_email?: boolean;
   notify_sms?: boolean;
   created_at?: Timestamp | null;

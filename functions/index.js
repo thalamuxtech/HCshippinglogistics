@@ -673,7 +673,9 @@ export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req)
   // Using a Firebase download token (not getSignedUrl) avoids requiring the
   // iam.serviceAccountTokenCreator role on the runtime service account.
   const pdf = await renderReceiptPdf({ shipment: ship, receiptNumber, siteUrl: SITE });
-  const bucket = getStorage().bucket();
+  // Explicit bucket name (project uses the .firebasestorage.app bucket, which
+  // is NOT the legacy .appspot.com default that getStorage().bucket() assumes).
+  const bucket = getStorage().bucket("highclassshippinglogistics.firebasestorage.app");
   const path = `receipts/${shipmentId}/${receiptNumber}.pdf`;
   const file = bucket.file(path);
   const downloadToken = `${shipmentId}-${receiptNumber}`.replace(/[^A-Za-z0-9-]/g, "");

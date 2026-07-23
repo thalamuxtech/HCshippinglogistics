@@ -481,7 +481,7 @@ function ShipmentCard({
               className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-navy/20 bg-white px-5 py-2.5 text-sm font-semibold text-navy transition-colors hover:bg-navy/5 focus-ring sm:w-auto"
             >
               <FileText className="h-4 w-4" />
-              Download receipt
+              Download {payment === "paid" ? "receipt" : "invoice"}
               <span className="text-xs font-normal text-ink-muted">
                 ({payment === "paid" ? "paid" : payment === "partial" ? "part-paid" : "unpaid"})
               </span>
