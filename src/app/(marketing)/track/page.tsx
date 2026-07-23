@@ -33,6 +33,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Badge, StageBadge } from "@/components/ui/badge";
 import { EmptyState, PageLoader, Skeleton } from "@/components/ui/misc";
 import { Reveal } from "@/components/marketing/Reveal";
+import { BrandPattern } from "@/components/marketing/BrandPattern";
 
 const SERVICE_ICON: Record<string, typeof Ship> = {
   sea: Ship,
@@ -105,13 +106,7 @@ function TrackHub() {
       {/* Hero band + input */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "36px 36px",
-          }}
-        />
+        <BrandPattern intensity="hero" />
         <div className="container-page relative py-16 sm:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <Reveal>

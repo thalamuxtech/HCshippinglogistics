@@ -21,6 +21,7 @@ import {
 import { ButtonLink } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/Reveal";
 import { HeroStart } from "@/components/marketing/HeroStart";
+import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { ProcessJourney } from "@/components/marketing/ProcessJourney";
 import { StageJourney } from "@/components/marketing/StageJourney";
 import { Testimonials } from "@/components/marketing/Testimonials";
@@ -96,17 +97,8 @@ export default function HomePage() {
       {/* ─── Hero ─────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />
-        {/* soft aurora glows for depth */}
-        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-gold/10 blur-3xl" />
-        <div className="pointer-events-none absolute -right-24 top-24 h-80 w-80 rounded-full bg-blue-500/10 blur-3xl" />
-        <div
-          className="pointer-events-none absolute inset-0 opacity-[0.04]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-            backgroundSize: "36px 36px",
-          }}
-        />
+        {/* Premium brand backdrop: blueprint grid + accent dots + route sweeps */}
+        <BrandPattern intensity="hero" />
         {/* subtle gradient fade into the next section */}
         <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-b from-transparent to-navy-950/30" />
         <div className="container-page relative py-20 sm:py-28 lg:py-32">
