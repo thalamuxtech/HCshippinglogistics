@@ -12,6 +12,7 @@ import {
   FlaskConical,
   Plus,
   Search,
+  X,
 } from "lucide-react";
 import { listAllShipments, listUsers, logActivity, updateShipment } from "@/lib/db";
 import { sendContainerBroadcast } from "@/lib/notify";
@@ -67,6 +68,12 @@ export default function AdminContainersPage() {
   const [testEmail, setTestEmail] = React.useState(user?.email || "");
   const [testing, setTesting] = React.useState(false);
   const [sending, setSending] = React.useState(false);
+
+  // Editable recipient list: derived customers can be removed; extra ad-hoc
+  // emails can be added. Keyed per container so switching containers resets it.
+  const [removedEmails, setRemovedEmails] = React.useState<Set<string>>(new Set());
+  const [extraEmails, setExtraEmails] = React.useState<string[]>([]);
+  const [newEmail, setNewEmail] = React.useState("");
 
   // Create / assign container modal
   const [assignOpen, setAssignOpen] = React.useState(false);
@@ -135,6 +142,61 @@ export default function AdminContainersPage() {
     return out;
   }, [selectedGroup, customers, activeCustomerIds]);
 
+  // Reset the recipient edits whenever the selected container changes.
+  React.useEffect(() => {
+    setRemovedEmails(new Set());
+    setExtraEmails([]);
+    setNewEmail("");
+  }, [selected]);
+
+  const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+  // The final, editable recipient list: derived customers (minus removed) plus
+  // any ad-hoc emails, de-duplicated case-insensitively.
+  const finalRecipients = React.useMemo(() => {
+    const seen = new Set<string>();
+    const list: { email: string; name?: string; adhoc: boolean }[] = [];
+    const add = (email: string, name: string | undefined, adhoc: boolean) => {
+      const key = email.trim().toLowerCase();
+      if (!email || seen.has(key) || removedEmails.has(key)) return;
+      seen.add(key);
+      list.push({ email: email.trim(), name, adhoc });
+    };
+    for (const c of recipients) if (c.email) add(c.email, c.full_name, false);
+    for (const e of extraEmails) add(e, undefined, true);
+    return list;
+  }, [recipients, extraEmails, removedEmails]);
+
+  const finalEmails = React.useMemo(
+    () => finalRecipients.map((r) => r.email),
+    [finalRecipients]
+  );
+
+  function removeRecipient(email: string) {
+    setRemovedEmails((prev) => new Set(prev).add(email.trim().toLowerCase()));
+    setExtraEmails((prev) => prev.filter((e) => e.trim().toLowerCase() !== email.trim().toLowerCase()));
+  }
+
+  function addRecipient() {
+    const e = newEmail.trim();
+    if (!emailRe.test(e)) {
+      toast.error("Invalid email", "Enter a valid email address to add.");
+      return;
+    }
+    const key = e.toLowerCase();
+    // Un-remove if it was a removed derived recipient; otherwise add as ad-hoc.
+    setRemovedEmails((prev) => {
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    const isDerived = recipients.some((c) => c.email?.trim().toLowerCase() === key);
+    if (!isDerived && !extraEmails.some((x) => x.trim().toLowerCase() === key)) {
+      setExtraEmails((prev) => [...prev, e]);
+    }
+    setNewEmail("");
+  }
+
   async function handleTest() {
     if (!selected) return;
     if (!testEmail.trim()) {
@@ -172,9 +234,13 @@ export default function AdminContainersPage() {
       toast.error("Missing content", "Subject and message are required.");
       return;
     }
+    if (finalEmails.length === 0) {
+      toast.error("No recipients", "Add at least one recipient before sending.");
+      return;
+    }
     if (
       !window.confirm(
-        `Send this notice to ${recipients.length} customer(s) with cargo on CNT #${selected}?`
+        `Send this notice to ${finalEmails.length} recipient(s) for CNT #${selected}?`
       )
     )
       return;
@@ -192,6 +258,7 @@ export default function AdminContainersPage() {
         nextLoadingDate,
         nextLoadingNote,
         usPhones,
+        emails: finalEmails,
       });
       await logActivity({
         actor_id: user.id,
@@ -201,10 +268,17 @@ export default function AdminContainersPage() {
         target: subject,
         meta: { container_number: selected, recipient_count: res.recipientCount },
       });
-      toast.success(
-        "Broadcast sent",
-        `Notice delivered to ${res.recipientCount} customer(s) on CNT #${selected}.`
-      );
+      if (res.failedCount && res.failedCount > 0) {
+        toast.info(
+          "Broadcast sent with issues",
+          `${res.recipientCount - res.failedCount} delivered, ${res.failedCount} failed.`
+        );
+      } else {
+        toast.success(
+          "Broadcast sent",
+          `Notice delivered to ${res.recipientCount} recipient(s) on CNT #${selected}.`
+        );
+      }
     } catch {
       toast.error("Send failed", "Could not send the broadcast.");
     } finally {
@@ -349,43 +423,84 @@ export default function AdminContainersPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {/* Recipients summary */}
+          {/* Recipients — editable */}
           <Card>
             <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <span className="font-mono">CNT #{selectedGroup.cnt}</span>
-                  <Badge variant="gold">{recipients.length} recipient(s)</Badge>
+                  <Badge variant="gold">{finalEmails.length} recipient(s)</Badge>
                 </CardTitle>
                 <CardDescription className="mt-1">
-                  {selectedGroup.shipments.length} shipment(s) on this container. Soft-deleted,
-                  inactive, or opted-out customers are excluded from broadcasts automatically.
+                  {selectedGroup.shipments.length} shipment(s) on this container. Remove anyone you
+                  do not want to email, or add extra addresses. This exact list is what gets the
+                  broadcast.
                 </CardDescription>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => openAssign(selectedGroup.cnt)}
-              >
+              <Button size="sm" variant="outline" onClick={() => openAssign(selectedGroup.cnt)}>
                 <Plus className="h-3.5 w-3.5" /> Add shipments
               </Button>
             </CardHeader>
-            <CardContent>
-              {recipients.length === 0 ? (
+            <CardContent className="space-y-4">
+              {finalRecipients.length === 0 ? (
                 <p className="text-sm text-ink-muted">
-                  No reachable customers on this container yet.
+                  No recipients yet. Add an email below, or add shipments to this container.
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {recipients.map((c) => (
+                  {finalRecipients.map((r) => (
                     <span
-                      key={c.id}
-                      className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-xs text-secondary-foreground"
+                      key={r.email}
+                      className={`group inline-flex items-center gap-1.5 rounded-full py-1 pl-3 pr-1.5 text-xs ${
+                        r.adhoc
+                          ? "bg-gold/10 text-gold-700 ring-1 ring-gold/25"
+                          : "bg-secondary text-secondary-foreground"
+                      }`}
+                      title={r.email}
                     >
-                      <Users className="h-3 w-3" /> {c.full_name}
+                      <Users className="h-3 w-3 shrink-0" />
+                      <span className="max-w-[180px] truncate">{r.name || r.email}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeRecipient(r.email)}
+                        aria-label={`Remove ${r.name || r.email}`}
+                        className="ml-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-red-100 hover:text-red-600 focus-ring"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
                     </span>
                   ))}
                 </div>
+              )}
+
+              {/* Add an ad-hoc recipient */}
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addRecipient();
+                    }
+                  }}
+                  placeholder="Add another email address"
+                  aria-label="Add recipient email"
+                />
+                <Button variant="outline" onClick={addRecipient} disabled={!newEmail.trim()}>
+                  <Plus className="h-4 w-4" /> Add
+                </Button>
+              </div>
+
+              {removedEmails.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setRemovedEmails(new Set())}
+                  className="text-xs font-medium text-gold-700 hover:underline focus-ring"
+                >
+                  Restore removed customers
+                </button>
               )}
             </CardContent>
           </Card>
@@ -536,10 +651,10 @@ export default function AdminContainersPage() {
                   variant="gold"
                   onClick={handleBroadcast}
                   loading={sending}
-                  disabled={sending || recipients.length === 0}
+                  disabled={sending || finalEmails.length === 0}
                   className="w-full"
                 >
-                  <Send className="h-4 w-4" /> Broadcast to {recipients.length} customer(s)
+                  <Send className="h-4 w-4" /> Broadcast to {finalEmails.length} recipient(s)
                 </Button>
               </CardContent>
             </Card>

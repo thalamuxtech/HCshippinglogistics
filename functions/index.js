@@ -31,6 +31,17 @@ setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 // Bound per-function via `secrets: [...]` so they're injected into
 // process.env at runtime ONLY for functions that need them. Until they
 // are set, the functions run in stub mode (log-only, still succeed).
+// Brevo (primary email provider). BREVO_API_KEY is the key you generate under
+// Brevo → SMTP & API. It works for both SMTP and the HTTP transactional API;
+// we use the HTTP API (reliable on serverless). BREVO_FROM_EMAIL /
+// BREVO_FROM_NAME set the verified sender identity.
+const BREVO_API_KEY = defineSecret("BREVO_API_KEY");
+const BREVO_FROM_EMAIL = defineSecret("BREVO_FROM_EMAIL");
+const BREVO_FROM_NAME = defineSecret("BREVO_FROM_NAME");
+// Optional reply-to (e.g. a monitored inbox); falls back to the from address.
+const BREVO_REPLY_TO = defineSecret("BREVO_REPLY_TO");
+
+// Resend kept as an automatic fallback if Brevo is not configured.
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 const RESEND_FROM_EMAIL = defineSecret("RESEND_FROM_EMAIL");
 const TWILIO_ACCOUNT_SID = defineSecret("TWILIO_ACCOUNT_SID");
@@ -38,7 +49,8 @@ const TWILIO_AUTH_TOKEN = defineSecret("TWILIO_AUTH_TOKEN");
 const TWILIO_FROM_NUMBER = defineSecret("TWILIO_FROM_NUMBER");
 
 // Convenience arrays for binding to functions.
-const EMAIL_SECRETS = [RESEND_API_KEY, RESEND_FROM_EMAIL];
+const BREVO_SECRETS = [BREVO_API_KEY, BREVO_FROM_EMAIL, BREVO_FROM_NAME, BREVO_REPLY_TO];
+const EMAIL_SECRETS = [...BREVO_SECRETS, RESEND_API_KEY, RESEND_FROM_EMAIL];
 const SMS_SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER];
 const ALL_SECRETS = [...EMAIL_SECRETS, ...SMS_SECRETS];
 
@@ -104,27 +116,79 @@ function cfg(v) {
   return s;
 }
 
-async function sendEmail({ to, subject, html }) {
-  const key = cfg(process.env.RESEND_API_KEY);
-  const from = cfg(process.env.RESEND_FROM_EMAIL) || DEFAULT_FROM;
-  if (!key) {
-    console.log(`[STUB EMAIL] to=${to} subject="${subject}"`);
-    return { ok: true, stub: true };
+// Parse a "Name <email>" string (or a bare email) into Brevo's {name, email}.
+function parseSender(str, fallbackEmail, fallbackName) {
+  const s = cfg(str);
+  const m = s.match(/^\s*(.*?)\s*<\s*([^>]+)\s*>\s*$/);
+  if (m) return { name: m[1] || fallbackName, email: m[2] };
+  if (s && s.includes("@")) return { name: fallbackName, email: s };
+  return { name: fallbackName, email: fallbackEmail };
+}
+
+// Send a transactional email. Provider order: Brevo (HTTP API) → Resend →
+// stub (log-only). Returns { ok, provider, stub, status?, error? } so callers
+// and the admin test tool can see exactly what happened.
+async function sendEmail({ to, subject, html, replyTo }) {
+  const recipients = Array.isArray(to) ? to : [to];
+
+  // ── Brevo transactional HTTP API (primary) ──
+  const brevoKey = cfg(process.env.BREVO_API_KEY);
+  if (brevoKey) {
+    const sender = parseSender(
+      process.env.BREVO_FROM_EMAIL,
+      "info@highclassshippinglogistics.com",
+      cfg(process.env.BREVO_FROM_NAME) || "Highclass Shipping and Logistics"
+    );
+    // BREVO_FROM_NAME overrides the name even when FROM_EMAIL is a bare address.
+    if (cfg(process.env.BREVO_FROM_NAME)) sender.name = cfg(process.env.BREVO_FROM_NAME);
+    const reply = cfg(replyTo) || cfg(process.env.BREVO_REPLY_TO);
+    const payload = {
+      sender,
+      to: recipients.map((email) => ({ email })),
+      subject,
+      htmlContent: html,
+    };
+    if (reply) payload.replyTo = { email: reply };
+    try {
+      const res = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "api-key": brevoKey,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) return { ok: true, provider: "brevo", stub: false, status: res.status };
+      const errText = await res.text().catch(() => "");
+      console.error("Brevo send failed", res.status, errText);
+      return { ok: false, provider: "brevo", stub: false, status: res.status, error: errText };
+    } catch (e) {
+      console.error("Brevo send error", e);
+      return { ok: false, provider: "brevo", stub: false, error: String(e) };
+    }
   }
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from, to, subject, html }),
-    });
-    return { ok: res.ok, stub: false };
-  } catch (e) {
-    console.error("sendEmail error", e);
-    return { ok: false, stub: false };
+
+  // ── Resend (fallback) ──
+  const resendKey = cfg(process.env.RESEND_API_KEY);
+  if (resendKey) {
+    const from = cfg(process.env.RESEND_FROM_EMAIL) || DEFAULT_FROM;
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to: recipients, subject, html, reply_to: cfg(replyTo) || undefined }),
+      });
+      return { ok: res.ok, provider: "resend", stub: false, status: res.status };
+    } catch (e) {
+      console.error("Resend send error", e);
+      return { ok: false, provider: "resend", stub: false, error: String(e) };
+    }
   }
+
+  // ── Stub (no provider configured) ──
+  console.log(`[STUB EMAIL] to=${recipients.join(", ")} subject="${subject}"`);
+  return { ok: true, provider: "stub", stub: true };
 }
 
 async function sendSms({ to, body }) {
@@ -150,24 +214,99 @@ async function sendSms({ to, body }) {
   }
 }
 
-// ---- Branded email template (inline, no external deps) ----
-function emailShell({ heading, body, trackingNumber, ctaUrl }) {
-  return `<!doctype html><html><body style="margin:0;background:#F8FAFC;font-family:Inter,Arial,sans-serif;color:#1A202C">
-  <div style="max-width:560px;margin:0 auto;padding:24px">
-    <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px;padding:28px;color:#fff">
-      <div style="font-weight:800;font-size:18px">Highclass Shipping <span style="color:#5E97F3">&amp; Logistics</span></div>
-      <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#5E97F3;margin-top:2px">Excellence in handling your valuables</div>
-    </div>
-    <div style="background:#fff;border:1px solid #E2E8F0;border-top:none;border-radius:0 0 16px 16px;padding:28px">
-      <h1 style="font-size:20px;margin:0 0 8px;color:#0B1E3A">${heading}</h1>
-      <p style="font-size:14px;line-height:1.6;color:#334155">${body}</p>
-      ${trackingNumber ? `<div style="margin:18px 0;padding:14px;background:#F8FAFC;border-radius:10px;font-family:monospace;font-size:15px;color:#0B1E3A"><strong>Tracking:</strong> ${trackingNumber}</div>` : ""}
-      ${ctaUrl ? `<a href="${ctaUrl}" style="display:inline-block;margin-top:8px;background:#0A5BE0;color:#FFFFFF;font-weight:700;text-decoration:none;padding:12px 22px;border-radius:10px">Track your shipment</a>` : ""}
-      <p style="font-size:12px;color:#718096;margin-top:24px;border-top:1px solid #E2E8F0;padding-top:16px">
-        FMC Licensed since 2017 · CAC Registered · This is an automated message from Highclass Shipping and Logistics Inc.
-      </p>
-    </div>
-  </div></body></html>`;
+// ---- Branded email template (table-based, email-client safe, no external deps) ----
+// Backwards-compatible signature: heading, body (HTML allowed), trackingNumber,
+// ctaUrl. Optional: ctaLabel, preheader, footerNote.
+function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader, footerNote }) {
+  const NAVY = "#0B1E3A";
+  const BLUE = "#0A5BE0";
+  const BLUE_LT = "#5E97F3";
+  const preheaderText = preheader || (typeof body === "string" ? body.replace(/<[^>]+>/g, "").slice(0, 120) : "");
+  const cta = ctaUrl
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 4px">
+         <tr><td align="center" bgcolor="${BLUE}" style="border-radius:10px">
+           <a href="${ctaUrl}" target="_blank"
+              style="display:inline-block;padding:13px 30px;font-family:Segoe UI,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">
+             ${ctaLabel || "Track your shipment"}
+           </a>
+         </td></tr>
+       </table>`
+    : "";
+  const tracking = trackingNumber
+    ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 4px">
+         <tr><td style="background:#F1F5FA;border:1px solid #E2E8F0;border-radius:12px;padding:14px 18px">
+           <div style="font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:#8A98A6;font-weight:700;font-family:Segoe UI,Arial,sans-serif">Tracking number</div>
+           <div style="margin-top:4px;font-family:Consolas,'Courier New',monospace;font-size:17px;font-weight:700;color:${NAVY};letter-spacing:.5px">${trackingNumber}</div>
+         </td></tr>
+       </table>`
+    : "";
+
+  return `<!doctype html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="x-apple-disable-message-reformatting"/>
+<title>${heading}</title>
+</head>
+<body style="margin:0;padding:0;background:#EEF2F7;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${preheaderText}</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#EEF2F7;padding:28px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 10px 40px -18px rgba(11,30,58,.35);font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:${NAVY};background:linear-gradient(135deg,#0B1E3A,#071427);padding:26px 32px">
+            <div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-.2px">Highclass Shipping <span style="color:${BLUE_LT}">&amp; Logistics</span></div>
+            <div style="margin-top:5px;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:${BLUE_LT};font-weight:700">Excellence in handling your valuables</div>
+          </td>
+        </tr>
+        <tr><td style="height:4px;background:${BLUE};line-height:4px;font-size:0">&nbsp;</td></tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px">
+            <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:${NAVY};font-weight:750">${heading}</h1>
+            <div style="font-size:14.5px;line-height:1.7;color:#3A4A5E">${body}</div>
+            ${tracking}
+            ${cta}
+          </td>
+        </tr>
+
+        <!-- Office footer -->
+        <tr>
+          <td style="padding:0 32px 8px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #E9EEF4">
+              <tr>
+                <td width="50%" valign="top" style="padding:18px 12px 6px 0">
+                  <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:${BLUE};font-weight:700">USA Office</div>
+                  <div style="margin-top:5px;font-size:12px;line-height:1.6;color:#5B6B7D">6600 Foxley Road, Gate C<br/>Upper Marlboro, Maryland 20772<br/>+1 (240) 374-8394</div>
+                </td>
+                <td width="50%" valign="top" style="padding:18px 0 6px 12px">
+                  <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:${BLUE};font-weight:700">Nigeria Office</div>
+                  <div style="margin-top:5px;font-size:12px;line-height:1.6;color:#5B6B7D">28 Moleye Street, Alagomeji<br/>Yaba, Lagos<br/>+234 808 029 1754</div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+
+        <!-- Legal footer -->
+        <tr>
+          <td style="padding:14px 32px 26px;border-top:1px solid #E9EEF4">
+            <div style="font-size:11.5px;line-height:1.6;color:#8A98A6">
+              FMC Licensed since 2017 · Registered in Maryland, USA &amp; Nigeria (CAC)<br/>
+              ${footerNote || "This is an automated message from Highclass Shipping and Logistics Inc."}
+            </div>
+            <div style="margin-top:8px;font-size:11.5px"><a href="${SITE}" style="color:${BLUE};text-decoration:none;font-weight:600">highclassshippinglogistics.com</a></div>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
 }
 
 const SITE = process.env.SITE_URL || "https://highclassshippinglogistics.com";
@@ -366,6 +505,46 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
   await batch.commit();
 
   return { ok: true, email: emailRes, sms: smsRes };
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Callable (admin): send a branded TEST email to verify the provider
+// (Brevo) is configured and delivering. Returns the provider + status so
+// you can confirm setup from the admin UI before going live.
+// ═══════════════════════════════════════════════════════════════
+export const sendTestEmail = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  await assertAdmin(req);
+  const to = (req.data?.to || "").trim();
+  if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
+    throw new HttpsError("invalid-argument", "A valid destination email is required.");
+  }
+  const provider = cfg(process.env.BREVO_API_KEY)
+    ? "Brevo"
+    : cfg(process.env.RESEND_API_KEY)
+    ? "Resend"
+    : "stub (no provider configured)";
+
+  const html = emailShell({
+    heading: "Your email setup is working",
+    preheader: "Test email from the Highclass Shipping admin portal.",
+    body:
+      `<p style="margin:0 0 12px">This is a test message sent from the Highclass Shipping admin portal to confirm that transactional email is configured and delivering correctly.</p>` +
+      `<p style="margin:0 0 12px">Provider in use: <strong>${provider}</strong>.</p>` +
+      `<p style="margin:0">If you received this in your inbox (not spam), you are ready to send customer notifications, invoices, and broadcasts.</p>`,
+    trackingNumber: "HC-TEST-0001",
+    ctaUrl: `${SITE}/track`,
+    ctaLabel: "Open My Shipments",
+    footerNote: "Test message — no action required.",
+  });
+
+  const res = await sendEmail({ to, subject: "Highclass Shipping — email test", html });
+  return {
+    ok: res.ok,
+    provider: res.provider || provider,
+    stub: !!res.stub,
+    status: res.status || null,
+    error: res.error || null,
+  };
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -828,7 +1007,38 @@ export const sendContainerBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (
     return { ok: res.ok !== false, test: true, recipientCount: 1, recipientIds: [] };
   }
 
-  // Find shipments assigned to this container, then their (active) customers.
+  const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
+  // If the admin supplied an explicit, edited recipient list, send to exactly
+  // those addresses (validated + de-duplicated, case-insensitive). This backs
+  // the editable recipient list in the admin UI.
+  const explicit = Array.isArray(d.emails) ? d.emails : null;
+  if (explicit) {
+    const seen = new Set();
+    const targets = [];
+    for (const raw of explicit) {
+      const e = String(raw || "").trim();
+      const key = e.toLowerCase();
+      if (emailRe.test(e) && !seen.has(key)) {
+        seen.add(key);
+        targets.push(e);
+      }
+    }
+    if (targets.length === 0) {
+      throw new HttpsError("invalid-argument", "No valid recipient emails were provided.");
+    }
+    const sends = targets.map((email) => sendEmail({ to: email, subject, html }));
+    const results = await Promise.allSettled(sends);
+    const failed = results.filter((r) => r.status === "rejected" || r.value?.ok === false).length;
+    return {
+      ok: failed === 0,
+      recipientCount: targets.length,
+      failedCount: failed,
+      recipientEmails: targets,
+    };
+  }
+
+  // Otherwise, derive recipients from the container's shipments (legacy path).
   const shipSnap = await db
     .collection("shipments")
     .where("container_number", "==", containerNumber)

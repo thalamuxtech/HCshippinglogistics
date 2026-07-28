@@ -10,6 +10,7 @@ import { Input, Textarea, Label, FieldHint } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
+import { EmailTestCard } from "@/components/portal/EmailTestCard";
 
 interface HomeContent {
   hero_title: string;
@@ -156,6 +157,14 @@ export default function AdminContentPage() {
       <p className="flex items-center gap-1.5 text-xs text-ink-muted">
         <FileText className="h-3.5 w-3.5" /> Content document: <span className="font-mono">home</span>
       </p>
+
+      {/* Operations */}
+      <div className="pt-2">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
+          Operations
+        </h2>
+        <EmailTestCard />
+      </div>
     </div>
   );
 }

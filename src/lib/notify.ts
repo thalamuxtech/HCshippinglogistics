@@ -165,6 +165,21 @@ export async function generateReceiptPdf(payload: {
   return res.data as { ok: boolean; pdfUrl?: string; receiptNumber?: string };
 }
 
+// Admin: send a branded test email to verify the email provider (Brevo).
+export async function sendTestEmail(payload: {
+  to: string;
+}): Promise<{ ok: boolean; provider?: string; stub?: boolean; status?: number | null; error?: string | null }> {
+  const fn = httpsCallable(functions, "sendTestEmail");
+  const res = await fn(payload);
+  return res.data as {
+    ok: boolean;
+    provider?: string;
+    stub?: boolean;
+    status?: number | null;
+    error?: string | null;
+  };
+}
+
 // Admin: delete a shipment's invoice server-side (removes receipt records,
 // the Storage PDF, and clears the shipment's receipt fields).
 export async function deleteReceiptPdf(payload: {
@@ -190,18 +205,30 @@ export interface ContainerBroadcastInput {
   nextLoadingNote?: string;
   usPhones?: string;
   testEmail?: string;
+  /** Explicit, edited recipient list. When set, the broadcast goes to exactly
+   *  these addresses instead of being re-derived from the container. */
+  emails?: string[];
 }
 
 export async function sendContainerBroadcast(
   payload: ContainerBroadcastInput
-): Promise<{ ok: boolean; test?: boolean; recipientCount: number; recipientIds: string[] }> {
+): Promise<{
+  ok: boolean;
+  test?: boolean;
+  recipientCount: number;
+  failedCount?: number;
+  recipientIds?: string[];
+  recipientEmails?: string[];
+}> {
   const fn = httpsCallable(functions, "sendContainerBroadcast");
   const res = await fn(payload);
   return res.data as {
     ok: boolean;
     test?: boolean;
     recipientCount: number;
-    recipientIds: string[];
+    failedCount?: number;
+    recipientIds?: string[];
+    recipientEmails?: string[];
   };
 }
 
