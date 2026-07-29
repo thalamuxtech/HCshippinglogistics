@@ -8,7 +8,6 @@ import {
   Tags,
   Inbox,
   FileText,
-  Activity,
   Boxes,
   Container,
 } from "lucide-react";
@@ -28,9 +27,8 @@ const NAV: (PortalNavItem & { key: FeatureKey })[] = [
   { key: "admin.staff", href: "/admin/staff", label: "Staff & Roles", icon: UserCog },
   { key: "admin.pricing", href: "/admin/pricing", label: "Pricing", icon: Tags },
   { key: "admin.containers", href: "/admin/containers", label: "Containers", icon: Container },
-  { key: "admin.inquiries", href: "/admin/inquiries", label: "Inquiries", icon: Inbox },
+  { key: "admin.inquiries", href: "/admin/inquiries", label: "Submissions", icon: Inbox },
   { key: "admin.content", href: "/admin/content", label: "Content", icon: FileText },
-  { key: "admin.activity", href: "/admin/activity", label: "Activity", icon: Activity },
 ];
 
 const TITLES: Record<string, string> = {
@@ -41,9 +39,8 @@ const TITLES: Record<string, string> = {
   "/admin/staff": "Staff & Roles",
   "/admin/pricing": "Pricing",
   "/admin/containers": "Container Broadcasts",
-  "/admin/inquiries": "Inquiries",
+  "/admin/inquiries": "Submissions",
   "/admin/content": "Site Content",
-  "/admin/activity": "Activity Log",
 };
 
 function titleFor(pathname: string): string {

@@ -472,7 +472,7 @@ function AccessModal({
     <Modal
       open
       onClose={onClose}
-      title={`Menu access — ${user.full_name}`}
+      title={`Menu access: ${user.full_name}`}
       description="Turn back-end menus on or off for this account. Core menus cannot be removed."
     >
       <div className="space-y-4">

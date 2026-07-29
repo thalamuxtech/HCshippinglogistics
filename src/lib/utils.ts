@@ -14,7 +14,7 @@ export function formatCurrency(amount: number, currency = "USD"): string {
 }
 
 export function formatDate(d?: Date | { toDate: () => Date } | null): string {
-  if (!d) return "—";
+  if (!d) return "-";
   const date = "toDate" in (d as object) ? (d as { toDate: () => Date }).toDate() : (d as Date);
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
@@ -24,7 +24,7 @@ export function formatDate(d?: Date | { toDate: () => Date } | null): string {
 }
 
 export function formatDateTime(d?: Date | { toDate: () => Date } | null): string {
-  if (!d) return "—";
+  if (!d) return "-";
   const date = "toDate" in (d as object) ? (d as { toDate: () => Date }).toDate() : (d as Date);
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",

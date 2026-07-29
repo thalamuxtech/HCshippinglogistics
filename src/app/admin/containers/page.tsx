@@ -792,7 +792,7 @@ export default function AdminContainersPage() {
             </div>
             <p className="mt-1.5 text-xs text-ink-muted">
               Shipments already on another container show an amber tag; assigning moves them here.
-              {assignMatches.length >= 60 && " Showing the first 60 — refine your search to narrow it."}
+              {assignMatches.length >= 60 && " Showing the first 60. Refine your search to narrow it."}
             </p>
           </div>
 

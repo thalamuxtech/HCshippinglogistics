@@ -26,7 +26,6 @@ export type FeatureKey =
   | "admin.containers"
   | "admin.inquiries"
   | "admin.content"
-  | "admin.activity"
   // Destination office
   | "office.dashboard"
   | "office.shipments"
@@ -56,9 +55,8 @@ export const FEATURES: FeatureMeta[] = [
   { key: "admin.staff", label: "Staff & Roles", href: "/admin/staff", role: "admin", required: true },
   { key: "admin.pricing", label: "Pricing", href: "/admin/pricing", role: "admin" },
   { key: "admin.containers", label: "Containers", href: "/admin/containers", role: "admin" },
-  { key: "admin.inquiries", label: "Inquiries", href: "/admin/inquiries", role: "admin" },
+  { key: "admin.inquiries", label: "Submissions", href: "/admin/inquiries", role: "admin" },
   { key: "admin.content", label: "Content", href: "/admin/content", role: "admin" },
-  { key: "admin.activity", label: "Activity", href: "/admin/activity", role: "admin" },
   // ── Destination office ──
   { key: "office.dashboard", label: "Dashboard", href: "/office", role: "nigeria_office", required: true },
   { key: "office.shipments", label: "Shipments", href: "/office/shipments", role: "nigeria_office" },

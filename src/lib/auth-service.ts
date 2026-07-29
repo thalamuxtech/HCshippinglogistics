@@ -125,7 +125,7 @@ export async function lookupByAccessCode(
 ): Promise<{ found: boolean; hint?: string }> {
   const clean = normalizeCode(code);
   if (!validateCheckChar(clean)) {
-    return { found: false, hint: "That code looks mistyped — please re-check it." };
+    return { found: false, hint: "That code looks mistyped. Please re-check it." };
   }
   try {
     const fn = httpsCallable(functions, "resolveAccessCode");

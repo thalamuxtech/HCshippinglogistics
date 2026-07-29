@@ -94,7 +94,7 @@ export function EmailTestCard() {
               )}
               <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {res.provider && <Badge variant="muted">{res.provider}</Badge>}
-                {res.stub && <Badge variant="warning">stub mode — no key set</Badge>}
+                {res.stub && <Badge variant="warning">stub mode (no key set)</Badge>}
                 {res.status != null && <Badge variant="muted">HTTP {res.status}</Badge>}
               </div>
             </div>

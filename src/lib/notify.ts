@@ -180,6 +180,24 @@ export async function sendTestEmail(payload: {
   };
 }
 
+// Admin: reply to a contact submission with a branded email (editable recipient).
+export async function sendInquiryReply(payload: {
+  to: string;
+  subject: string;
+  message: string;
+  inquiryId?: string;
+}): Promise<{ ok: boolean; provider?: string; stub?: boolean; status?: number | null; error?: string | null }> {
+  const fn = httpsCallable(functions, "sendInquiryReply");
+  const res = await fn(payload);
+  return res.data as {
+    ok: boolean;
+    provider?: string;
+    stub?: boolean;
+    status?: number | null;
+    error?: string | null;
+  };
+}
+
 // Admin: delete a shipment's invoice server-side (removes receipt records,
 // the Storage PDF, and clears the shipment's receipt fields).
 export async function deleteReceiptPdf(payload: {

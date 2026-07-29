@@ -21,7 +21,9 @@ import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import { randomBytes, createHash } from "node:crypto";
 import { renderReceiptPdf } from "./receipt.js";
-import { LOGO_DATA_URI } from "./logo.js";
+// Email logo: reference the publicly-hosted PNG (Gmail/Outlook strip base64
+// data-URI images, so a real https URL is required for the logo to render).
+const LOGO_URL = "https://highclassshippinglogistics.web.app/brand/logo.png";
 
 initializeApp();
 const db = getFirestore();
@@ -74,7 +76,7 @@ const STAGE_LABEL = {
   clearance: "Clearance (Destination Customs)",
   offloading: "Offloading (Destination Warehouse)",
   delivery: "Out for Delivery / Ready for Pickup",
-  completed: "Delivered — Completed",
+  completed: "Delivered, Completed",
 };
 
 function stageMessage(status, destination) {
@@ -259,7 +261,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
         <!-- Header -->
         <tr>
           <td align="center" style="background:${NAVY};background:linear-gradient(135deg,#0B1E3A,#071427);padding:28px 32px 24px">
-            <img src="${LOGO_DATA_URI}" width="200" alt="Highclass Shipping & Logistics Inc." style="display:block;margin:0 auto;width:200px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:10px 14px" />
+            <img src="${LOGO_URL}" width="200" alt="Highclass Shipping & Logistics Inc." style="display:block;margin:0 auto;width:200px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:10px 14px" />
             <div style="margin-top:14px;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:${BLUE_LT};font-weight:700">Excellence in handling your valuables</div>
           </td>
         </tr>
@@ -351,7 +353,7 @@ function containerNoticeEmail({
   <div style="max-width:600px;margin:0 auto;padding:24px 16px">
     <!-- Header -->
     <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px 16px 0 0;padding:30px 30px 24px;text-align:center">
-      <img src="${LOGO_DATA_URI}" width="200" alt="Highclass Shipping &amp; Logistics Inc." style="display:block;margin:0 auto;width:200px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:10px 14px" />
+      <img src="${LOGO_URL}" width="200" alt="Highclass Shipping &amp; Logistics Inc." style="display:block;margin:0 auto;width:200px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:10px 14px" />
       <div style="font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:#5E97F3;margin-top:14px">Excellence in handling your valuables</div>
     </div>
     <div style="height:4px;background:#0A5BE0"></div>
@@ -476,7 +478,7 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
   const emailRes = cust.email && cust.notify_email !== false
     ? await sendEmail({
         to: cust.email,
-        subject: `${heading} — ${ship.tracking_number || "Highclass Shipping"}`,
+        subject: `${heading}: ${ship.tracking_number || "Highclass Shipping"}`,
         html: emailShell({ heading, body: msg, trackingNumber: ship.tracking_number, ctaUrl: trackUrl }),
       })
     : { ok: false, skipped: true };
@@ -484,7 +486,7 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
   const smsRes = cust.phone && cust.notify_sms !== false
     ? await sendSms({
         to: cust.phone,
-        body: `Highclass Shipping: ${ship.tracking_number} — ${stageMessage(status, ship.destination_country)}`,
+        body: `Highclass Shipping: ${ship.tracking_number}. ${stageMessage(status, ship.destination_country)}`,
       })
     : { ok: false, skipped: true };
 
@@ -535,13 +537,72 @@ export const sendTestEmail = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
     trackingNumber: "HC-TEST-0001",
     ctaUrl: `${SITE}/track`,
     ctaLabel: "Open My Shipments",
-    footerNote: "Test message — no action required.",
+    footerNote: "Test message. No action required.",
   });
 
-  const res = await sendEmail({ to, subject: "Highclass Shipping — email test", html });
+  const res = await sendEmail({ to, subject: "Highclass Shipping email test", html });
   return {
     ok: res.ok,
     provider: res.provider || provider,
+    stub: !!res.stub,
+    status: res.status || null,
+    error: res.error || null,
+  };
+});
+
+// ═══════════════════════════════════════════════════════════════
+// Callable (admin): reply to a contact-form submission with a branded
+// email to an (editable) recipient. Logs the reply on the inquiry and
+// moves it to "in_progress" if it was still new.
+// ═══════════════════════════════════════════════════════════════
+export const sendInquiryReply = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  await assertAdmin(req);
+  const d = req.data || {};
+  const to = (d.to || "").trim();
+  const subject = (d.subject || "").trim();
+  const message = (d.message || "").trim();
+  const inquiryId = (d.inquiryId || "").trim();
+  if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
+    throw new HttpsError("invalid-argument", "A valid recipient email is required.");
+  }
+  if (!subject || !message) {
+    throw new HttpsError("invalid-argument", "Subject and message are required.");
+  }
+
+  const bodyHtml = escapeHtml(message).replace(/\n/g, "<br/>");
+  const html = emailShell({
+    heading: subject,
+    preheader: message.slice(0, 120),
+    body: `<div>${bodyHtml}</div>`,
+    ctaUrl: `${SITE}/contact`,
+    ctaLabel: "Contact us",
+    footerNote: "You are receiving this because you contacted Highclass Shipping.",
+  });
+
+  // Replies should come back to the office inbox.
+  const replyTo = cfg(process.env.BREVO_REPLY_TO) || cfg(process.env.BREVO_FROM_EMAIL) || undefined;
+  const res = await sendEmail({ to, subject, html, replyTo });
+
+  // Log the reply + advance status (best-effort; never fail the send on these).
+  if (res.ok && inquiryId) {
+    try {
+      const ref = db.collection("contact_inquiries").doc(inquiryId);
+      const snap = await ref.get();
+      const patch = {
+        last_reply_at: FieldValue.serverTimestamp(),
+        last_reply_by: req.auth?.uid || "admin",
+        reply_count: FieldValue.increment(1),
+      };
+      if (snap.exists && snap.data().status === "new") patch.status = "in_progress";
+      await ref.set(patch, { merge: true });
+    } catch (e) {
+      logger.warn("sendInquiryReply: could not update inquiry", e);
+    }
+  }
+
+  return {
+    ok: res.ok,
+    provider: res.provider || null,
     stub: !!res.stub,
     status: res.status || null,
     error: res.error || null,
@@ -795,17 +856,17 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   // Confirmation email with the Customer ID (stub-safe).
   await sendEmail({
     to: email,
-    subject: `Order received — ${tracking}`,
+    subject: `Order received: ${tracking}`,
     html: emailShell({
       heading: "We've received your order",
-      body: `Thank you, ${d.full_name}. Your shipment to ${d.destination_country} has been logged.<br/><br/>Your Customer ID is <strong style="font-family:monospace;font-size:16px">${customerId}</strong>. Keep it safe — use it on our website to check your status and download your receipt at any time.`,
+      body: `Thank you, ${d.full_name}. Your shipment to ${d.destination_country} has been logged.<br/><br/>Your Customer ID is <strong style="font-family:monospace;font-size:16px">${customerId}</strong>. Keep it safe. Use it on our website to check your status and download your receipt at any time.`,
       trackingNumber: tracking,
       ctaUrl: `${SITE}/track?id=${encodeURIComponent(customerId)}`,
     }),
   });
   await db.collection("notifications").doc().set({
     customer_id: customerId, shipment_id: shipRef.id, channel: "email",
-    type: "order_confirmation", subject: `Order received — ${tracking}`,
+    type: "order_confirmation", subject: `Order received: ${tracking}`,
     status: "sent", created_at: FieldValue.serverTimestamp(),
   });
 
@@ -917,7 +978,7 @@ export const sendAccessCodeEmail = onCall({ secrets: EMAIL_SECRETS }, async (req
   if (!email) throw new HttpsError("invalid-argument", "email required");
   const heading = "Your Highclass Access Code";
   const body = code
-    ? `Hi ${fullName || "there"}, keep this access code safe — it lets you return to your account and full shipment history at any time:<br/><br/><span style="font-family:monospace;font-size:22px;letter-spacing:3px;color:#0B1E3A"><strong>${code}</strong></span>`
+    ? `Hi ${fullName || "there"}, keep this access code safe. It lets you return to your account and full shipment history at any time:<br/><br/><span style="font-family:monospace;font-size:22px;letter-spacing:3px;color:#0B1E3A"><strong>${code}</strong></span>`
     : `Hi ${fullName || "there"}, we received a request for your account. Use the return page and your access code to sign back in. If you didn't request this, you can ignore this email.`;
   const res = await sendEmail({
     to: email, subject: heading,
@@ -1325,7 +1386,7 @@ export const onShipmentStatusChange = onDocumentUpdated(
   if (cust.email && cust.notify_email !== false) {
     const res = await sendEmail({
       to: cust.email,
-      subject: `${heading} — ${after.tracking_number}`,
+      subject: `${heading}: ${after.tracking_number}`,
       html: emailShell({
         heading,
         body: stageMessage(status, after.destination_country),
@@ -1342,7 +1403,7 @@ export const onShipmentStatusChange = onDocumentUpdated(
   if (cust.phone && cust.notify_sms !== false) {
     const res = await sendSms({
       to: cust.phone,
-      body: `Highclass Shipping: ${after.tracking_number} — ${stageMessage(status, after.destination_country)}`,
+      body: `Highclass Shipping: ${after.tracking_number}. ${stageMessage(status, after.destination_country)}`,
     });
     await db.collection("notifications").doc().set({
       customer_id: custId, shipment_id: event.params.shipmentId, channel: "sms",

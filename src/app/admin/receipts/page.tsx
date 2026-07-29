@@ -135,7 +135,7 @@ export default function AdminReceiptsPage() {
                           {s.tracking_number}
                         </Link>
                       ) : (
-                        <span className="text-xs text-ink-muted">—</span>
+                        <span className="text-xs text-ink-muted">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
