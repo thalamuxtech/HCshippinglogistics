@@ -23,7 +23,7 @@ import { randomBytes, createHash } from "node:crypto";
 import { renderReceiptPdf } from "./receipt.js";
 // Email logo: reference the publicly-hosted PNG (Gmail/Outlook strip base64
 // data-URI images, so a real https URL is required for the logo to render).
-const LOGO_URL = "https://highclassshippinglogistics.web.app/brand/logo.png";
+const LOGO_URL = "https://highclassshippinglogistics.web.app/brand/logo-email.png";
 
 initializeApp();
 const db = getFirestore();

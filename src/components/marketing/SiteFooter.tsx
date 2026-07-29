@@ -97,13 +97,14 @@ export function SiteFooter() {
             >
               Powered by ThalamuxTech
             </a>
-            {/* Discreet staff entry point */}
+            {/* Discreet staff entry point (icon only) */}
             <Link
               href="/login"
-              className="inline-flex items-center gap-1.5 text-xs text-white/40 transition-colors hover:text-gold-200 focus-ring rounded"
+              className="inline-flex items-center text-white/25 transition-colors hover:text-gold-200 focus-ring rounded"
               aria-label="Staff sign in"
+              title="Staff sign in"
             >
-              <Lock className="h-3.5 w-3.5" /> Staff
+              <Lock className="h-3.5 w-3.5" />
             </Link>
           </div>
         </div>
