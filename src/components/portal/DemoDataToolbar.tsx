@@ -24,9 +24,12 @@ export function DemoDataToolbar() {
         actor_name: user.full_name,
         actor_role: "admin",
         action: "added demo data",
-        meta: { shipments: r.shipments, inquiries: r.inquiries },
+        meta: { shipments: r.shipments, inquiries: r.inquiries, receipts: r.receipts },
       });
-      toast.success("Demo data added", `${r.shipments} shipments and ${r.inquiries} submissions. Refresh to see them.`);
+      toast.success(
+        "Demo data added",
+        `${r.shipments} shipments (all stages), ${r.receipts} receipts, ${r.inquiries} submissions. Refresh to see them.`
+      );
     } catch {
       toast.error("Could not add demo data", "Please try again.");
     } finally {
