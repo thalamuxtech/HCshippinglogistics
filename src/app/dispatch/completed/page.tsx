@@ -44,8 +44,8 @@ export default function DispatchCompletedPage() {
     (async () => {
       setLoading(true);
       try {
-        const rows = await listShipments([where("assigned_dispatcher_id", "==", user.id)]);
-        const completed = rows.filter((s) => s.current_status === "completed");
+        const rows = await listShipments([where("current_status", "==", "completed")]);
+        const completed = rows;
         // Resolve when THIS dispatcher marked it completed (from the status log).
         const withTimes = await Promise.all(
           completed.map(async (s) => {

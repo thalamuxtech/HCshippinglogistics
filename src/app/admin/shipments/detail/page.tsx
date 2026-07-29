@@ -126,7 +126,16 @@ function AdminShipmentDetailPageInner() {
       // dnr_override: null follows payment; true/false is a manual lock.
       const effective =
         next === true ? true : next === false ? false : (shipment.payment_status || "unpaid") !== "paid";
-      await updateShipment(shipment.id, { dnr_override: next, dnr: effective });
+      const patch: Record<string, unknown> = { dnr_override: next, dnr: effective };
+      // Clearing the hold resolves any pending dispatcher release request.
+      if (!effective && shipment.dnr_release_requested) {
+        patch.dnr_release_requested = false;
+        patch.dnr_release_requested_by = null;
+        patch.dnr_release_requested_by_name = null;
+        patch.dnr_release_requested_at = null;
+        patch.dnr_release_note = null;
+      }
+      await updateShipment(shipment.id, patch);
       await logActivity({
         actor_id: user.id,
         actor_name: user.full_name,
@@ -632,6 +641,22 @@ function AdminShipmentDetailPageInner() {
                     ? "Manually held. Packages must not be released until you clear this."
                     : "Manually cleared for release regardless of payment."}
                 </p>
+
+                {/* Dispatcher release request */}
+                {isDnr(s) && s.dnr_release_requested && (
+                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
+                    <p className="text-xs font-semibold text-amber-800">
+                      Release requested by {s.dnr_release_requested_by_name || "a dispatcher"}
+                    </p>
+                    {s.dnr_release_note && (
+                      <p className="mt-1 text-xs text-amber-700">&ldquo;{s.dnr_release_note}&rdquo;</p>
+                    )}
+                    <p className="mt-1 text-[11px] text-amber-700">
+                      Approve with &ldquo;Allow release&rdquo; below once payment is settled.
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
                     variant={isDnr(s) ? "outline" : "primary"}

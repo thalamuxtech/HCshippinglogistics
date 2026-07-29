@@ -158,6 +158,34 @@ export async function listAllShipments(max = 500): Promise<Shipment[]> {
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as Shipment);
 }
 
+// Shipments that have arrived at the destination and are ready to hand out
+// (dispatcher view). Single-field `in` query, no composite index needed.
+export async function listArrivedShipments(): Promise<Shipment[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, COL.shipments),
+      where("current_status", "in", ["offloading", "delivery", "completed"])
+    )
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as Shipment);
+}
+
+// Dispatcher raises a request for the admin to lift a DNR hold on a shipment.
+export async function requestDnrRelease(
+  shipmentId: string,
+  by: { id: string; name?: string },
+  note?: string
+): Promise<void> {
+  await updateDoc(doc(db, COL.shipments, shipmentId), {
+    dnr_release_requested: true,
+    dnr_release_requested_by: by.id,
+    dnr_release_requested_by_name: by.name ?? null,
+    dnr_release_requested_at: serverTimestamp(),
+    dnr_release_note: note ?? null,
+    updated_at: serverTimestamp(),
+  });
+}
+
 // ---- Status logs (append-only) + advance stage ----
 export async function advanceStage(params: {
   shipmentId: string;

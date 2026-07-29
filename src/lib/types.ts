@@ -108,6 +108,12 @@ export interface Shipment {
   // with a manual admin override.
   dnr?: boolean;
   dnr_override?: boolean | null; // null = follow payment; true/false = manual lock
+  // Dispatcher-raised request to lift a DNR hold; admin reviews and clears it.
+  dnr_release_requested?: boolean;
+  dnr_release_requested_by?: string | null;
+  dnr_release_requested_by_name?: string | null;
+  dnr_release_requested_at?: Timestamp | null;
+  dnr_release_note?: string | null;
   total_price: number;
   currency: string;
   // Payment

@@ -19,7 +19,7 @@ import {
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getShipment, advanceStage } from "@/lib/db";
+import { getShipment, advanceStage, requestDnrRelease } from "@/lib/db";
 import { sendStageUpdateEmail } from "@/lib/notify";
 import type { Shipment } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,15 @@ function DispatchJobDetailPageInner() {
   const [photos, setPhotos] = React.useState<File[]>([]);
   const [previews, setPreviews] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
+  const [requesting, setRequesting] = React.useState(false);
+
+  const loadJob = React.useCallback(async () => {
+    const s = await getShipment(id);
+    // A dispatcher may open any shipment that has arrived at the destination
+    // (offloading / delivery / completed), or one explicitly assigned to them.
+    const arrived = s && ["offloading", "delivery", "completed"].includes(s.current_status);
+    return s && (arrived || s.assigned_dispatcher_id === user?.id) ? s : null;
+  }, [id, user?.id]);
 
   React.useEffect(() => {
     if (!user?.id) return;
@@ -48,9 +57,8 @@ function DispatchJobDetailPageInner() {
     (async () => {
       setLoading(true);
       try {
-        const s = await getShipment(id);
-        // Only the assigned dispatcher may view this job (rules also enforce this).
-        if (active) setJob(s && s.assigned_dispatcher_id === user.id ? s : null);
+        const s = await loadJob();
+        if (active) setJob(s);
       } catch {
         if (active) setJob(null);
       } finally {
@@ -60,7 +68,7 @@ function DispatchJobDetailPageInner() {
     return () => {
       active = false;
     };
-  }, [id, user?.id]);
+  }, [loadJob, user?.id]);
 
   React.useEffect(() => {
     // Clean up object URLs on unmount / change.
@@ -126,6 +134,21 @@ function DispatchJobDetailPageInner() {
     }
   }
 
+  async function handleRequestRelease() {
+    if (!job || !user) return;
+    setRequesting(true);
+    try {
+      await requestDnrRelease(job.id, { id: user.id, name: user.full_name }, notes.trim() || undefined);
+      const s = await loadJob();
+      setJob(s);
+      toast.success("Release requested", "The office has been asked to lift the hold.");
+    } catch {
+      toast.error("Could not send request", "Please try again.");
+    } finally {
+      setRequesting(false);
+    }
+  }
+
   if (loading) return <PageLoader label="Loading job…" />;
 
   if (!job) {
@@ -174,30 +197,38 @@ function DispatchJobDetailPageInner() {
           <div className="flex items-start gap-2.5">
             <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-gold" />
             <p className="text-base font-semibold leading-snug text-navy">
-              {job.delivery_address ||
+              {job.receiver?.address ||
+                job.delivery_address ||
                 [job.destination_city, job.destination_country].filter(Boolean).join(", ") ||
-                "Address on file"}
+                "Pickup at warehouse"}
             </p>
           </div>
 
-          <a
-            href={job.customer_phone ? `tel:${job.customer_phone}` : undefined}
-            className="flex items-center gap-2.5 rounded-xl border border-border p-3 text-base text-ink active:bg-secondary/50 focus-ring"
-          >
-            <Phone className="h-5 w-5 shrink-0 text-navy" />
-            <span className="font-medium">
-              {job.customer_name || "Customer"}
-              {job.customer_phone ? ` · ${job.customer_phone}` : ""}
-            </span>
-          </a>
+          {(() => {
+            const rName = job.receiver?.full_name || job.customer_name || "Recipient";
+            const rPhone = job.receiver?.phone || job.customer_phone || "";
+            return (
+              <a
+                href={rPhone ? `tel:${rPhone}` : undefined}
+                className="flex items-center gap-2.5 rounded-xl border border-border p-3 text-base text-ink active:bg-secondary/50 focus-ring"
+              >
+                <Phone className="h-5 w-5 shrink-0 text-navy" />
+                <span className="font-medium">
+                  {rName}
+                  {rPhone ? ` · ${rPhone}` : ""}
+                </span>
+              </a>
+            );
+          })()}
 
           <div className="flex items-start gap-2.5">
             <Package className="mt-0.5 h-5 w-5 shrink-0 text-ink-muted" />
             <span className="text-sm text-ink-muted">
-              {job.items?.[0]?.description ||
-                job.item_category ||
-                job.vehicle_details ||
-                "Shipment items"}
+              {job.items?.length
+                ? job.items
+                    .map((it) => `${it.quantity && it.quantity > 1 ? `${it.quantity}x ` : ""}${it.description}`)
+                    .join(", ")
+                : job.item_category || job.vehicle_details || "Shipment items"}
             </span>
           </div>
 
@@ -218,17 +249,43 @@ function DispatchJobDetailPageInner() {
           </span>
         </div>
       ) : onHold ? (
-        <div className="flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-4">
-          <Lock className="mt-0.5 h-6 w-6 shrink-0 text-red-600" />
-          <div>
-            <p className="text-base font-semibold text-red-800">
-              Do Not Release (DNR) &mdash; payment outstanding
-            </p>
-            <p className="mt-0.5 text-sm text-red-700">
-              Do not hand over these packages. The office must clear the hold (once the
-              customer settles the balance) before you can complete this delivery.
-            </p>
+        <div className="space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+          <div className="flex items-start gap-2.5">
+            <Lock className="mt-0.5 h-6 w-6 shrink-0 text-red-600" />
+            <div>
+              <p className="text-base font-semibold text-red-800">
+                Do Not Release (DNR), payment outstanding
+              </p>
+              <p className="mt-0.5 text-sm text-red-700">
+                Do not hand over this package. Ask the office to lift the hold before releasing it.
+              </p>
+            </div>
           </div>
+
+          {job.dnr_release_requested ? (
+            <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-800">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Release requested. Waiting for the office to lift the hold.
+            </div>
+          ) : (
+            <>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional note for the office (e.g. customer is here to collect)"
+                className="bg-white"
+              />
+              <Button
+                variant="primary"
+                onClick={handleRequestRelease}
+                loading={requesting}
+                disabled={requesting}
+                className="w-full"
+              >
+                <Lock className="h-4 w-4" /> Request release from office
+              </Button>
+            </>
+          )}
         </div>
       ) : !readyToDeliver ? (
         <div className="flex items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-4">

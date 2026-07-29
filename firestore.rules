@@ -73,7 +73,12 @@ service cloud.firestore {
       allow read: if isSignedIn() && (
         isAdmin() ||
         resource.data.customer_id == request.auth.uid ||
-        (isDispatcher() && resource.data.assigned_dispatcher_id == request.auth.uid) ||
+        // Dispatchers see shipments that have reached the destination hand-out
+        // stages (grouped by container), plus anything explicitly assigned.
+        (isDispatcher() && (
+          resource.data.assigned_dispatcher_id == request.auth.uid ||
+          resource.data.current_status in ['offloading', 'delivery', 'completed']
+        )) ||
         (isNigeriaOffice() && resource.data.destination_country == assignedCountry())
       );
       // Customers may create their own orders; staff may create for anyone.
