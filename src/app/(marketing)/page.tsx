@@ -23,7 +23,6 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { HeroStart } from "@/components/marketing/HeroStart";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { ProcessJourney } from "@/components/marketing/ProcessJourney";
-import { StageJourney } from "@/components/marketing/StageJourney";
 import { Testimonials } from "@/components/marketing/Testimonials";
 import { ManagedText } from "@/components/marketing/ManagedText";
 import { COMPANY, SERVICES } from "@/lib/constants";
@@ -281,9 +280,6 @@ export default function HomePage() {
 
       {/* ─── How it works — animated journey ──────────────── */}
       <ProcessJourney />
-
-      {/* ─── 8-Stage lifecycle (animated) ─────────────────── */}
-      <StageJourney />
 
       {/* ─── Customer reviews (auto-slider) ───────────────── */}
       <Testimonials />
