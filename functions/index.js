@@ -682,8 +682,17 @@ function callerKey(req) {
   return sha256Hex(first).slice(0, 32);
 }
 
-async function throttleGuard(req, bucket) {
-  const ref = db.collection("rate_limits").doc(`${bucket}_${callerKey(req)}`);
+// `subject` (the attempted code) is mixed into the bucket key so that a shared
+// IP — office NAT, mobile carrier, a whole household — cannot lock a real
+// customer out of their OWN id just because someone else on that IP was
+// guessing. An attacker sweeping many ids gets a fresh bucket per id, but each
+// id still only tolerates MAX_FAILS guesses per window, which is what actually
+// protects the credential. Successful lookups clear the bucket immediately.
+async function throttleGuard(req, bucket, subject) {
+  const key = subject
+    ? `${bucket}_${callerKey(req)}_${sha256Hex(String(subject)).slice(0, 16)}`
+    : `${bucket}_${callerKey(req)}`;
+  const ref = db.collection("rate_limits").doc(key);
   try {
     const snap = await ref.get();
     if (snap.exists) {
@@ -731,7 +740,7 @@ export const publicTrack = onCall(async (req) => {
   const raw = String(req.data?.code || "").trim();
   if (!raw) return { found: false };
   const code = raw.toUpperCase();
-  const rl = await throttleGuard(req, "track");
+  const rl = await throttleGuard(req, "track", code);
 
   // Match by tracking number, then fall back to customer ID.
   let snap = await db.collection("shipments").where("tracking_number", "==", code).limit(1).get();
@@ -975,7 +984,7 @@ export const viewByCustomerId = onCall(async (req) => {
   // receipt links), so keep the shape check strict: HC + 2 initials + 6 chars +
   // check char. Anything else is rejected without touching Firestore.
   if (!/^HC[A-Z0-9]{9}$/.test(id)) return { found: false };
-  const rl = await throttleGuard(req, "viewid");
+  const rl = await throttleGuard(req, "viewid", id);
 
   const userSnap = await db.collection("users").doc(id).get();
   const snap = await db
@@ -1045,7 +1054,7 @@ export const resolveAccessCode = onCall(async (req) => {
   if (clean.length < 10 || clean.length > 12) return { found: false };
   const body = clean.slice(0, -1);
   if (dammCheck(body) !== clean.slice(-1)) return { found: false };
-  const rl = await throttleGuard(req, "accesscode");
+  const rl = await throttleGuard(req, "accesscode", clean);
 
   const prefix = clean.slice(0, 4);
   // Single-field query (no composite index); role filtered in memory.
