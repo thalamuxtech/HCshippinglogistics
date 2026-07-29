@@ -243,14 +243,21 @@ export default function AdminStaffPage() {
 
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
                   <span className="text-xs text-ink-muted">Joined {formatDate(u.created_at)}</span>
-                  <Button
-                    size="sm"
-                    variant={u.is_active ? "outline" : "gold"}
-                    onClick={() => toggleActive(u)}
-                  >
-                    <Power className="h-3.5 w-3.5" />
-                    {u.is_active ? "Deactivate" : "Reactivate"}
-                  </Button>
+                  {/* Administrators cannot be deactivated from here. */}
+                  {u.role === "admin" ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-muted">
+                      <ShieldCheck className="h-3.5 w-3.5 text-navy" /> Administrator
+                    </span>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant={u.is_active ? "outline" : "gold"}
+                      onClick={() => toggleActive(u)}
+                    >
+                      <Power className="h-3.5 w-3.5" />
+                      {u.is_active ? "Deactivate" : "Reactivate"}
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

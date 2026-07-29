@@ -28,8 +28,11 @@ service firebase.storage {
     }
 
     // Inspection photos, POD photos, shipment docs — staff upload, staff read.
+    // Read is staff-only: customers are never signed in (the Customer ID is
+    // their credential) and receive any file they need as a tokenized URL, so
+    // `isSignedIn()` here would only let one account enumerate another's files.
     match /shipments/{shipmentId}/{allPaths=**} {
-      allow read: if isSignedIn();
+      allow read: if isStaff();
       allow write: if isStaff()
                    && request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*|application/pdf');
@@ -42,9 +45,12 @@ service firebase.storage {
                    && request.resource.size < 25 * 1024 * 1024;
     }
 
-    // Digital receipts (PDF) — staff write, signed-URL delivery to customers.
+    // Digital receipts (PDF) — written by the Admin SDK (generateReceiptPdf),
+    // delivered to customers as an unguessable tokenized download URL stored on
+    // the shipment. Direct bucket reads are staff-only for the same reason as
+    // above: an invoice carries amounts and customer details.
     match /receipts/{shipmentId}/{allPaths=**} {
-      allow read: if isSignedIn();
+      allow read: if isStaff();
       allow write: if isAdminOrOffice();
     }
 

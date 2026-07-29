@@ -47,20 +47,29 @@ service cloud.firestore {
 
     // ---- users ----
     match /users/{userId} {
-      // A user can read their own record; staff can read any user.
-      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      // A user reads their own record. Admin and destination office may read any
+      // user (they manage customers). Dispatchers may NOT read customer accounts
+      // in bulk — they get the recipient contact they need from the shipment doc.
+      allow read: if isSignedIn() && (
+        request.auth.uid == userId || isAdmin() || isNigeriaOffice()
+      );
       // Anyone signed in can create their OWN user doc (signup); role is
       // constrained to 'customer' at creation to prevent privilege escalation.
       allow create: if isSignedIn()
                     && request.auth.uid == userId
                     && request.resource.data.role == 'customer';
-      // Users can update limited profile fields on their own doc;
-      // they may NOT change their own role or active flag.
+      // Users can update limited profile fields on their own doc; they may NOT
+      // change their role, active/deleted flags, or the access-code material
+      // (which is the credential for returning customers).
       allow update: if isSignedIn() && (
         isAdmin() ||
         (request.auth.uid == userId
           && request.resource.data.role == resource.data.role
-          && request.resource.data.is_active == resource.data.is_active)
+          && request.resource.data.is_active == resource.data.is_active
+          && request.resource.data.get('deleted', false) == resource.data.get('deleted', false)
+          && request.resource.data.get('access_code_hash', '') == resource.data.get('access_code_hash', '')
+          && request.resource.data.get('access_code_salt', '') == resource.data.get('access_code_salt', '')
+          && request.resource.data.get('access_code_prefix', '') == resource.data.get('access_code_prefix', ''))
       );
       allow delete: if isAdmin();
     }
@@ -86,8 +95,26 @@ service cloud.firestore {
         isStaff() ||
         request.resource.data.customer_id == request.auth.uid
       );
-      // Only staff advance shipment state.
-      allow update: if isStaff();
+      // Admin and destination office may update freely. Dispatchers may only act
+      // on the delivery hand-off: they can advance status and raise a release
+      // request, but MUST NOT change money or the DNR hold (those stay equal to
+      // the stored values). This enforces the hold model server-side.
+      allow update: if isAdmin() || (
+        // Destination office: only shipments bound for their assigned country,
+        // and they may not reassign a shipment out of that country.
+        isNigeriaOffice()
+        && resource.data.destination_country == assignedCountry()
+        && request.resource.data.destination_country == assignedCountry()
+      ) || (
+        isDispatcher()
+        && request.resource.data.customer_id == resource.data.customer_id
+        && request.resource.data.total_price == resource.data.total_price
+        && request.resource.data.deposit == resource.data.deposit
+        && request.resource.data.balance == resource.data.balance
+        && request.resource.data.payment_status == resource.data.payment_status
+        && request.resource.data.dnr == resource.data.dnr
+        && request.resource.data.dnr_override == resource.data.dnr_override
+      );
       allow delete: if isAdmin();
     }
 
@@ -191,6 +218,13 @@ service cloud.firestore {
     match /counters/{counterId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn();
+    }
+
+    // ---- rate_limits (brute-force buckets for the public lookup callables) ----
+    // Written ONLY by Cloud Functions via the Admin SDK, which bypasses these
+    // rules. No client may read or tamper with the counters.
+    match /rate_limits/{bucketId} {
+      allow read, write: if false;
     }
   }
 }

@@ -58,13 +58,27 @@ const SMS_SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER];
 const ALL_SECRETS = [...EMAIL_SECRETS, ...SMS_SECRETS];
 
 // ---- Auth guard: require the caller to be an admin ----
+// A deactivated admin is treated as no admin at all: `is_active === false`
+// must lock the account out of every privileged callable, not just the UI.
 async function assertAdmin(req) {
   if (!req.auth?.uid) throw new HttpsError("unauthenticated", "Sign in required.");
   const snap = await db.collection("users").doc(req.auth.uid).get();
-  if (!snap.exists || snap.data().role !== "admin") {
+  const u = snap.exists ? snap.data() : null;
+  if (!u || u.role !== "admin" || u.is_active === false) {
     throw new HttpsError("permission-denied", "Admin access required.");
   }
-  return snap.data();
+  return u;
+}
+
+// Require any active staff member (admin / nigeria_office / dispatcher).
+async function assertStaff(req) {
+  if (!req.auth?.uid) throw new HttpsError("unauthenticated", "Sign in required.");
+  const snap = await db.collection("users").doc(req.auth.uid).get();
+  const u = snap.exists ? snap.data() : null;
+  if (!u || !["admin", "nigeria_office", "dispatcher"].includes(u.role) || u.is_active === false) {
+    throw new HttpsError("permission-denied", "Staff access required.");
+  }
+  return u;
 }
 
 // ---- Stage metadata (mirrors src/lib/constants.ts) ----
@@ -224,13 +238,22 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
   const NAVY = "#0B1E3A";
   const BLUE = "#0A5BE0";
   const BLUE_LT = "#5E97F3";
-  const preheaderText = preheader || (typeof body === "string" ? body.replace(/<[^>]+>/g, "").slice(0, 120) : "");
+  // `body` is intentionally raw HTML (callers must escape their own content).
+  // Everything else is escaped here so headings/labels/URLs are injection-safe.
+  const safeHeading = escapeHtml(heading);
+  const safeCtaLabel = escapeHtml(ctaLabel || "Track your shipment");
+  const safeCtaUrl = encodeURI(String(ctaUrl || "")).replace(/"/g, "%22");
+  const safeTracking = escapeHtml(trackingNumber);
+  const safeFooterNote = escapeHtml(footerNote || "");
+  const preheaderText = escapeHtml(
+    preheader || (typeof body === "string" ? body.replace(/<[^>]+>/g, "").slice(0, 120) : "")
+  );
   const cta = ctaUrl
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:22px 0 4px">
          <tr><td align="center" bgcolor="${BLUE}" style="border-radius:10px">
-           <a href="${ctaUrl}" target="_blank"
+           <a href="${safeCtaUrl}" target="_blank"
               style="display:inline-block;padding:13px 30px;font-family:Segoe UI,Arial,sans-serif;font-size:15px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:10px">
-             ${ctaLabel || "Track your shipment"}
+             ${safeCtaLabel}
            </a>
          </td></tr>
        </table>`
@@ -239,7 +262,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
     ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:20px 0 4px">
          <tr><td style="background:#F1F5FA;border:1px solid #E2E8F0;border-radius:12px;padding:14px 18px">
            <div style="font-size:10.5px;letter-spacing:1.5px;text-transform:uppercase;color:#8A98A6;font-weight:700;font-family:Segoe UI,Arial,sans-serif">Tracking number</div>
-           <div style="margin-top:4px;font-family:Consolas,'Courier New',monospace;font-size:17px;font-weight:700;color:${NAVY};letter-spacing:.5px">${trackingNumber}</div>
+           <div style="margin-top:4px;font-family:Consolas,'Courier New',monospace;font-size:17px;font-weight:700;color:${NAVY};letter-spacing:.5px">${safeTracking}</div>
          </td></tr>
        </table>`
     : "";
@@ -250,7 +273,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <meta name="x-apple-disable-message-reformatting"/>
-<title>${heading}</title>
+<title>${safeHeading}</title>
 </head>
 <body style="margin:0;padding:0;background:#EEF2F7;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px">${preheaderText}</div>
@@ -270,7 +293,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
         <!-- Body -->
         <tr>
           <td style="padding:32px">
-            <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:${NAVY};font-weight:750">${heading}</h1>
+            <h1 style="margin:0 0 12px;font-size:21px;line-height:1.3;color:${NAVY};font-weight:750">${safeHeading}</h1>
             <div style="font-size:14.5px;line-height:1.7;color:#3A4A5E">${body}</div>
             ${tracking}
             ${cta}
@@ -300,7 +323,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
           <td style="padding:14px 32px 26px;border-top:1px solid #E9EEF4">
             <div style="font-size:11.5px;line-height:1.6;color:#8A98A6">
               FMC Licensed since 2017 · Registered in Maryland, USA &amp; Nigeria (CAC)<br/>
-              ${footerNote || "This is an automated message from Highclass Shipping &amp; Logistics Inc."}
+              ${safeFooterNote || "This is an automated message from Highclass Shipping &amp; Logistics Inc."}
             </div>
             <div style="margin-top:8px;font-size:11.5px"><a href="${SITE}" style="color:${BLUE};text-decoration:none;font-weight:600">highclassshippinglogistics.com</a></div>
           </td>
@@ -323,7 +346,9 @@ function escapeHtml(str) {
   return String(str == null ? "" : str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function containerNoticeEmail({
@@ -460,6 +485,7 @@ function containerNoticeEmail({
 // Callable: send a stage-update email (+ SMS) for one shipment
 // ═══════════════════════════════════════════════════════════════
 export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req) => {
+  await assertStaff(req);
   const { shipmentId, customerId, status, extraNote } = req.data || {};
   if (!shipmentId || !status) throw new HttpsError("invalid-argument", "shipmentId and status required");
 
@@ -472,7 +498,7 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
   const cust = custSnap && custSnap.exists ? custSnap.data() : {};
 
   const heading = STAGE_LABEL[status] || "Shipment update";
-  const msg = `${stageMessage(status, ship.destination_country)}${extraNote ? `<br/><br/>${extraNote}` : ""}`;
+  const msg = `${stageMessage(status, ship.destination_country)}${extraNote ? `<br/><br/>${escapeHtml(extraNote)}` : ""}`;
   const trackUrl = `${SITE}/track?tn=${encodeURIComponent(ship.tracking_number || "")}`;
 
   const emailRes = cust.email && cust.notify_email !== false
@@ -640,17 +666,83 @@ function sha256Hex(input) {
   return createHash("sha256").update(input).digest("hex");
 }
 
+// ── Brute-force throttle for the PUBLIC credential endpoints ──
+// A Customer ID / access code is the only credential a customer has, so the
+// unauthenticated lookups must not be freely guessable at machine speed. We
+// bucket failed attempts per caller IP in Firestore and refuse once a caller
+// exceeds MAX_FAILS inside WINDOW_MS. Successful lookups clear the bucket, so
+// real customers are never affected.
+const RL_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const RL_MAX_FAILS = 12;
+
+function callerKey(req) {
+  const ip = req.rawRequest?.ip || req.rawRequest?.headers?.["x-forwarded-for"] || "unknown";
+  // x-forwarded-for may be a list; the first entry is the origin client.
+  const first = String(ip).split(",")[0].trim();
+  return sha256Hex(first).slice(0, 32);
+}
+
+async function throttleGuard(req, bucket) {
+  const ref = db.collection("rate_limits").doc(`${bucket}_${callerKey(req)}`);
+  try {
+    const snap = await ref.get();
+    if (snap.exists) {
+      const d = snap.data();
+      const startedAt = d.started_at?.toMillis ? d.started_at.toMillis() : 0;
+      const fresh = Date.now() - startedAt < RL_WINDOW_MS;
+      if (fresh && (d.fails || 0) >= RL_MAX_FAILS) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "Too many attempts. Please wait a few minutes and try again."
+        );
+      }
+    }
+  } catch (e) {
+    if (e instanceof HttpsError) throw e;
+    logger.warn(`throttleGuard(${bucket}): read failed, allowing request`, e);
+  }
+  return ref;
+}
+
+// Record the outcome of a throttled lookup. Failures increment (and start) the
+// window; a success clears it. Never let bookkeeping break the response.
+async function throttleRecord(ref, ok) {
+  if (!ref) return;
+  try {
+    if (ok) {
+      await ref.delete();
+      return;
+    }
+    const snap = await ref.get();
+    const startedAt = snap.exists && snap.data().started_at?.toMillis
+      ? snap.data().started_at.toMillis()
+      : 0;
+    if (!snap.exists || Date.now() - startedAt >= RL_WINDOW_MS) {
+      await ref.set({ fails: 1, started_at: FieldValue.serverTimestamp() });
+    } else {
+      await ref.set({ fails: FieldValue.increment(1) }, { merge: true });
+    }
+  } catch (e) {
+    logger.warn("throttleRecord: write failed", e);
+  }
+}
+
 export const publicTrack = onCall(async (req) => {
   const raw = String(req.data?.code || "").trim();
   if (!raw) return { found: false };
   const code = raw.toUpperCase();
+  const rl = await throttleGuard(req, "track");
 
   // Match by tracking number, then fall back to customer ID.
   let snap = await db.collection("shipments").where("tracking_number", "==", code).limit(1).get();
   if (snap.empty) {
-    snap = await db.collection("shipments").where("customer_id", "==", raw).limit(1).get();
+    snap = await db.collection("shipments").where("customer_id", "==", code).limit(1).get();
   }
-  if (snap.empty) return { found: false };
+  if (snap.empty) {
+    await throttleRecord(rl, false);
+    return { found: false };
+  }
+  await throttleRecord(rl, true);
 
   const d = snap.docs[0].data();
   // Return ONLY non-sensitive fields — never customer PII or the PDF URL.
@@ -879,17 +971,22 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
 // ═══════════════════════════════════════════════════════════════
 export const viewByCustomerId = onCall(async (req) => {
   const id = String(req.data?.customerId || "").trim().toUpperCase();
-  if (!id || id.length < 6) return { found: false };
-  // Validate check char to reject typos cheaply.
-  if (dammCheck(id.slice(0, -1)) !== id.slice(-1)) {
-    // Still allow (older/admin-made ids may not have a check char) — try lookup anyway.
-  }
+  // The Customer ID IS the credential here (it returns full shipment detail and
+  // receipt links), so keep the shape check strict: HC + 2 initials + 6 chars +
+  // check char. Anything else is rejected without touching Firestore.
+  if (!/^HC[A-Z0-9]{9}$/.test(id)) return { found: false };
+  const rl = await throttleGuard(req, "viewid");
+
   const userSnap = await db.collection("users").doc(id).get();
   const snap = await db
     .collection("shipments")
     .where("customer_id", "==", id)
     .get();
-  if (snap.empty && !userSnap.exists) return { found: false };
+  if (snap.empty && !userSnap.exists) {
+    await throttleRecord(rl, false);
+    return { found: false };
+  }
+  await throttleRecord(rl, true);
 
   const shipments = snap.docs
     .map((doc) => {
@@ -948,6 +1045,7 @@ export const resolveAccessCode = onCall(async (req) => {
   if (clean.length < 10 || clean.length > 12) return { found: false };
   const body = clean.slice(0, -1);
   if (dammCheck(body) !== clean.slice(-1)) return { found: false };
+  const rl = await throttleGuard(req, "accesscode");
 
   const prefix = clean.slice(0, 4);
   // Single-field query (no composite index); role filtered in memory.
@@ -959,13 +1057,15 @@ export const resolveAccessCode = onCall(async (req) => {
 
   for (const d of snap.docs) {
     const u = d.data();
-    if (u.role !== "customer") continue;
+    if (u.role !== "customer" || u.is_active === false || u.deleted === true) continue;
     if (!u.access_code_salt || !u.access_code_hash) continue;
-    const h = await sha256Hex(`${u.access_code_salt}:${clean}`);
+    const h = sha256Hex(`${u.access_code_salt}:${clean}`);
     if (h === u.access_code_hash) {
+      await throttleRecord(rl, true);
       return { found: true, email: u.email || "", fullName: u.full_name || "" };
     }
   }
+  await throttleRecord(rl, false);
   return { found: false };
 });
 
@@ -973,12 +1073,17 @@ export const resolveAccessCode = onCall(async (req) => {
 // Callable: send access-code email
 // ═══════════════════════════════════════════════════════════════
 export const sendAccessCodeEmail = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  await assertAdmin(req);
   const { email, fullName, code } = req.data || {};
-  if (!email) throw new HttpsError("invalid-argument", "email required");
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(email))) {
+    throw new HttpsError("invalid-argument", "A valid email is required.");
+  }
+  const name = escapeHtml(fullName || "there");
+  const safeCode = escapeHtml(code || "");
   const heading = "Your Highclass Access Code";
   const body = code
-    ? `Hi ${fullName || "there"}, keep this access code safe. It lets you return to your account and full shipment history at any time:<br/><br/><span style="font-family:monospace;font-size:22px;letter-spacing:3px;color:#0B1E3A"><strong>${code}</strong></span>`
-    : `Hi ${fullName || "there"}, we received a request for your account. Use the return page and your access code to sign back in. If you didn't request this, you can ignore this email.`;
+    ? `Hi ${name}, keep this access code safe. It lets you return to your account and full shipment history at any time:<br/><br/><span style="font-family:monospace;font-size:22px;letter-spacing:3px;color:#0B1E3A"><strong>${safeCode}</strong></span>`
+    : `Hi ${name}, we received a request for your account. Use the return page and your access code to sign back in. If you didn't request this, you can ignore this email.`;
   const res = await sendEmail({
     to: email, subject: heading,
     html: emailShell({ heading, body, ctaUrl: `${SITE}/return` }),
@@ -995,6 +1100,7 @@ export const sendAccessCodeEmail = onCall({ secrets: EMAIL_SECRETS }, async (req
 // Callable: sailing broadcast to active customers with active shipments
 // ═══════════════════════════════════════════════════════════════
 export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  await assertAdmin(req);
   const { subject, body, filters } = req.data || {};
   if (!subject || !body) throw new HttpsError("invalid-argument", "subject and body required");
 
@@ -1010,25 +1116,33 @@ export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (re
     if (s.customer_id) activeCustomerIds.add(s.customer_id);
   });
 
+  const safeBody = escapeHtml(body).replace(/\n/g, "<br/>");
   const recipientIds = [];
   const sends = [];
   for (const cid of activeCustomerIds) {
     const uSnap = await db.collection("users").doc(cid).get();
     if (!uSnap.exists) continue;
     const u = uSnap.data();
-    if (u.is_active === false || u.role !== "customer" || !u.email) continue;
+    if (u.is_active === false || u.deleted === true || u.role !== "customer" || !u.email) continue;
+    if (u.notify_email === false) continue;
     recipientIds.push(cid);
     sends.push(
       sendEmail({
         to: u.email,
         subject,
-        html: emailShell({ heading: subject, body: body.replace(/\n/g, "<br/>"), ctaUrl: `${SITE}/portal` }),
+        html: emailShell({ heading: subject, body: safeBody, ctaUrl: `${SITE}/track` }),
       })
     );
   }
-  await Promise.allSettled(sends);
+  const results = await Promise.allSettled(sends);
+  const failed = results.filter((r) => r.status === "rejected" || r.value?.ok === false).length;
 
-  return { ok: true, recipientCount: recipientIds.length, recipientIds };
+  return {
+    ok: failed === 0,
+    recipientCount: recipientIds.length,
+    failedCount: failed,
+    recipientIds,
+  };
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1121,9 +1235,15 @@ export const sendContainerBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (
     recipientIds.push(cid);
     sends.push(sendEmail({ to: u.email, subject, html }));
   }
-  await Promise.allSettled(sends);
+  const results = await Promise.allSettled(sends);
+  const failed = results.filter((r) => r.status === "rejected" || r.value?.ok === false).length;
 
-  return { ok: true, recipientCount: recipientIds.length, recipientIds };
+  return {
+    ok: failed === 0,
+    recipientCount: recipientIds.length,
+    failedCount: failed,
+    recipientIds,
+  };
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1173,7 +1293,9 @@ export const generateReceiptPdf = onCall({ secrets: EMAIL_SECRETS }, async (req)
   const bucket = getStorage().bucket("highclassshippinglogistics.firebasestorage.app");
   const path = `receipts/${shipmentId}/${receiptNumber}.pdf`;
   const file = bucket.file(path);
-  const downloadToken = `${shipmentId}-${receiptNumber}`.replace(/[^A-Za-z0-9-]/g, "");
+  // Random, unguessable download token so an invoice URL can't be reconstructed
+  // from a (sequential) receipt number + shipment id.
+  const downloadToken = randomBytes(16).toString("hex");
   await file.save(pdf, {
     contentType: "application/pdf",
     resumable: false,
@@ -1373,27 +1495,26 @@ export const onShipmentStatusChange = onDocumentUpdated(
   if (before.current_status === after.current_status) return; // only on change
 
   // ── Auto-add to destination inventory when the shipment reaches the
-  // destination warehouse (offloading). Idempotent: one record per shipment. ──
+  // destination warehouse (offloading). Idempotent via a deterministic doc id
+  // (one per shipment): create() throws on a duplicate, which we ignore, so
+  // concurrent/duplicate trigger firings cannot create two records. ──
   if (after.current_status === "offloading") {
     try {
-      const existing = await db
+      const items = Array.isArray(after.items) ? after.items : [];
+      const desc =
+        items.length > 0
+          ? items
+              .map((it) => `${it.quantity && it.quantity > 1 ? `${it.quantity}x ` : ""}${it.description || "Item"}`)
+              .join(", ")
+          : after.service_type === "air"
+          ? "Air freight shipment"
+          : after.service_type === "roro"
+          ? `Vehicle (RORO)${after.vehicle_details ? ` (${after.vehicle_details})` : ""}`
+          : "Shipment";
+      await db
         .collection("destination_inventory")
-        .where("shipment_id", "==", event.params.shipmentId)
-        .limit(1)
-        .get();
-      if (existing.empty) {
-        const items = Array.isArray(after.items) ? after.items : [];
-        const desc =
-          items.length > 0
-            ? items
-                .map((it) => `${it.quantity && it.quantity > 1 ? `${it.quantity}x ` : ""}${it.description || "Item"}`)
-                .join(", ")
-            : after.service_type === "air"
-            ? "Air freight shipment"
-            : after.service_type === "roro"
-            ? `Vehicle (RORO)${after.vehicle_details ? ` — ${after.vehicle_details}` : ""}`
-            : "Shipment";
-        await db.collection("destination_inventory").add({
+        .doc(event.params.shipmentId)
+        .create({
           shipment_id: event.params.shipmentId,
           tracking_number: after.tracking_number || "",
           item_description: desc.slice(0, 500),
@@ -1402,9 +1523,11 @@ export const onShipmentStatusChange = onDocumentUpdated(
           received_at: FieldValue.serverTimestamp(),
           dispatched_at: null,
         });
-      }
     } catch (e) {
-      logger.warn("onShipmentStatusChange: inventory auto-add failed", e);
+      // ALREADY_EXISTS (code 6) is expected on repeat firings; anything else logs.
+      if (!(e && (e.code === 6 || String(e).includes("ALREADY_EXISTS")))) {
+        logger.warn("onShipmentStatusChange: inventory auto-add failed", e);
+      }
     }
   }
 

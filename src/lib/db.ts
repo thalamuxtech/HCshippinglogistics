@@ -119,20 +119,43 @@ export async function setPayment(
   id: string,
   params: { total: number; deposit: number; dnr_override?: boolean | null }
 ): Promise<{ payment_status: "paid" | "partial" | "unpaid"; balance: number; dnr: boolean }> {
-  const deposit = Math.max(0, Math.min(params.deposit, params.total));
-  const balance = Math.round((params.total - deposit) * 100) / 100;
-  const payment_status = balance <= 0 ? "paid" : deposit > 0 ? "partial" : "unpaid";
-  const override = params.dnr_override;
-  const dnr = override === true ? true : override === false ? false : payment_status !== "paid";
-  await updateDoc(doc(db, COL.shipments, id), {
-    deposit,
-    balance,
-    payment_status,
-    dnr,
-    paid_at: payment_status === "paid" ? serverTimestamp() : null,
-    updated_at: serverTimestamp(),
+  // Runs in a transaction and re-reads the STORED total_price: the caller's
+  // `total` came from a page load that may be stale (price edited in another
+  // tab/by another user since), and deriving the balance from a stale total
+  // would silently leave balance disagreeing with the real price. The stored
+  // value always wins; params.total is only a fallback for legacy docs.
+  return runTransaction(db, async (tx) => {
+    const ref = doc(db, COL.shipments, id);
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new Error("Shipment not found");
+    const current = snap.data() as Shipment;
+
+    const total = typeof current.total_price === "number" ? current.total_price : params.total || 0;
+    const deposit = Math.max(0, Math.min(params.deposit, total));
+    const balance = Math.round((total - deposit) * 100) / 100;
+    const payment_status = balance <= 0 ? "paid" : deposit > 0 ? "partial" : "unpaid";
+    const override = params.dnr_override;
+    const dnr = override === true ? true : override === false ? false : payment_status !== "paid";
+
+    const patch: Record<string, unknown> = {
+      deposit,
+      balance,
+      payment_status,
+      dnr,
+      paid_at: payment_status === "paid" ? serverTimestamp() : null,
+      updated_at: serverTimestamp(),
+    };
+    // Payment clearing the hold also resolves any pending dispatcher release request.
+    if (!dnr) {
+      patch.dnr_release_requested = false;
+      patch.dnr_release_requested_by = null;
+      patch.dnr_release_requested_by_name = null;
+      patch.dnr_release_requested_at = null;
+      patch.dnr_release_note = null;
+    }
+    tx.update(ref, patch);
+    return { payment_status, balance, dnr };
   });
-  return { payment_status, balance, dnr };
 }
 
 export async function listShipmentsByCustomer(customerId: string): Promise<Shipment[]> {
@@ -151,7 +174,11 @@ export async function listShipments(constraints: QueryConstraint[] = []): Promis
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as Shipment);
 }
 
-export async function listAllShipments(max = 500): Promise<Shipment[]> {
+// Cap chosen to comfortably cover many years of shipments for the admin
+// dashboard/lists. If the business ever approaches this, move dashboard
+// aggregation server-side (Cloud Function or scheduled rollups) rather than
+// pulling every doc to the client.
+export async function listAllShipments(max = 5000): Promise<Shipment[]> {
   const snap = await getDocs(
     query(collection(db, COL.shipments), orderBy("created_at", "desc"), fbLimit(max))
   );
