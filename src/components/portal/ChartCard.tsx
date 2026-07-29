@@ -27,6 +27,15 @@ const BLUE_LIGHT = "#2E74EC";
 // Brand-forward palette for multi-series charts (blues + supporting hues).
 const PALETTE = ["#0A5BE0", "#0B1E3A", "#2E74EC", "#8B5CF6", "#14B8A6", "#F97316", "#EC4899", "#22C55E"];
 
+// Stable, SVG-safe unique id for gradient <defs>. React.useId() emits characters
+// (":", "«»") that are invalid inside a bare url(#id) reference and cause the
+// gradient fill — and the whole chart — to fail to paint. A plain counter is safe.
+let __gidCounter = 0;
+function useGradientId(prefix: string): string {
+  const [id] = React.useState(() => `${prefix}${(__gidCounter += 1)}`);
+  return id;
+}
+
 // ─── Wrapper card ──────────────────────────────────────────
 export interface ChartCardProps {
   title: string;
@@ -55,7 +64,7 @@ export function ChartCard({
   return (
     <Card
       className={cn(
-        "group flex animate-fade-up flex-col overflow-hidden transition-shadow duration-300 hover:shadow-premium",
+        "group overflow-hidden transition-shadow duration-300 hover:shadow-premium",
         className
       )}
     >
@@ -66,19 +75,13 @@ export function ChartCard({
         </div>
         {action}
       </CardHeader>
-      <CardContent className="flex-1">
-        <figure className="m-0">
-          <div style={{ width: "100%", height }} role="img" aria-label={caption}>
-            {raw ? (
-              children
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                {children as React.ReactElement}
-              </ResponsiveContainer>
-            )}
-          </div>
-          <figcaption className="mt-3 text-xs leading-relaxed text-ink-muted">{caption}</figcaption>
-        </figure>
+      <CardContent>
+        {/* Each chart component owns its own ResponsiveContainer, so it renders
+            the real recharts element as the direct child (required for sizing). */}
+        <div style={{ width: "100%", height }} role="img" aria-label={caption}>
+          {children}
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-ink-muted">{caption}</p>
       </CardContent>
     </Card>
   );
@@ -129,8 +132,9 @@ export function CategoryBarChart({
   color?: string;
   valueLabel?: string;
 }) {
-  const gid = React.useId().replace(/:/g, "");
+  const gid = useGradientId("g");
   return (
+    <ResponsiveContainer width="100%" height="100%">
     <BarChart data={data} margin={{ top: 18, right: 8, left: -16, bottom: 0 }}>
       <defs>
         {/* A vertical gradient per distinct color so every bar glows top-to-base. */}
@@ -167,7 +171,7 @@ export function CategoryBarChart({
         dataKey="value"
         radius={[8, 8, 0, 0]}
         maxBarSize={54}
-        isAnimationActive
+        isAnimationActive={false}
         animationBegin={120}
         animationDuration={900}
         animationEasing="ease-out"
@@ -182,6 +186,7 @@ export function CategoryBarChart({
         />
       </Bar>
     </BarChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -219,7 +224,7 @@ export function DonutChart({
   data: CategoryDatum[];
   centerLabel?: string;
 }) {
-  const gid = React.useId().replace(/:/g, "");
+  const gid = useGradientId("g");
   const [active, setActive] = React.useState<number | undefined>(undefined);
   const total = data.reduce((a, b) => a + b.value, 0);
 
@@ -228,7 +233,7 @@ export function DonutChart({
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 sm:flex-row sm:gap-5">
       <div className="relative h-[200px] w-full max-w-[220px] shrink-0">
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={200}>
           <PieChart>
             <defs>
               {data.map((d, i) => {
@@ -256,7 +261,7 @@ export function DonutChart({
               activeShape={renderActiveShape}
               onMouseEnter={(_, i) => setActive(i)}
               onMouseLeave={() => setActive(undefined)}
-              isAnimationActive
+              isAnimationActive={false}
               animationBegin={150}
               animationDuration={950}
               animationEasing="ease-out"
@@ -326,8 +331,9 @@ export function TrendChart({
   valueLabel?: string;
   currency?: boolean;
 }) {
-  const gid = React.useId().replace(/:/g, "");
+  const gid = useGradientId("g");
   return (
+    <ResponsiveContainer width="100%" height="100%">
     <AreaChart data={data} margin={{ top: 12, right: 12, left: -16, bottom: 0 }}>
       <defs>
         <linearGradient id={`area-${gid}`} x1="0" y1="0" x2="0" y2="1">
@@ -365,11 +371,12 @@ export function TrendChart({
         fill={`url(#area-${gid})`}
         dot={{ r: 3.5, fill: "#fff", stroke: color, strokeWidth: 2 }}
         activeDot={{ r: 6, fill: color, stroke: "#fff", strokeWidth: 2 }}
-        isAnimationActive
+        isAnimationActive={false}
         animationBegin={120}
         animationDuration={1100}
         animationEasing="ease-out"
       />
     </AreaChart>
+    </ResponsiveContainer>
   );
 }
