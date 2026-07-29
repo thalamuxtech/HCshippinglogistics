@@ -39,10 +39,10 @@ export interface SailingBroadcastPayload {
 
 export async function sendSailingBroadcast(
   payload: SailingBroadcastPayload
-): Promise<{ ok: boolean; recipientCount: number; recipientIds: string[] }> {
+): Promise<{ ok: boolean; recipientCount: number; recipientIds: string[]; failedCount?: number; error?: string | null }> {
   const fn = httpsCallable(functions, "sendSailingBroadcast");
   const res = await fn(payload);
-  return res.data as { ok: boolean; recipientCount: number; recipientIds: string[] };
+  return res.data as { ok: boolean; recipientCount: number; recipientIds: string[]; failedCount?: number; error?: string | null };
 }
 
 export interface PublicOrderInput {
@@ -237,6 +237,9 @@ export async function sendContainerBroadcast(
   failedCount?: number;
   recipientIds?: string[];
   recipientEmails?: string[];
+  /** Provider rejection reason (e.g. Brevo IP allowlist) when a send failed. */
+  error?: string | null;
+  stub?: boolean;
 }> {
   const fn = httpsCallable(functions, "sendContainerBroadcast");
   const res = await fn(payload);
@@ -247,6 +250,9 @@ export async function sendContainerBroadcast(
     failedCount?: number;
     recipientIds?: string[];
     recipientEmails?: string[];
+    /** Provider rejection reason (e.g. Brevo IP allowlist) when a send failed. */
+    error?: string | null;
+    stub?: boolean;
   };
 }
 

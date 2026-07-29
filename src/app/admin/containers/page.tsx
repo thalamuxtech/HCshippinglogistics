@@ -220,7 +220,15 @@ export default function AdminContainersPage() {
         testEmail: testEmail.trim(),
       });
       if (res.ok) toast.success("Test sent", `Preview delivered to ${testEmail.trim()}.`);
-      else toast.info("Test queued", "Delivery pending; check the address shortly.");
+      // A failed send is a real failure, not a "queued" one — reporting it as
+      // pending hid provider rejections (e.g. Brevo IP allowlist 401s).
+      else
+        toast.error(
+          "Test not delivered",
+          res.error
+            ? String(res.error).slice(0, 180)
+            : "The email provider rejected the send. Check Email delivery in Settings."
+        );
     } catch {
       toast.error("Test failed", "Could not send the test email.");
     } finally {
@@ -269,10 +277,18 @@ export default function AdminContainersPage() {
         meta: { container_number: selected, recipient_count: res.recipientCount },
       });
       if (res.failedCount && res.failedCount > 0) {
-        toast.info(
-          "Broadcast sent with issues",
-          `${res.recipientCount - res.failedCount} delivered, ${res.failedCount} failed.`
-        );
+        const delivered = res.recipientCount - res.failedCount;
+        const reason = res.error ? ` ${String(res.error).slice(0, 180)}` : "";
+        // Nothing delivered is an outright failure, not an "issue" — and always
+        // include the provider's reason so it is actionable.
+        if (delivered === 0) {
+          toast.error("Broadcast not delivered", `All ${res.failedCount} failed.${reason}`);
+        } else {
+          toast.info(
+            "Broadcast sent with issues",
+            `${delivered} delivered, ${res.failedCount} failed.${reason}`
+          );
+        }
       } else {
         toast.success(
           "Broadcast sent",

@@ -70,6 +70,27 @@ async function assertAdmin(req) {
   return u;
 }
 
+// Summarise a provider failure for the admin UI. Brevo/Resend return a JSON
+// body explaining WHY (unverified sender, IP allowlist, quota); surfacing that
+// verbatim is the difference between "it failed" and a fixable instruction.
+function sendErrorSummary(results) {
+  for (const r of results) {
+    const v = r.status === "fulfilled" ? r.value : null;
+    if (r.status === "rejected") return String(r.reason || "Send rejected").slice(0, 300);
+    if (v && v.ok === false) {
+      let msg = v.error || `HTTP ${v.status || "error"}`;
+      try {
+        const parsed = JSON.parse(v.error);
+        if (parsed?.message) msg = parsed.message;
+      } catch {
+        /* error body was not JSON — use it as-is */
+      }
+      return String(msg).slice(0, 300);
+    }
+  }
+  return null;
+}
+
 // Require any active staff member (admin / nigeria_office / dispatcher).
 async function assertStaff(req) {
   if (!req.auth?.uid) throw new HttpsError("unauthenticated", "Sign in required.");
@@ -1102,7 +1123,11 @@ export const sendAccessCodeEmail = onCall({ secrets: EMAIL_SECRETS }, async (req
     subject: heading, status: res.ok ? "sent" : "failed",
     stub: !!res.stub, created_at: FieldValue.serverTimestamp(),
   });
-  return { ok: true, stub: !!res.stub };
+  return {
+    ok: res.ok !== false,
+    stub: !!res.stub,
+    error: sendErrorSummary([{ status: "fulfilled", value: res }]),
+  };
 });
 
 // ═══════════════════════════════════════════════════════════════
@@ -1151,6 +1176,7 @@ export const sendSailingBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (re
     recipientCount: recipientIds.length,
     failedCount: failed,
     recipientIds,
+    error: sendErrorSummary(results),
   };
 });
 
@@ -1188,7 +1214,14 @@ export const sendContainerBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (
   // Test send: deliver only to the given address, do not touch customers.
   if (testEmail) {
     const res = await sendEmail({ to: testEmail, subject: `[TEST] ${subject}`, html });
-    return { ok: res.ok !== false, test: true, recipientCount: 1, recipientIds: [] };
+    return {
+      ok: res.ok !== false,
+      test: true,
+      recipientCount: 1,
+      recipientIds: [],
+      error: sendErrorSummary([{ status: "fulfilled", value: res }]),
+      stub: !!res.stub,
+    };
   }
 
   const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -1219,6 +1252,7 @@ export const sendContainerBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (
       recipientCount: targets.length,
       failedCount: failed,
       recipientEmails: targets,
+      error: sendErrorSummary(results),
     };
   }
 
@@ -1252,6 +1286,7 @@ export const sendContainerBroadcast = onCall({ secrets: EMAIL_SECRETS }, async (
     recipientCount: recipientIds.length,
     failedCount: failed,
     recipientIds,
+    error: sendErrorSummary(results),
   };
 });
 

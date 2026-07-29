@@ -28,13 +28,20 @@ const TEST_EMAIL = {
 
 export function EmailTestCard() {
   const { user } = useAuth();
-  const [to, setTo] = React.useState(user?.email || "");
+  const [to, setTo] = React.useState("");
   const [res, setRes] = React.useState<Result>({ state: "idle" });
   const [preview, setPreview] = React.useState(false);
+  // Seed the field with the signed-in admin's address ONCE, and only before the
+  // user has touched it. Re-seeding whenever the field went empty made it
+  // impossible to clear and type a different address — every deletion refilled it.
+  const seeded = React.useRef(false);
 
   React.useEffect(() => {
-    if (user?.email && !to) setTo(user.email);
-  }, [user?.email, to]);
+    if (!seeded.current && user?.email) {
+      seeded.current = true;
+      setTo((cur) => (cur ? cur : user.email));
+    }
+  }, [user?.email]);
 
   async function run() {
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to.trim())) {
@@ -104,12 +111,25 @@ export function EmailTestCard() {
                 <p>Test email sent successfully to the email address.</p>
               ) : (
                 <>
-                  <p>Could not send the test email. {res.error || ""}</p>
+                  <p className="font-medium">Could not send the test email.</p>
+                  {/* Show the provider's own words — it usually names the fix
+                      (unverified sender, IP allowlist, quota exhausted). */}
+                  {res.error && (
+                    <p className="mt-1 break-words text-xs leading-relaxed">{res.error}</p>
+                  )}
                   <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                     {res.provider && <Badge variant="muted">{res.provider}</Badge>}
                     {res.stub && <Badge variant="warning">stub mode (no key set)</Badge>}
                     {res.status != null && <Badge variant="muted">HTTP {res.status}</Badge>}
                   </div>
+                  {res.status === 401 && (
+                    <p className="mt-2 text-xs leading-relaxed">
+                      A 401 from Brevo usually means the sending IP is not on the account&apos;s
+                      authorised-IP list. Add the Cloud Functions IP, or disable the IP restriction,
+                      at{" "}
+                      <span className="font-mono">app.brevo.com/security/authorised_ips</span>.
+                    </p>
+                  )}
                 </>
               )}
             </div>
