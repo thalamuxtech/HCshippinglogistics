@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StageBadge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import { STAGES, stageOrder } from "@/lib/constants";
 
 export default function OfficeShipmentsPage() {
@@ -134,9 +134,6 @@ export default function OfficeShipmentsPage() {
                   </div>
                   <div className="flex shrink-0 items-center gap-4">
                     <div className="text-right">
-                      <div className="font-mono text-sm font-semibold text-navy">
-                        {formatCurrency(s.total_price, s.currency)}
-                      </div>
                       <div className="text-xs text-ink-muted">{formatDate(s.updated_at)}</div>
                     </div>
                     <ArrowRight className="h-4 w-4 text-ink-muted transition-transform group-hover:translate-x-1" />

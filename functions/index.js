@@ -1372,6 +1372,42 @@ export const onShipmentStatusChange = onDocumentUpdated(
   if (!before || !after) return;
   if (before.current_status === after.current_status) return; // only on change
 
+  // ── Auto-add to destination inventory when the shipment reaches the
+  // destination warehouse (offloading). Idempotent: one record per shipment. ──
+  if (after.current_status === "offloading") {
+    try {
+      const existing = await db
+        .collection("destination_inventory")
+        .where("shipment_id", "==", event.params.shipmentId)
+        .limit(1)
+        .get();
+      if (existing.empty) {
+        const items = Array.isArray(after.items) ? after.items : [];
+        const desc =
+          items.length > 0
+            ? items
+                .map((it) => `${it.quantity && it.quantity > 1 ? `${it.quantity}x ` : ""}${it.description || "Item"}`)
+                .join(", ")
+            : after.service_type === "air"
+            ? "Air freight shipment"
+            : after.service_type === "roro"
+            ? `Vehicle (RORO)${after.vehicle_details ? ` — ${after.vehicle_details}` : ""}`
+            : "Shipment";
+        await db.collection("destination_inventory").add({
+          shipment_id: event.params.shipmentId,
+          tracking_number: after.tracking_number || "",
+          item_description: desc.slice(0, 500),
+          destination_country: after.destination_country || "",
+          location_notes: "Auto-added on arrival at destination warehouse",
+          received_at: FieldValue.serverTimestamp(),
+          dispatched_at: null,
+        });
+      }
+    } catch (e) {
+      logger.warn("onShipmentStatusChange: inventory auto-add failed", e);
+    }
+  }
+
   const custId = after.customer_id;
   if (!custId) return;
   const custSnap = await db.collection("users").doc(custId).get();

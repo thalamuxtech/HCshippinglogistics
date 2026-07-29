@@ -8,17 +8,13 @@ import { effectiveFeatureKeys, type FeatureKey } from "@/lib/features";
 import {
   LayoutDashboard,
   Package,
-  ReceiptText,
   Boxes,
-  ClipboardList,
 } from "lucide-react";
 
 const NAV: (PortalNavItem & { key: FeatureKey })[] = [
   { key: "office.dashboard", href: "/office", label: "Dashboard", icon: LayoutDashboard },
   { key: "office.shipments", href: "/office/shipments", label: "Shipments", icon: Package },
-  { key: "office.receipts", href: "/office/receipts", label: "Receipts", icon: ReceiptText },
   { key: "office.inventory", href: "/office/inventory", label: "Inventory", icon: Boxes },
-  { key: "office.consignees", href: "/office/consignees", label: "Consignees", icon: ClipboardList },
 ];
 
 export default function OfficeLayout({ children }: { children: React.ReactNode }) {

@@ -23,9 +23,8 @@ import { Badge, StageBadge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label, Textarea } from "@/components/ui/input";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
-import { PaymentReceiptCard } from "@/components/portal/PaymentReceiptCard";
 import { useToast } from "@/components/ui/toast";
-import { formatCurrency, formatDateTime } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
 import { STAGE_MAP, stageOrder } from "@/lib/constants";
 
 // Destination-office workflow: clearance -> offloading -> delivery -> completed.
@@ -164,18 +163,15 @@ function OfficeShipmentDetailPageInner() {
           </p>
         </div>
         <div className="text-right">
-          <div className="font-mono text-xl font-bold text-navy">
-            {formatCurrency(shipment.total_price, shipment.currency)}
-          </div>
-          <Badge variant="muted" className="mt-1 uppercase">
+          <Badge variant="muted" className="uppercase">
             {shipment.service_type}
           </Badge>
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left column: details + workflow */}
-        <div className="space-y-6 lg:col-span-2">
+      <div className="grid gap-6">
+        {/* Details + workflow */}
+        <div className="space-y-6">
           {/* Details */}
           <Card>
             <CardHeader>
@@ -289,17 +285,6 @@ function OfficeShipmentDetailPageInner() {
               )}
             </CardContent>
           </Card>
-        </div>
-
-        {/* Right column: receipt action */}
-        <div className="space-y-6">
-          {user && (
-            <PaymentReceiptCard
-              shipment={shipment}
-              actor={{ id: user.id, full_name: user.full_name, role: "nigeria_office" }}
-              onChanged={load}
-            />
-          )}
         </div>
       </div>
     </div>

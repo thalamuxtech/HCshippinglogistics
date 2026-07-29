@@ -29,9 +29,7 @@ export type FeatureKey =
   // Destination office
   | "office.dashboard"
   | "office.shipments"
-  | "office.receipts"
   | "office.inventory"
-  | "office.consignees"
   // Dispatch
   | "dispatch.jobs"
   | "dispatch.completed";
@@ -60,9 +58,7 @@ export const FEATURES: FeatureMeta[] = [
   // ── Destination office ──
   { key: "office.dashboard", label: "Dashboard", href: "/office", role: "nigeria_office", required: true },
   { key: "office.shipments", label: "Shipments", href: "/office/shipments", role: "nigeria_office" },
-  { key: "office.receipts", label: "Receipts", href: "/office/receipts", role: "nigeria_office" },
   { key: "office.inventory", label: "Inventory", href: "/office/inventory", role: "nigeria_office" },
-  { key: "office.consignees", label: "Consignees", href: "/office/consignees", role: "nigeria_office" },
   // ── Dispatch ──
   { key: "dispatch.jobs", label: "My Jobs", href: "/dispatch", role: "dispatcher", required: true },
   { key: "dispatch.completed", label: "Completed Today", href: "/dispatch/completed", role: "dispatcher" },
