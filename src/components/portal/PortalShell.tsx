@@ -20,6 +20,8 @@ export interface PortalShellProps {
   title: string;
   roleLabel: string;
   children: React.ReactNode;
+  /** Optional actions rendered in the top bar, before the account menu. */
+  headerActions?: React.ReactNode;
 }
 
 function isActive(pathname: string, href: string): boolean {
@@ -104,7 +106,7 @@ function SidebarBrand({
   );
 }
 
-export function PortalShell({ nav, title, roleLabel, children }: PortalShellProps) {
+export function PortalShell({ nav, title, roleLabel, children, headerActions }: PortalShellProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const [mobileOpen, setMobileOpen] = React.useState(false);
@@ -239,6 +241,8 @@ export function PortalShell({ nav, title, roleLabel, children }: PortalShellProp
               <Menu className="h-5 w-5" />
             </button>
             <h1 className="flex-1 truncate text-lg font-bold tracking-tight text-navy">{title}</h1>
+
+            {headerActions}
 
             <div className="relative" ref={menuRef}>
               <button

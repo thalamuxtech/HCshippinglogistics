@@ -15,6 +15,7 @@ import { usePathname } from "next/navigation";
 import { RequireRole } from "@/components/providers/RequireRole";
 import { FeatureGuard } from "@/components/providers/FeatureGuard";
 import { PortalShell, type PortalNavItem } from "@/components/portal/PortalShell";
+import { DemoDataToolbar } from "@/components/portal/DemoDataToolbar";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { effectiveFeatureKeys, type FeatureKey } from "@/lib/features";
 
@@ -63,7 +64,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <RequireRole roles={["admin"]}>
       <FeatureGuard>
-        <PortalShell nav={nav} title={titleFor(pathname)} roleLabel="Administrator">
+        <PortalShell
+          nav={nav}
+          title={titleFor(pathname)}
+          roleLabel="Administrator"
+          headerActions={<DemoDataToolbar />}
+        >
           {children}
         </PortalShell>
       </FeatureGuard>
