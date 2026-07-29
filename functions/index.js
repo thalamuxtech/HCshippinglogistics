@@ -21,6 +21,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import { randomBytes, createHash } from "node:crypto";
 import { renderReceiptPdf } from "./receipt.js";
+import { LOGO_DATA_URI } from "./logo.js";
 
 initializeApp();
 const db = getFirestore();
@@ -257,9 +258,9 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
 
         <!-- Header -->
         <tr>
-          <td style="background:${NAVY};background:linear-gradient(135deg,#0B1E3A,#071427);padding:26px 32px">
-            <div style="font-size:20px;font-weight:800;color:#ffffff;letter-spacing:-.2px">Highclass Shipping <span style="color:${BLUE_LT}">&amp; Logistics</span></div>
-            <div style="margin-top:5px;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:${BLUE_LT};font-weight:700">Excellence in handling your valuables</div>
+          <td align="center" style="background:${NAVY};background:linear-gradient(135deg,#0B1E3A,#071427);padding:28px 32px 24px">
+            <img src="${LOGO_DATA_URI}" width="200" alt="Highclass Shipping & Logistics Inc." style="display:block;margin:0 auto;width:200px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:10px 14px" />
+            <div style="margin-top:14px;font-size:10.5px;letter-spacing:2.4px;text-transform:uppercase;color:${BLUE_LT};font-weight:700">Excellence in handling your valuables</div>
           </td>
         </tr>
         <tr><td style="height:4px;background:${BLUE};line-height:4px;font-size:0">&nbsp;</td></tr>
@@ -297,7 +298,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
           <td style="padding:14px 32px 26px;border-top:1px solid #E9EEF4">
             <div style="font-size:11.5px;line-height:1.6;color:#8A98A6">
               FMC Licensed since 2017 · Registered in Maryland, USA &amp; Nigeria (CAC)<br/>
-              ${footerNote || "This is an automated message from Highclass Shipping and Logistics Inc."}
+              ${footerNote || "This is an automated message from Highclass Shipping &amp; Logistics Inc."}
             </div>
             <div style="margin-top:8px;font-size:11.5px"><a href="${SITE}" style="color:${BLUE};text-decoration:none;font-weight:600">highclassshippinglogistics.com</a></div>
           </td>
@@ -349,9 +350,9 @@ function containerNoticeEmail({
   return `<!doctype html><html><body style="margin:0;background:#F1F5F9;font-family:Inter,Segoe UI,Arial,sans-serif;color:#1A202C">
   <div style="max-width:600px;margin:0 auto;padding:24px 16px">
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px 16px 0 0;padding:30px 30px 26px">
-      <div style="color:#fff;font-weight:800;font-size:20px;letter-spacing:-0.2px">Highclass Shipping <span style="color:#5E97F3">&amp; Logistics</span></div>
-      <div style="font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:#5E97F3;margin-top:4px">Excellence in handling your valuables</div>
+    <div style="background:linear-gradient(135deg,#0B1E3A,#071427);border-radius:16px 16px 0 0;padding:30px 30px 24px;text-align:center">
+      <img src="${LOGO_DATA_URI}" width="200" alt="Highclass Shipping &amp; Logistics Inc." style="display:block;margin:0 auto;width:200px;max-width:70%;height:auto;background:#ffffff;border-radius:12px;padding:10px 14px" />
+      <div style="font-size:10.5px;letter-spacing:2px;text-transform:uppercase;color:#5E97F3;margin-top:14px">Excellence in handling your valuables</div>
     </div>
     <div style="height:4px;background:#0A5BE0"></div>
 
@@ -447,7 +448,7 @@ function containerNoticeEmail({
 
       <p style="font-size:11.5px;color:#94A3B8;margin-top:26px;border-top:1px solid #E2E8F0;padding-top:16px;line-height:1.6">
         FMC Licensed since 2017 · Registered in Maryland, USA &amp; Nigeria (CAC)<br/>
-        Highclass Shipping and Logistics Inc. This message was sent to customers with cargo on this container.
+        Highclass Shipping &amp; Logistics Inc. This message was sent to customers with cargo on this container.
       </p>
     </div>
   </div></body></html>`;

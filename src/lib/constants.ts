@@ -207,7 +207,7 @@ export const PRICE_CATEGORIES = Array.from(new Set(SEA_PRICE_LIST.map((i) => i.c
 
 // ---- Company info (managed content defaults) ----
 export const COMPANY = {
-  name: "Highclass Shipping and Logistics Inc.",
+  name: "Highclass Shipping & Logistics Inc.",
   shortName: "Highclass Shipping",
   slogan: "Excellence in handling your valuables.",
   tagline: "Shipping from the USA to Nigeria & across Africa",

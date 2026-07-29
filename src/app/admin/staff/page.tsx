@@ -375,23 +375,28 @@ export default function AdminStaffPage() {
             <div>
               <Label>Menu access</Label>
               <FieldHint>
-                Choose which back-end menus this person can use. Core menus stay on.
+                {form.role === "admin"
+                  ? "Administrators always have full access to every menu. This cannot be changed."
+                  : "Choose which back-end menus this person can use. Core menus stay on."}
               </FieldHint>
               <div className="mt-2 space-y-1.5 rounded-lg border border-border p-3">
                 {featuresForRole(form.role).map((f) => {
-                  const checked = createFeatures.has(f.key);
+                  // Admins always have every menu; the checkboxes are locked on.
+                  const lockAll = form.role === "admin";
+                  const locked = lockAll || f.required;
+                  const checked = lockAll ? true : createFeatures.has(f.key);
                   return (
                     <label
                       key={f.key}
                       className={`flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-sm ${
-                        f.required ? "opacity-60" : "cursor-pointer hover:bg-secondary/50"
+                        locked ? "opacity-60" : "cursor-pointer hover:bg-secondary/50"
                       }`}
                     >
                       <span className="text-ink">
                         {f.label}
-                        {f.required && (
+                        {(f.required || lockAll) && (
                           <span className="ml-1.5 text-[10px] uppercase tracking-wide text-ink-muted">
-                            core
+                            {lockAll ? "always on" : "core"}
                           </span>
                         )}
                       </span>
@@ -399,7 +404,7 @@ export default function AdminStaffPage() {
                         type="checkbox"
                         className="h-4 w-4 cursor-pointer accent-navy disabled:cursor-not-allowed"
                         checked={checked}
-                        disabled={f.required}
+                        disabled={locked}
                         onChange={(e) =>
                           setCreateFeatures((prev) => {
                             const next = new Set(prev);
@@ -445,6 +450,8 @@ function AccessModal({
   onSave: (u: AppUser, keys: FeatureKey[] | null) => Promise<void> | void;
 }) {
   const features = featuresForRole(user.role);
+  // Administrators always have full access; their menu access is not editable.
+  const lockAll = user.role === "admin";
   const [selected, setSelected] = React.useState<Set<FeatureKey>>(
     () => effectiveFeatureKeys(user.role, user.allowed_features)
   );
@@ -469,27 +476,37 @@ function AccessModal({
       description="Turn back-end menus on or off for this account. Core menus cannot be removed."
     >
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <Badge variant={isFullDefault ? "muted" : "gold"}>
-            {isFullDefault ? "Role default" : "Customized"}
-          </Badge>
-          <button
-            type="button"
-            onClick={() => setSelected(new Set(roleDefaults))}
-            className="text-xs font-semibold text-gold-700 hover:underline focus-ring rounded"
-          >
-            Reset to role default
-          </button>
-        </div>
+        {lockAll ? (
+          <div className="flex items-start gap-2.5 rounded-lg border border-navy/15 bg-navy/5 p-3 text-sm text-navy">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
+            <p>
+              Administrators always have full access to every menu. This cannot be changed.
+            </p>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <Badge variant={isFullDefault ? "muted" : "gold"}>
+              {isFullDefault ? "Role default" : "Customized"}
+            </Badge>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set(roleDefaults))}
+              className="text-xs font-semibold text-gold-700 hover:underline focus-ring rounded"
+            >
+              Reset to role default
+            </button>
+          </div>
+        )}
 
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto rounded-lg border border-border p-3">
           {features.map((f) => {
-            const checked = selected.has(f.key);
+            const locked = lockAll || f.required;
+            const checked = lockAll ? true : selected.has(f.key);
             return (
               <label
                 key={f.key}
                 className={`flex items-center justify-between gap-2 rounded-md px-2 py-2 text-sm ${
-                  f.required ? "opacity-60" : "cursor-pointer hover:bg-secondary/50"
+                  locked ? "opacity-60" : "cursor-pointer hover:bg-secondary/50"
                 }`}
               >
                 <span className="flex items-center gap-2 text-ink">
@@ -499,15 +516,17 @@ function AccessModal({
                     <span className="h-4 w-4" />
                   )}
                   {f.label}
-                  {f.required && (
-                    <span className="text-[10px] uppercase tracking-wide text-ink-muted">core</span>
+                  {(f.required || lockAll) && (
+                    <span className="text-[10px] uppercase tracking-wide text-ink-muted">
+                      {lockAll ? "always on" : "core"}
+                    </span>
                   )}
                 </span>
                 <input
                   type="checkbox"
                   className="h-4 w-4 cursor-pointer accent-navy disabled:cursor-not-allowed"
                   checked={checked}
-                  disabled={f.required}
+                  disabled={locked}
                   onChange={(e) =>
                     setSelected((prev) => {
                       const next = new Set(prev);

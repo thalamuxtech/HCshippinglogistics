@@ -19,12 +19,10 @@ export type FeatureKey =
   // Admin
   | "admin.dashboard"
   | "admin.shipments"
-  | "admin.receipts"
   | "admin.inventory"
   | "admin.customers"
   | "admin.staff"
   | "admin.pricing"
-  | "admin.sailing"
   | "admin.containers"
   | "admin.inquiries"
   | "admin.content"
@@ -53,12 +51,10 @@ export const FEATURES: FeatureMeta[] = [
   // ── Admin ──
   { key: "admin.dashboard", label: "Dashboard", href: "/admin", role: "admin", required: true },
   { key: "admin.shipments", label: "Shipments", href: "/admin/shipments", role: "admin" },
-  { key: "admin.receipts", label: "Receipts", href: "/admin/receipts", role: "admin" },
   { key: "admin.inventory", label: "Inventory", href: "/admin/inventory", role: "admin" },
   { key: "admin.customers", label: "Customers", href: "/admin/customers", role: "admin" },
   { key: "admin.staff", label: "Staff & Roles", href: "/admin/staff", role: "admin", required: true },
   { key: "admin.pricing", label: "Pricing", href: "/admin/pricing", role: "admin" },
-  { key: "admin.sailing", label: "Sailing Notices", href: "/admin/sailing", role: "admin" },
   { key: "admin.containers", label: "Containers", href: "/admin/containers", role: "admin" },
   { key: "admin.inquiries", label: "Inquiries", href: "/admin/inquiries", role: "admin" },
   { key: "admin.content", label: "Content", href: "/admin/content", role: "admin" },

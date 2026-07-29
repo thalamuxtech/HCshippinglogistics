@@ -27,7 +27,7 @@ const MUTED = "#718096";
 const LINE = "#E2E8F0";
 
 const COMPANY = {
-  name: "HIGHCLASS SHIPPING AND LOGISTICS INC.",
+  name: "HIGHCLASS SHIPPING & LOGISTICS INC.",
   tagline: "Excellence in handling your valuables.",
   email: "info@highclassshippinglogistics.com",
   site: "highclassshippinglogistics.com",
