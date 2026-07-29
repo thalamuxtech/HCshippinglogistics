@@ -532,7 +532,6 @@ export const sendTestEmail = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
     preheader: "Test email from the Highclass Shipping admin portal.",
     body:
       `<p style="margin:0 0 12px">This is a test message sent from the Highclass Shipping admin portal to confirm that transactional email is configured and delivering correctly.</p>` +
-      `<p style="margin:0 0 12px">Provider in use: <strong>${provider}</strong>.</p>` +
       `<p style="margin:0">If you received this in your inbox (not spam), you are ready to send customer notifications, invoices, and broadcasts.</p>`,
     trackingNumber: "HC-TEST-0001",
     ctaUrl: `${SITE}/track`,
