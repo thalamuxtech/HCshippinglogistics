@@ -85,18 +85,17 @@ export function EmailTestCard() {
             )}
             <div className="min-w-0">
               {res.ok ? (
-                <p>
-                  Test sent{res.provider ? ` via ${res.provider}` : ""}. Check the inbox (and spam)
-                  for the message.
-                </p>
+                <p>Test email sent successfully to the email address.</p>
               ) : (
-                <p>Could not send{res.provider ? ` via ${res.provider}` : ""}. {res.error || ""}</p>
+                <>
+                  <p>Could not send the test email. {res.error || ""}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    {res.provider && <Badge variant="muted">{res.provider}</Badge>}
+                    {res.stub && <Badge variant="warning">stub mode (no key set)</Badge>}
+                    {res.status != null && <Badge variant="muted">HTTP {res.status}</Badge>}
+                  </div>
+                </>
               )}
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {res.provider && <Badge variant="muted">{res.provider}</Badge>}
-                {res.stub && <Badge variant="warning">stub mode (no key set)</Badge>}
-                {res.status != null && <Badge variant="muted">HTTP {res.status}</Badge>}
-              </div>
             </div>
           </div>
         )}
