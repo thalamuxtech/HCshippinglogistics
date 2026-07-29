@@ -10,8 +10,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StageBadge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
-import { formatDate } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
 import { STAGES, stageOrder } from "@/lib/constants";
+import { BulkAdvanceBar } from "@/components/portal/BulkAdvanceBar";
 
 export default function OfficeShipmentsPage() {
   const { user } = useAuth();
@@ -22,6 +23,18 @@ export default function OfficeShipmentsPage() {
   const [status, setStatus] = React.useState<ShipmentStatus | "all" | "destination">(
     "destination"
   );
+  const [selected, setSelected] = React.useState<Set<string>>(new Set());
+
+  const load = React.useCallback(async () => {
+    try {
+      const rows = await listShipments([where("destination_country", "==", country)]);
+      setShipments(rows);
+    } catch {
+      setShipments([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [country]);
 
   React.useEffect(() => {
     let active = true;
@@ -59,6 +72,31 @@ export default function OfficeShipmentsPage() {
       })
       .sort((a, b) => (b.updated_at?.toMillis?.() ?? 0) - (a.updated_at?.toMillis?.() ?? 0));
   }, [shipments, q, status]);
+
+  // Keep the selection scoped to what's visible, so a bulk action can never
+  // touch a shipment that has been filtered out of view.
+  React.useEffect(() => {
+    setSelected((prev) => {
+      if (prev.size === 0) return prev;
+      const visible = new Set(filtered.map((s) => s.id));
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (visible.has(id)) next.add(id);
+      });
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filtered]);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const allVisibleSelected = filtered.length > 0 && filtered.every((s) => selected.has(s.id));
 
   return (
     <div className="space-y-6">
@@ -111,15 +149,51 @@ export default function OfficeShipmentsPage() {
         />
       ) : (
         <div className="space-y-3">
+          {/* Select-all for batch stage moves (a container, a truckload, a manifest). */}
+          <label className="flex w-fit cursor-pointer items-center gap-2.5 px-1 text-xs font-medium text-ink-muted">
+            <input
+              type="checkbox"
+              className="h-4 w-4 cursor-pointer accent-navy"
+              checked={allVisibleSelected}
+              ref={(el) => {
+                if (el)
+                  el.indeterminate =
+                    filtered.some((s) => selected.has(s.id)) && !allVisibleSelected;
+              }}
+              onChange={(e) => {
+                setSelected((prev) => {
+                  const next = new Set(prev);
+                  if (e.target.checked) filtered.forEach((s) => next.add(s.id));
+                  else filtered.forEach((s) => next.delete(s.id));
+                  return next;
+                });
+              }}
+            />
+            Select all {filtered.length} shown
+          </label>
+
           {filtered.map((s) => (
-            <Link
+            <Card
               key={s.id}
-              href={`/office/shipments/detail?id=${s.id}`}
-              className="group block focus-ring rounded-xl"
+              className={cn(
+                "group transition-all duration-200 hover:-translate-y-0.5 hover:shadow-premium",
+                selected.has(s.id) && "bg-gold/5 ring-1 ring-gold/40"
+              )}
             >
-              <Card className="transition-all duration-200 group-hover:-translate-y-0.5 group-hover:shadow-premium">
-                <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
+              <CardContent className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  {/* Outside the link so selecting never navigates away. */}
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${s.tracking_number}`}
+                    className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-navy"
+                    checked={selected.has(s.id)}
+                    onChange={() => toggle(s.id)}
+                  />
+                  <Link
+                    href={`/office/shipments/detail?id=${s.id}`}
+                    className="min-w-0 focus-ring rounded-md"
+                  >
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm font-bold text-navy">
                         {s.tracking_number}
@@ -131,18 +205,33 @@ export default function OfficeShipmentsPage() {
                       {s.destination_city ? `${s.destination_city}, ` : ""}
                       {s.destination_country}
                     </p>
+                  </Link>
+                </div>
+                <Link
+                  href={`/office/shipments/detail?id=${s.id}`}
+                  className="flex shrink-0 items-center gap-4 focus-ring rounded-md"
+                  aria-label={`Open ${s.tracking_number}`}
+                >
+                  <div className="text-right">
+                    <div className="text-xs text-ink-muted">{formatDate(s.updated_at)}</div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-4">
-                    <div className="text-right">
-                      <div className="text-xs text-ink-muted">{formatDate(s.updated_at)}</div>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-ink-muted transition-transform group-hover:translate-x-1" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
+                  <ArrowRight className="h-4 w-4 text-ink-muted transition-transform group-hover:translate-x-1" />
+                </Link>
+              </CardContent>
+            </Card>
           ))}
         </div>
+      )}
+
+      {/* Bulk selection bar + advance modal (stages 5-8 for this role) */}
+      {user && (
+        <BulkAdvanceBar
+          selected={selected}
+          shipments={shipments}
+          actor={{ id: user.id, full_name: user.full_name, role: user.role }}
+          onDone={load}
+          onClear={() => setSelected(new Set())}
+        />
       )}
     </div>
   );

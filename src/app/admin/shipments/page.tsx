@@ -2,18 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Package, Search, ChevronRight, Layers, X, Loader2 } from "lucide-react";
-import { listAllShipments, advanceStage, logNotification, logActivity } from "@/lib/db";
-import { sendStageUpdateEmail } from "@/lib/notify";
+import { Package, Search, ChevronRight } from "lucide-react";
+import { listAllShipments } from "@/lib/db";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { useToast } from "@/components/ui/toast";
 import type { Shipment, ShipmentStatus, ServiceType } from "@/lib/types";
-import { STAGES, STAGE_MAP, SERVICES } from "@/lib/constants";
+import { STAGES, SERVICES } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
-import { Input, Select, Textarea, Label } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input, Select } from "@/components/ui/input";
 import { StageBadge, Badge } from "@/components/ui/badge";
-import { Skeleton, EmptyState, Modal } from "@/components/ui/misc";
+import { Skeleton, EmptyState } from "@/components/ui/misc";
+import { BulkAdvanceBar } from "@/components/portal/BulkAdvanceBar";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import type { Timestamp } from "firebase/firestore";
 
@@ -34,7 +32,6 @@ const SERVICE_LABEL: Record<ServiceType, string> = {
 
 export default function AdminShipmentsPage() {
   const { user } = useAuth();
-  const toast = useToast();
   const [loading, setLoading] = React.useState(true);
   const [shipments, setShipments] = React.useState<Shipment[]>([]);
   const [error, setError] = React.useState(false);
@@ -42,14 +39,8 @@ export default function AdminShipmentsPage() {
   const [status, setStatus] = React.useState<ShipmentStatus | "all">("all");
   const [service, setService] = React.useState<ServiceType | "all">("all");
 
-  // ── Bulk selection + advance ──
+  // ── Bulk selection (the advance flow itself lives in BulkAdvanceBar) ──
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
-  const [bulkOpen, setBulkOpen] = React.useState(false);
-  const [bulkStage, setBulkStage] = React.useState<ShipmentStatus>("loading");
-  const [bulkNotes, setBulkNotes] = React.useState("");
-  const [bulkNotify, setBulkNotify] = React.useState(true);
-  const [bulkRunning, setBulkRunning] = React.useState(false);
-  const [bulkProgress, setBulkProgress] = React.useState(0);
 
   const reload = React.useCallback(async () => {
     try {
@@ -86,61 +77,6 @@ export default function AdminShipmentsPage() {
       else next.add(id);
       return next;
     });
-  }
-
-  async function runBulkAdvance() {
-    if (!user || selected.size === 0) return;
-    setBulkRunning(true);
-    setBulkProgress(0);
-    const ids = Array.from(selected);
-    let done = 0;
-    for (const id of ids) {
-      const ship = shipments.find((s) => s.id === id);
-      if (!ship) continue;
-      try {
-        await advanceStage({
-          shipmentId: id,
-          status: bulkStage,
-          notes: bulkNotes.trim() || undefined,
-          updatedBy: user.id,
-          updatedByName: user.full_name,
-        });
-        if (bulkNotify) {
-          const res = await sendStageUpdateEmail({
-            shipmentId: id,
-            customerId: ship.customer_id,
-            status: bulkStage,
-          });
-          await logNotification({
-            customer_id: ship.customer_id,
-            shipment_id: id,
-            channel: "email",
-            type: `bulk_stage_${bulkStage}`,
-            subject: `Update: ${STAGE_MAP[bulkStage].label}`,
-            status: res.ok ? "sent" : "failed",
-          });
-        }
-      } catch {
-        /* continue with the rest */
-      }
-      done += 1;
-      setBulkProgress(done);
-    }
-    await logActivity({
-      actor_id: user.id,
-      actor_name: user.full_name,
-      actor_role: "admin",
-      action: `bulk-advanced ${ids.length} shipments to ${STAGE_MAP[bulkStage].short}`,
-      meta: { count: ids.length, status: bulkStage },
-    });
-    await reload();
-    setBulkRunning(false);
-    setBulkOpen(false);
-    setSelected(new Set());
-    toast.success(
-      "Batch updated",
-      `${ids.length} shipment${ids.length !== 1 ? "s" : ""} advanced to ${STAGE_MAP[bulkStage].label}.`
-    );
   }
 
   const filtered = React.useMemo(() => {
@@ -364,113 +300,16 @@ export default function AdminShipmentsPage() {
         </p>
       )}
 
-      {/* Bulk action bar */}
-      {selected.size > 0 && (
-        <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-2 rounded-2xl border border-border bg-white px-4 py-3 shadow-premium animate-fade-up sm:gap-3">
-            <span className="inline-flex items-center gap-2 text-sm font-semibold text-navy">
-              <Layers className="h-4 w-4 text-gold-700" />
-              {selected.size} selected
-            </span>
-            <Button size="sm" variant="gold" onClick={() => setBulkOpen(true)}>
-              Advance stage
-            </Button>
-            <button
-              onClick={() => setSelected(new Set())}
-              className="rounded-md p-1.5 text-ink-muted hover:bg-secondary focus-ring"
-              aria-label="Clear selection"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
+      {/* Bulk selection bar + advance modal (shared with the office portal) */}
+      {user && (
+        <BulkAdvanceBar
+          selected={selected}
+          shipments={shipments}
+          actor={{ id: user.id, full_name: user.full_name, role: user.role }}
+          onDone={reload}
+          onClear={() => setSelected(new Set())}
+        />
       )}
-
-      {/* Bulk advance modal */}
-      <Modal
-        open={bulkOpen}
-        onClose={() => !bulkRunning && setBulkOpen(false)}
-        title={`Advance ${selected.size} shipment${selected.size !== 1 ? "s" : ""}`}
-        description="Move every selected shipment to the same stage. Each change is logged to the audit trail."
-      >
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="bulk-stage">Target stage</Label>
-            <Select
-              id="bulk-stage"
-              value={bulkStage}
-              onChange={(e) => setBulkStage(e.target.value as ShipmentStatus)}
-            >
-              {STAGES.map((st) => (
-                <option key={st.key} value={st.key}>
-                  {st.order}. {st.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="bulk-notes">Shared note (optional)</Label>
-            <Textarea
-              id="bulk-notes"
-              value={bulkNotes}
-              onChange={(e) => setBulkNotes(e.target.value)}
-              placeholder="e.g. Cleared Lagos customs on today's manifest."
-            />
-          </div>
-          <label className="flex items-center gap-2.5 text-sm text-ink">
-            <input
-              type="checkbox"
-              checked={bulkNotify}
-              onChange={(e) => setBulkNotify(e.target.checked)}
-              className="h-4 w-4 cursor-pointer accent-navy"
-            />
-            Email each customer the update
-          </label>
-
-          {bulkRunning && (
-            <div className="rounded-lg bg-surface p-3">
-              <div className="flex items-center justify-between text-xs text-ink-muted">
-                <span>Updating…</span>
-                <span className="font-mono">
-                  {bulkProgress}/{selected.size}
-                </span>
-              </div>
-              <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-border">
-                <div
-                  className="h-full rounded-full bg-gold-gradient transition-all"
-                  style={{ width: `${(bulkProgress / Math.max(1, selected.size)) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => setBulkOpen(false)}
-              disabled={bulkRunning}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="gold"
-              className="flex-1"
-              onClick={runBulkAdvance}
-              loading={bulkRunning}
-              disabled={bulkRunning}
-            >
-              {bulkRunning ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Updating
-                </>
-              ) : (
-                `Advance ${selected.size}`
-              )}
-            </Button>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 }
