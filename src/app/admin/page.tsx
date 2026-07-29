@@ -398,7 +398,7 @@ export default function AdminDashboardPage() {
               description={`New shipments per month · ${rangeLabel.toLowerCase()}`}
               caption={`Monthly new shipments, ${volumeSeries.map((d) => `${d.name}: ${d.value}`).join(", ")}.`}
             >
-              <CategoryBarChart data={volumeSeries} valueLabel="shipments" />
+              <TrendChart data={volumeSeries} valueLabel="shipments" />
             </ChartCard>
           )}
         </div>
