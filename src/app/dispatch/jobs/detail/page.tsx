@@ -100,15 +100,16 @@ function DispatchJobDetailPageInner() {
     }
     setSubmitting(true);
     try {
-      // Upload proof-of-delivery photos to Storage.
-      const urls: string[] = [];
-      for (let i = 0; i < photos.length; i++) {
-        const file = photos[i];
-        const path = `shipments/${job.id}/pod/${Date.now()}_${i}_${file.name}`;
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, file);
-        urls.push(await getDownloadURL(storageRef));
-      }
+      // Upload proof-of-delivery photos in parallel — a rider on mobile data
+      // would otherwise wait for each one in turn.
+      const stamp = Date.now();
+      const urls: string[] = await Promise.all(
+        photos.map(async (file, i) => {
+          const storageRef = ref(storage, `shipments/${job.id}/pod/${stamp}_${i}_${file.name}`);
+          await uploadBytes(storageRef, file);
+          return getDownloadURL(storageRef);
+        })
+      );
 
       await advanceStage({
         shipmentId: job.id,
@@ -119,14 +120,27 @@ function DispatchJobDetailPageInner() {
         photos: urls,
       });
 
-      await sendStageUpdateEmail({
-        shipmentId: job.id,
-        customerId: job.customer_id,
-        status: "completed",
-        extraNote: notes.trim() || undefined,
-      });
+      // The delivery is already recorded at this point. A notification failure
+      // must NOT be reported as a failed delivery — that made riders re-submit
+      // jobs that had in fact completed.
+      let notified = true;
+      try {
+        const res = await sendStageUpdateEmail({
+          shipmentId: job.id,
+          customerId: job.customer_id,
+          status: "completed",
+          extraNote: notes.trim() || undefined,
+        });
+        notified = res?.ok !== false;
+      } catch {
+        notified = false;
+      }
 
-      toast.success("Delivered!", "Marked complete and customer notified.");
+      if (notified) {
+        toast.success("Delivered!", "Marked complete and customer notified.");
+      } else {
+        toast.success("Delivered!", "Marked complete. Customer email did not send.");
+      }
       router.push("/dispatch/completed");
     } catch {
       toast.error("Could not complete", "Check your connection and try again.");

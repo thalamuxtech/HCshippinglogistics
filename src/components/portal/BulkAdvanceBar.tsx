@@ -114,8 +114,10 @@ export function BulkAdvanceBar({
 
   return (
     <>
-      {/* Floating selection bar */}
-      <div className="fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+      {/* Floating selection bar. z-30 keeps it below the mobile nav slide-over
+          (z-40) and the modal (z-50) — at z-40 it floated on top of the open
+          drawer on phones. */}
+      <div className="fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
         <div className="flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-2 rounded-2xl border border-border bg-white px-4 py-3 shadow-premium animate-fade-up sm:gap-3">
           <span className="inline-flex items-center gap-2 text-sm font-semibold text-navy">
             <Layers className="h-4 w-4 text-gold-700" />

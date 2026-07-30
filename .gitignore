@@ -43,3 +43,9 @@ serviceAccountKey.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local QA/audit scripts and their output (Playwright probes, screenshots)
+__*.mjs
+*-out.txt
+drawer-shot.png
+shot-*.png

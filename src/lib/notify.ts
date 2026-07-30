@@ -69,10 +69,23 @@ export interface PublicOrderInput {
 
 export async function submitPublicOrder(
   payload: PublicOrderInput
-): Promise<{ ok: boolean; customerId: string; trackingNumber: string; total: number }> {
+): Promise<{
+  ok: boolean;
+  customerId: string;
+  trackingNumber: string;
+  total: number;
+  /** False when the confirmation email (which carries the Customer ID) failed. */
+  emailSent?: boolean;
+}> {
   const fn = httpsCallable(functions, "submitPublicOrder");
   const res = await fn(payload);
-  return res.data as { ok: boolean; customerId: string; trackingNumber: string; total: number };
+  return res.data as {
+    ok: boolean;
+    customerId: string;
+    trackingNumber: string;
+    total: number;
+    emailSent?: boolean;
+  };
 }
 
 export interface CustomerView {

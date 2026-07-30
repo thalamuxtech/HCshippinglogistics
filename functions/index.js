@@ -1029,13 +1029,20 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   }
   const shipRef = await db.collection("shipments").add(shipment);
 
-  // Confirmation email with the Customer ID (stub-safe).
-  await sendEmail({
+  // Confirmation email carrying the Customer ID — the customer's ONLY
+  // credential, so whether it actually sent must be recorded truthfully (it was
+  // previously logged as "sent" unconditionally) and returned to the client.
+  // Customer-supplied fields are escaped: they are rendered into HTML here.
+  const safeName = escapeHtml(d.full_name);
+  const safeDest = escapeHtml(d.destination_country);
+  const emailRes = await sendEmail({
     to: email,
     subject: `Order received: ${tracking}`,
     html: emailShell({
       heading: "We've received your order",
-      body: `Thank you, ${d.full_name}. Your shipment to ${d.destination_country} has been logged.<br/><br/>Your Customer ID is <strong style="font-family:monospace;font-size:16px">${customerId}</strong>. Keep it safe. Use it on our website to check your status and download your receipt at any time.`,
+      body: `Thank you, ${safeName}. Your shipment to ${safeDest} has been logged.<br/><br/>Your Customer ID is <strong style="font-family:monospace;font-size:16px">${escapeHtml(
+        customerId
+      )}</strong>. Keep it safe. Use it on our website to check your status and download your receipt at any time.`,
       trackingNumber: tracking,
       ctaUrl: `${SITE}/track?id=${encodeURIComponent(customerId)}`,
     }),
@@ -1043,10 +1050,20 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   await db.collection("notifications").doc().set({
     customer_id: customerId, shipment_id: shipRef.id, channel: "email",
     type: "order_confirmation", subject: `Order received: ${tracking}`,
-    status: "sent", created_at: FieldValue.serverTimestamp(),
+    status: emailRes.ok === false ? "failed" : "sent",
+    stub: !!emailRes.stub,
+    created_at: FieldValue.serverTimestamp(),
   });
 
-  return { ok: true, customerId, trackingNumber: tracking, total };
+  // emailSent lets the UI tell the customer to save their ID from the screen
+  // when the email could not be delivered.
+  return {
+    ok: true,
+    customerId,
+    trackingNumber: tracking,
+    total,
+    emailSent: emailRes.ok !== false,
+  };
 });
 
 // ═══════════════════════════════════════════════════════════════

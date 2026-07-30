@@ -192,7 +192,7 @@ export default function AdminShipmentsPage() {
                     <input
                       type="checkbox"
                       aria-label="Select all"
-                      className="h-4 w-4 cursor-pointer accent-navy"
+                      className="h-5 w-5 cursor-pointer accent-navy"
                       checked={filtered.length > 0 && filtered.every((s) => selected.has(s.id))}
                       ref={(el) => {
                         if (el)
@@ -233,7 +233,7 @@ export default function AdminShipmentsPage() {
                       <input
                         type="checkbox"
                         aria-label={`Select ${s.tracking_number}`}
-                        className="h-4 w-4 cursor-pointer accent-navy"
+                        className="h-5 w-5 cursor-pointer accent-navy"
                         checked={selected.has(s.id)}
                         onChange={() => toggle(s.id)}
                       />
@@ -280,7 +280,7 @@ export default function AdminShipmentsPage() {
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/shipments/detail?id=${s.id}`}
-                        className="inline-flex items-center rounded-md p-1 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-navy focus-ring"
+                        className="inline-flex items-center rounded-md p-2 text-ink-muted transition-opacity hover:text-navy focus-ring sm:opacity-0 sm:group-hover:opacity-100"
                         aria-label={`Open ${s.tracking_number}`}
                       >
                         <ChevronRight className="h-4 w-4" />

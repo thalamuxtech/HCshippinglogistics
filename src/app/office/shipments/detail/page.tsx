@@ -97,22 +97,40 @@ function OfficeShipmentDetailPageInner() {
         updatedBy: user.id,
         updatedByName: user.full_name,
       });
-      // Notify the customer of the transition.
-      await sendStageUpdateEmail({
-        shipmentId: shipment.id,
-        customerId: shipment.customer_id,
-        status: next,
-        extraNote: notes.trim(),
-      });
-      await logNotification({
-        customer_id: shipment.customer_id,
-        shipment_id: shipment.id,
-        channel: "email",
-        type: "stage_update",
-        subject: `Shipment ${shipment.tracking_number} → ${STAGE_MAP[next].label}`,
-        status: "sent",
-      });
-      toast.success("Status updated", `Advanced to ${STAGE_MAP[next].label}.`);
+      // Notify the customer. The stage change is already committed, so a
+      // notification (or notification-log) failure must NOT be reported as a
+      // failed stage update — that made staff re-advance shipments that had
+      // already moved. Record what actually happened instead.
+      let notified = true;
+      try {
+        const res = await sendStageUpdateEmail({
+          shipmentId: shipment.id,
+          customerId: shipment.customer_id,
+          status: next,
+          extraNote: notes.trim(),
+        });
+        notified = res?.ok !== false;
+      } catch {
+        notified = false;
+      }
+      try {
+        await logNotification({
+          customer_id: shipment.customer_id,
+          shipment_id: shipment.id,
+          channel: "email",
+          type: "stage_update",
+          subject: `Shipment ${shipment.tracking_number} → ${STAGE_MAP[next].label}`,
+          status: notified ? "sent" : "failed",
+        });
+      } catch {
+        /* logging must never fail the stage update */
+      }
+      toast.success(
+        "Status updated",
+        notified
+          ? `Advanced to ${STAGE_MAP[next].label}.`
+          : `Advanced to ${STAGE_MAP[next].label}. Customer email did not send.`
+      );
       setNotes("");
       await load();
     } catch {

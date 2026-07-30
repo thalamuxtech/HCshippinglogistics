@@ -153,7 +153,7 @@ export default function OfficeShipmentsPage() {
           <label className="flex w-fit cursor-pointer items-center gap-2.5 px-1 text-xs font-medium text-ink-muted">
             <input
               type="checkbox"
-              className="h-4 w-4 cursor-pointer accent-navy"
+              className="h-5 w-5 cursor-pointer accent-navy"
               checked={allVisibleSelected}
               ref={(el) => {
                 if (el)
@@ -186,7 +186,7 @@ export default function OfficeShipmentsPage() {
                   <input
                     type="checkbox"
                     aria-label={`Select ${s.tracking_number}`}
-                    className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-navy"
+                    className="mt-1 h-5 w-5 shrink-0 cursor-pointer accent-navy"
                     checked={selected.has(s.id)}
                     onChange={() => toggle(s.id)}
                   />

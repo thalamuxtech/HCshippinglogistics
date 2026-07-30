@@ -62,9 +62,12 @@ export default function ContactPage() {
 
       {/* Form + contact info */}
       <section className="container-page py-20 sm:py-24">
-        <div className="grid gap-10 lg:grid-cols-5">
+        {/* grid-cols-1 is explicit: without a declared single-column track the
+            implicit track is sized to content, so the form card pushed past the
+            viewport on 320px phones. min-w-0 on the item lets it shrink. */}
+        <div className="grid grid-cols-1 gap-10 lg:grid-cols-5">
           {/* Form */}
-          <Reveal className="lg:col-span-3">
+          <Reveal className="min-w-0 lg:col-span-3">
             <Card className="p-6 sm:p-8">
               <h2 className="text-2xl font-bold text-navy">Send us a message</h2>
               <p className="mt-1.5 text-sm text-ink-muted">
@@ -86,11 +89,13 @@ export default function ContactPage() {
                     <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-navy/5 text-navy">
                       <Mail className="h-4.5 w-4.5" />
                     </span>
-                    <div>
+                    {/* min-w-0 + break-all: the company address is 36 chars and
+                        has no break opportunity, so it overflowed 320px phones. */}
+                    <div className="min-w-0">
                       <p className="font-medium text-navy">Email</p>
                       <a
                         href={`mailto:${COMPANY.email}`}
-                        className="text-ink-muted hover:text-gold-700 focus-ring rounded"
+                        className="break-all text-ink-muted hover:text-gold-700 focus-ring rounded"
                       >
                         {COMPANY.email}
                       </a>

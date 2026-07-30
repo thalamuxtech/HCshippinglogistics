@@ -160,7 +160,7 @@ export default function AdminCustomersPage() {
                     <td className="px-4 py-3 text-right">
                       <Link
                         href={`/admin/customers/detail?id=${c.id}`}
-                        className="inline-flex items-center rounded-md p-1 text-ink-muted opacity-0 transition-opacity group-hover:opacity-100 hover:text-navy focus-ring"
+                        className="inline-flex items-center rounded-md p-2 text-ink-muted transition-opacity hover:text-navy focus-ring sm:opacity-0 sm:group-hover:opacity-100"
                         aria-label={`Open ${c.full_name}`}
                       >
                         <ChevronRight className="h-4 w-4" />

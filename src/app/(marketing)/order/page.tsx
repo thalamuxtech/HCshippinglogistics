@@ -68,6 +68,9 @@ interface OrderResult {
   customerId: string;
   trackingNumber: string;
   total: number;
+  /** False when the confirmation email failed — the ID must then be saved from
+      this screen, since it is the customer's only way back to their shipments. */
+  emailSent?: boolean;
 }
 
 function OrderFlow() {
@@ -327,8 +330,13 @@ function OrderFlow() {
         customerId: res.customerId,
         trackingNumber: res.trackingNumber,
         total: res.total,
+        emailSent: res.emailSent,
       });
-      toast.success("Order submitted", "We emailed your Customer ID and tracking number.");
+      if (res.emailSent === false) {
+        toast.info("Order submitted", "Save your Customer ID below - the email did not send.");
+      } else {
+        toast.success("Order submitted", "We emailed your Customer ID and tracking number.");
+      }
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       console.error(e);
@@ -407,7 +415,10 @@ function OrderFlow() {
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* ── Left: builder + fields ── */}
-          <div className="space-y-6">
+          {/* min-w-0: a grid item defaults to min-width:auto, so without this the
+              column is forced to its widest content and the page scrolls
+              horizontally on narrow phones (~100px overflow at 375px). */}
+          <div className="min-w-0 space-y-6">
             {/* Sender / contact */}
             <Card>
               <CardHeader>
@@ -835,7 +846,9 @@ function OrderSuccess({
             </motion.div>
             <h1 className="mt-5 text-2xl font-extrabold tracking-tight">Order received</h1>
             <p className="mt-2 text-sm text-white/75">
-              Thanks. We emailed your Customer ID and tracking number to you.
+              {result.emailSent === false
+                ? "Thanks. We could not send your confirmation email - please save your Customer ID below before leaving this page."
+                : "Thanks. We emailed your Customer ID and tracking number to you."}
             </p>
           </div>
 

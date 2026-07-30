@@ -184,14 +184,20 @@ export default function AdminStaffPage() {
           {staff.map((u) => (
             <Card key={u.id}>
               <CardContent className="p-5">
+                {/* min-w-0 + truncate: a long staff email (the default admin
+                    address is 36 chars) cannot wrap, and a flex item defaults to
+                    min-width:auto, so without these the card overflows the
+                    viewport on phones. */}
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-full bg-navy text-sm font-bold text-gold-300">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy text-sm font-bold text-gold-300">
                       {initialsOf(u.full_name)}
                     </span>
-                    <div>
-                      <p className="font-semibold text-navy">{u.full_name}</p>
-                      <p className="text-xs text-ink-muted">{u.email}</p>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-navy">{u.full_name}</p>
+                      <p className="truncate text-xs text-ink-muted" title={u.email}>
+                        {u.email}
+                      </p>
                     </div>
                   </div>
                   <Badge variant={u.is_active ? "success" : "danger"}>
@@ -229,8 +235,8 @@ export default function AdminStaffPage() {
                   const eff = effectiveFeatureKeys(u.role, u.allowed_features).size;
                   const custom = u.allowed_features != null;
                   return (
-                    <div className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
-                      <span className="text-xs text-ink-muted">
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-secondary/40 px-3 py-2">
+                      <span className="min-w-0 text-xs text-ink-muted">
                         <span className="font-semibold text-navy">{eff}</span> of {total} menus
                         {custom ? " · customized" : " · role default"}
                       </span>

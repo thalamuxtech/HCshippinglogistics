@@ -229,7 +229,17 @@ export function PortalShell({ nav, title, roleLabel, children, headerActions }: 
       )}
 
       {/* ─── Main column ───────────────────────────────────── */}
-      <div className={cn("transition-[padding] duration-200", collapsed ? "lg:pl-[76px]" : "lg:pl-64")}>
+      {/* min-w-0 + overflow-x-clip: this column is a flex/normal-flow child whose
+          content (wide cards, long emails, button rows) would otherwise force it
+          past the viewport on phones — every portal page inherited that overflow.
+          Constraining it here fixes all of them in one place; individual tables
+          still scroll inside their own overflow-x-auto wrappers. */}
+      <div
+        className={cn(
+          "min-w-0 overflow-x-clip transition-[padding] duration-200",
+          collapsed ? "lg:pl-[76px]" : "lg:pl-64"
+        )}
+      >
         {/* Top bar */}
         <header className="sticky top-0 z-20 border-b border-border bg-white/85 backdrop-blur">
           <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
