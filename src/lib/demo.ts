@@ -32,6 +32,7 @@ import {
   doc,
   query,
   where,
+  limit as fbLimit,
   serverTimestamp,
   Timestamp,
 } from "firebase/firestore";
@@ -596,6 +597,16 @@ export async function seedDemoData(actor: { id: string }): Promise<{
     roroDocs,
     customers,
   };
+}
+
+// Is demo data currently present? Used by the toolbar to show a single
+// Add/Clear toggle instead of two buttons. Cheap: one limit(1) read on
+// shipments, which is the collection the seeder always writes to.
+export async function hasDemoData(): Promise<boolean> {
+  const snap = await getDocs(
+    query(collection(db, COL.shipments), where("demo", "==", true), fbLimit(1))
+  );
+  return !snap.empty;
 }
 
 export async function clearDemoData(): Promise<number> {
