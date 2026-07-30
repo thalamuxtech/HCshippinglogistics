@@ -295,3 +295,16 @@ export async function updateStaffUser(payload: {
   const res = await fn(payload);
   return res.data as { ok: boolean };
 }
+
+// ── Admin: demo customer records (Admin SDK; rules block client writes) ──
+export async function seedDemoCustomers(): Promise<{ ok: boolean; created: number }> {
+  const fn = httpsCallable(functions, "seedDemoCustomers");
+  const res = await fn({});
+  return res.data as { ok: boolean; created: number };
+}
+
+export async function clearDemoCustomers(): Promise<{ ok: boolean; deleted: number }> {
+  const fn = httpsCallable(functions, "clearDemoCustomers");
+  const res = await fn({});
+  return res.data as { ok: boolean; deleted: number };
+}

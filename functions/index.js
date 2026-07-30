@@ -1687,3 +1687,65 @@ export const onShipmentStatusChange = onDocumentUpdated(
   }
   }
 );
+
+// ═══════════════════════════════════════════════════════════════
+// Callables (admin): seed / clear DEMO CUSTOMER records.
+// firestore.rules only lets a signed-in user create their OWN users/{uid} doc,
+// so an admin cannot write customer records from the client. These run with the
+// Admin SDK. Every doc is tagged { demo: true } and given a HCDEMO* id so the
+// clear step can only ever touch seeded rows, never a real customer.
+// ═══════════════════════════════════════════════════════════════
+const DEMO_CUSTOMERS = [
+  { id: "HCDEMO00001", full_name: "Samuel Adeyemi",  email: "samuel.demo@example.com",  phone: "+234 806 888 1212", address: "3 Ring Rd, Ibadan",                 dob: "1988-04-12" },
+  { id: "HCDEMO00002", full_name: "Chinelo Obi",     email: "chinelo.demo@example.com", phone: "+234 810 555 9090", address: "10 Zik Ave, Enugu",                 dob: "1992-09-30" },
+  { id: "HCDEMO00003", full_name: "Fatou Diallo",    email: "fatou.demo@example.com",   phone: "+221 77 123 4567",  address: "Route de Ngor, Dakar",              dob: "1985-01-22" },
+  { id: "HCDEMO00004", full_name: "Ngozi Eze",       email: "ngozi.demo@example.com",   phone: "+234 902 444 5566", address: "22 Admiralty Way, Lekki, Lagos",    dob: "1990-07-08" },
+  { id: "HCDEMO00005", full_name: "Yaw Boateng",     email: "yaw.demo@example.com",     phone: "+233 24 111 2222",  address: "5 Prempeh Rd, Kumasi",              dob: "1979-11-03" },
+  { id: "HCDEMO00006", full_name: "Adaeze Okafor",   email: "adaeze.demo@example.com",  phone: "+234 803 111 2222", address: "5 Awolowo Rd, Ikeja, Lagos",        dob: "1994-02-17" },
+  { id: "HCDEMO00007", full_name: "Tunde Balogun",   email: "tunde.demo@example.com",   phone: "+234 701 222 3344", address: "8 Aso Drive, Maitama, Abuja",       dob: "1983-06-25" },
+  { id: "HCDEMO00008", full_name: "Kwame Mensah",    email: "kwame.demo@example.com",   phone: "+233 24 555 7788",  address: "12 Oxford St, Osu, Accra",          dob: "1991-12-05" },
+  { id: "HCDEMO00009", full_name: "Zainab Bello",    email: "zainab.demo@example.com",  phone: "+234 705 333 1010", address: "14 Bompai Rd, Kano",                dob: "1996-03-19" },
+  { id: "HCDEMO00010", full_name: "Grace Mwangi",    email: "grace.demo@example.com",   phone: "+254 722 100 200",  address: "22 Ngong Rd, Nairobi",              dob: "1987-08-14" },
+  { id: "HCDEMO00011", full_name: "Kofi Asante",     email: "kofi.demo@example.com",    phone: "+233 27 808 9090",  address: "Harbour Rd, Tema",                  dob: "1981-05-27" },
+  { id: "HCDEMO00012", full_name: "Amara Nwosu",     email: "amara.demo@example.com",   phone: "+234 809 656 4343", address: "3 Aba Rd, Port Harcourt",           dob: "1993-10-11" },
+];
+
+export const seedDemoCustomers = onCall(async (req) => {
+  await assertAdmin(req);
+  let created = 0;
+  for (const c of DEMO_CUSTOMERS) {
+    await db.collection("users").doc(c.id).set(
+      {
+        demo: true,
+        customer_code: c.id,
+        full_name: c.full_name,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        dob: c.dob,
+        role: "customer",
+        is_active: true,
+        notify_email: true,
+        created_at: FieldValue.serverTimestamp(),
+        updated_at: FieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+    created += 1;
+  }
+  return { ok: true, created };
+});
+
+export const clearDemoCustomers = onCall(async (req) => {
+  await assertAdmin(req);
+  // Guarded twice: the doc must be demo-tagged AND carry a demo id, so a real
+  // customer can never be removed by this path.
+  const snap = await db.collection("users").where("demo", "==", true).get();
+  let deleted = 0;
+  for (const d of snap.docs) {
+    if (!d.id.startsWith("HCDEMO")) continue;
+    await d.ref.delete();
+    deleted += 1;
+  }
+  return { ok: true, deleted };
+});

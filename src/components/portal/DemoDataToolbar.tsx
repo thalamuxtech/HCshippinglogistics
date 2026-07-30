@@ -24,11 +24,21 @@ export function DemoDataToolbar() {
         actor_name: user.full_name,
         actor_role: "admin",
         action: "added demo data",
-        meta: { shipments: r.shipments, inquiries: r.inquiries, receipts: r.receipts },
+        meta: {
+          shipments: r.shipments,
+          inquiries: r.inquiries,
+          receipts: r.receipts,
+          inventory: r.inventory,
+          sailings: r.sailings,
+          roroDocs: r.roroDocs,
+          customers: r.customers,
+        },
       });
       toast.success(
         "Demo data added",
-        `${r.shipments} shipments (all stages), ${r.receipts} receipts, ${r.inquiries} submissions. Refresh to see them.`
+        `${r.shipments} shipments (all stages), ${r.customers} customers, ${r.receipts} receipts, ` +
+          `${r.inventory} inventory items, ${r.sailings} sailing notices, ${r.roroDocs} RORO docs, ` +
+          `${r.inquiries} submissions. Refresh to see them.`
       );
     } catch {
       toast.error("Could not add demo data", "Please try again.");
@@ -39,7 +49,15 @@ export function DemoDataToolbar() {
 
   async function clearDemo() {
     if (!user) return;
-    if (!window.confirm("Delete ALL demo data (anything tagged demo)? Real records are not affected.")) return;
+    if (
+      !window.confirm(
+        "Delete ALL demo data?\n\n" +
+          "Removes demo shipments, customers, receipts, USA + destination inventory, " +
+          "sailing notices, RORO documents, and submissions.\n\n" +
+          "Real records are never affected."
+      )
+    )
+      return;
     setBusy("clear");
     try {
       const removed = await clearDemoData();

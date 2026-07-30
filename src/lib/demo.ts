@@ -3,15 +3,25 @@
 // Every seeded document is tagged { demo: true } so "Clear demo data"
 // removes ONLY seeded records and never touches real data.
 //
-// Coverage goal: exercise the whole app. Shipments span ALL 8 stages, all
-// three services, every payment state, both DNR variants (auto + manual) and a
-// pending release request, and are BACKDATED across ~10 months so the dashboard
-// revenue trend, date-range selector, and volume charts populate. Receipts are
-// attached to paid shipments; contact submissions cover every status.
+// Coverage goal: exercise the whole app, for EVERY backend role — not just the
+// admin dashboard. Shipments span all 8 stages, all three services, every
+// payment state, both DNR variants (auto + manual) and a pending release
+// request, backdated across ~10 months so the revenue trend, date-range
+// selector, and volume charts populate.
 //
-// Not seeded: status logs and notifications (rules make them immutable, so they
-// could not be cleared). Destination inventory is auto-created by the arrival
-// trigger for offloading+ shipments and is cleaned up on clear.
+// What each role sees after seeding:
+//  - admin      : dashboard charts, shipments, receipts, containers, customers,
+//                 submissions (all statuses), sailing notices, USA inventory
+//  - office     : country-scoped shipments, destination inventory (Nigeria,
+//                 Ghana, Kenya), receipts, RORO consignee documents
+//  - dispatcher : arrived/delivery jobs incl. a DNR hold + a pending release
+//
+// DELIBERATELY NOT SEEDED — firestore.rules makes these append-only
+// (`allow update, delete: if false`), so seeded rows could never be cleared and
+// would permanently pollute the database:
+//   shipment_status_logs, notifications, activity_log
+// Destination inventory is ALSO auto-created by the arrival trigger for
+// offloading+ shipments; both the seeded and triggered rows are cleaned up.
 // ─────────────────────────────────────────────────────────────
 
 import {
@@ -27,6 +37,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./firebase";
 import { COL } from "./db";
+import { seedDemoCustomers, clearDemoCustomers } from "./notify";
 import type { ShipmentStatus } from "./types";
 
 const DEMO = { demo: true } as const;
@@ -252,6 +263,97 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
   },
 ];
 
+// ── USA warehouse inventory (admin-only page) ──
+// Items received at the Maryland warehouse that are not yet on a shipment.
+const DEMO_USA_INVENTORY: {
+  item_description: string;
+  location_notes: string;
+  monthsAgo: number;
+}[] = [
+  { item_description: "2x Barrel (Tall) — awaiting consolidation", location_notes: "Bay A, rack 3", monthsAgo: 0 },
+  { item_description: "Toyota Corolla 2014 — awaiting RORO booking", location_notes: "Outside lot, slot 7", monthsAgo: 0 },
+  { item_description: "1x Wardrobe Box — customer dropping second box", location_notes: "Bay B, floor", monthsAgo: 1 },
+  { item_description: "4x Ghana Must Go (Large)", location_notes: "Bay C, pallet 12", monthsAgo: 1 },
+];
+
+// ── Destination inventory (office page, country-scoped) ──
+// Deliberately spans THREE countries so a Ghana/Kenya office login is not empty.
+// The arrival trigger also creates rows for offloading shipments; these are the
+// extra "already at the warehouse, not tied to a demo shipment" items.
+const DEMO_DEST_INVENTORY: {
+  item_description: string;
+  destination_country: string;
+  location_notes: string;
+  dispatched: boolean;
+  monthsAgo: number;
+}[] = [
+  { item_description: "3x Barrel (Short) — Lagos walk-in collection", destination_country: "Nigeria", location_notes: "Yaba store, shelf 2", dispatched: false, monthsAgo: 0 },
+  { item_description: "1x Suitcase — awaiting ID verification", destination_country: "Nigeria", location_notes: "Yaba office, secure cage", dispatched: false, monthsAgo: 0 },
+  { item_description: "2x Medium Box — collected by consignee", destination_country: "Nigeria", location_notes: "Yaba store", dispatched: true, monthsAgo: 1 },
+  { item_description: "1x Dish Barrel Box — Accra pickup", destination_country: "Ghana", location_notes: "Osu depot, bay 1", dispatched: false, monthsAgo: 0 },
+  { item_description: "1x Large Electronic Box — Kumasi transfer", destination_country: "Ghana", location_notes: "Osu depot, outbound", dispatched: true, monthsAgo: 2 },
+  { item_description: "2x Tote Ex-Large — Nairobi pickup", destination_country: "Kenya", location_notes: "Ngong Rd store", dispatched: false, monthsAgo: 1 },
+];
+
+// ── Sailing notices (admin: broadcast history) ──
+const DEMO_SAILINGS: {
+  subject: string;
+  body: string;
+  filters: { service_type?: "sea" | "air" | "roro"; destination?: string; container_number?: string };
+  recipient_count: number;
+  monthsAgo: number;
+}[] = [
+  {
+    subject: "Vessel departing Baltimore 12th — Lagos",
+    body: "Our next sea cargo vessel departs Baltimore on the 12th with an ETA of 4-6 weeks to Lagos. Drop off items at the Upper Marlboro warehouse before the 10th.",
+    filters: { service_type: "sea", destination: "Nigeria" },
+    recipient_count: 6,
+    monthsAgo: 1,
+  },
+  {
+    subject: "Container 19B has arrived in Lagos",
+    body: "Container 19B has cleared and is now available for collection at our Yaba office. Please bring a valid ID.",
+    filters: { service_type: "sea", container_number: "19B" },
+    recipient_count: 3,
+    monthsAgo: 2,
+  },
+  {
+    subject: "RORO booking window — Tema, Ghana",
+    body: "We have space on the next RORO sailing to Tema. Contact us to book your vehicle before the cut-off.",
+    filters: { service_type: "roro", destination: "Ghana" },
+    recipient_count: 2,
+    monthsAgo: 3,
+  },
+];
+
+// ── RORO consignee documents (office consignees page) ──
+// Keyed by the demo shipment's customer_email so we can attach to the real id.
+const DEMO_RORO_DOCS: {
+  forCustomerEmail: string;
+  shipping_line: "grimaldi" | "sallaum" | "msc";
+  vehicle_class: "class_a" | "class_b" | "class_c";
+  curb_weight: number;
+  consignee_details: { name: string; address: string; phone: string };
+  exporter_id: string;
+}[] = [
+  {
+    forCustomerEmail: "fatou.demo@example.com",
+    shipping_line: "grimaldi",
+    vehicle_class: "class_a",
+    curb_weight: 3200,
+    consignee_details: { name: "Moussa Diallo", address: "Route de Ngor, Dakar", phone: "+221 78 987 6543" },
+    exporter_id: "EX-DEMO-4471",
+  },
+  {
+    forCustomerEmail: "kofi.demo@example.com",
+    shipping_line: "sallaum",
+    vehicle_class: "class_b",
+    curb_weight: 4100,
+    consignee_details: { name: "Efua Asante", address: "Harbour Rd, Tema", phone: "+233 26 707 8080" },
+    exporter_id: "EX-DEMO-4482",
+  },
+];
+
 const DEMO_INQUIRIES: {
   name: string;
   email: string;
@@ -287,6 +389,24 @@ const DEMO_INQUIRIES: {
     message: "Quote to ship a Toyota Highlander from Baltimore to Lagos please.",
     status: "closed",
   },
+  {
+    name: "Aisha Mohammed",
+    email: "aisha.demo@example.com",
+    phone: "+234 803 777 2020",
+    inquiry_type: "Enterprise / Bulk",
+    message:
+      "We move roughly 40 barrels a month for our retail branches in Kano and Kaduna. Can you quote a standing monthly arrangement with consolidated invoicing?",
+    status: "new",
+  },
+  {
+    name: "Peter Mwangi",
+    email: "peter.demo@example.com",
+    phone: "+254 733 400 500",
+    company: "Mwangi Imports",
+    inquiry_type: "Sea Cargo",
+    message: "Do you ship to Mombasa as well as Nairobi? Looking at a 20ft consolidation.",
+    status: "in_progress",
+  },
 ];
 
 function dnrFrom(s: DemoShipment): boolean {
@@ -304,10 +424,24 @@ function backdated(monthsAgo: number): Timestamp {
 
 let serial = 2000;
 
-export async function seedDemoData(
-  actor: { id: string }
-): Promise<{ shipments: number; inquiries: number; receipts: number }> {
+export async function seedDemoData(actor: { id: string }): Promise<{
+  shipments: number;
+  inquiries: number;
+  receipts: number;
+  inventory: number;
+  sailings: number;
+  roroDocs: number;
+  customers: number;
+}> {
   let receipts = 0;
+  let inventory = 0;
+  let sailings = 0;
+  let roroDocs = 0;
+  let customers = 0;
+
+  // Shipment ids keyed by customer email, so RORO documents can reference the
+  // shipment that was just created.
+  const shipmentIdByEmail = new Map<string, string>();
 
   for (const s of DEMO_SHIPMENTS) {
     const balance =
@@ -348,6 +482,7 @@ export async function seedDemoData(
       created_at: createdAt,
       updated_at: createdAt,
     });
+    shipmentIdByEmail.set(s.customer_email, shipRef.id);
 
     // Attach a receipt record for paid shipments (Receipts admin view + revenue).
     if (paid && receiptNumber) {
@@ -376,7 +511,91 @@ export async function seedDemoData(
     });
   }
 
-  return { shipments: DEMO_SHIPMENTS.length, inquiries: DEMO_INQUIRIES.length, receipts };
+  // ── USA warehouse inventory (admin) ──
+  for (const it of DEMO_USA_INVENTORY) {
+    const at = backdated(it.monthsAgo);
+    await addDoc(collection(db, COL.usaInventory), {
+      ...DEMO,
+      shipment_id: "",
+      item_description: it.item_description,
+      location_notes: it.location_notes,
+      received_at: at,
+      dispatched_at: null,
+      created_at: at,
+    });
+    inventory += 1;
+  }
+
+  // ── Destination inventory (office, country-scoped) ──
+  for (const it of DEMO_DEST_INVENTORY) {
+    const at = backdated(it.monthsAgo);
+    await addDoc(collection(db, COL.destInventory), {
+      ...DEMO,
+      shipment_id: "",
+      item_description: it.item_description,
+      destination_country: it.destination_country,
+      location_notes: it.location_notes,
+      received_at: at,
+      dispatched_at: it.dispatched ? at : null,
+      created_at: at,
+    });
+    inventory += 1;
+  }
+
+  // ── Sailing notices (admin broadcast history) ──
+  for (const sn of DEMO_SAILINGS) {
+    const at = backdated(sn.monthsAgo);
+    await addDoc(collection(db, COL.sailingNotices), {
+      ...DEMO,
+      sent_by: actor.id,
+      subject: sn.subject,
+      body: sn.body,
+      filters: sn.filters,
+      recipient_count: sn.recipient_count,
+      recipient_ids: [],
+      sent_at: at,
+      created_at: at,
+    });
+    sailings += 1;
+  }
+
+  // ── RORO consignee documents (office consignees page) ──
+  for (const rd of DEMO_RORO_DOCS) {
+    const shipmentId = shipmentIdByEmail.get(rd.forCustomerEmail);
+    if (!shipmentId) continue;
+    await addDoc(collection(db, COL.roroDocs), {
+      ...DEMO,
+      shipment_id: shipmentId,
+      shipping_line: rd.shipping_line,
+      vehicle_class: rd.vehicle_class,
+      curb_weight: rd.curb_weight,
+      consignee_details: rd.consignee_details,
+      exporter_id: rd.exporter_id,
+      created_at: serverTimestamp(),
+    });
+    roroDocs += 1;
+  }
+
+  // ── Customer account records (admin Customers page) ──
+  // Must go through a Cloud Function: firestore.rules only lets a signed-in user
+  // create their OWN users/{uid} doc, so an admin cannot write customer docs
+  // from the client. Non-fatal — the rest of the demo data is still useful.
+  try {
+    const res = await seedDemoCustomers();
+    customers = res.created;
+  } catch {
+    customers = 0;
+  }
+
+  return {
+    shipments: DEMO_SHIPMENTS.length,
+    inquiries: DEMO_INQUIRIES.length,
+    receipts,
+    inventory,
+    sailings,
+    roroDocs,
+    customers,
+  };
 }
 
 export async function clearDemoData(): Promise<number> {
@@ -390,12 +609,19 @@ export async function clearDemoData(): Promise<number> {
     return snap.docs.map((d) => d.id);
   };
 
-  // Shipments (keep ids for auto-inventory cleanup) + receipts + submissions.
+  // Shipments (keep ids for auto-inventory cleanup) + everything seeded above.
+  // Every collection written by seedDemoData must appear here, or "Clear demo"
+  // would silently leave records behind.
   const shipmentIds = await delWhereDemo(COL.shipments);
   await delWhereDemo(COL.receipts);
   await delWhereDemo(COL.contact);
+  await delWhereDemo(COL.usaInventory);
+  await delWhereDemo(COL.destInventory);
+  await delWhereDemo(COL.sailingNotices);
+  await delWhereDemo(COL.roroDocs);
 
-  // Destination inventory auto-created for demo shipments by the arrival trigger.
+  // Destination inventory auto-created for demo shipments by the arrival trigger
+  // (those rows are written server-side and are NOT tagged demo:true).
   for (const sid of shipmentIds) {
     const invSnap = await getDocs(
       query(collection(db, COL.destInventory), where("shipment_id", "==", sid))
@@ -404,6 +630,15 @@ export async function clearDemoData(): Promise<number> {
       await deleteDoc(doc(db, COL.destInventory, d.id));
       removed += 1;
     }
+  }
+
+  // Demo customer docs live in `users`, which the client may not delete for
+  // other users — removed server-side. Non-fatal if the callable is unavailable.
+  try {
+    const res = await clearDemoCustomers();
+    removed += res.deleted;
+  } catch {
+    /* leave customer records; everything else is cleared */
   }
 
   return removed;
