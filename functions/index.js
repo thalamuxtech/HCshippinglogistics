@@ -43,6 +43,10 @@ const BREVO_FROM_EMAIL = defineSecret("BREVO_FROM_EMAIL");
 const BREVO_FROM_NAME = defineSecret("BREVO_FROM_NAME");
 // Optional reply-to (e.g. a monitored inbox); falls back to the from address.
 const BREVO_REPLY_TO = defineSecret("BREVO_REPLY_TO");
+// SMTP relay credentials (Brevo). Used as the primary send path when set,
+// because the v3 HTTP API is refused by the account's authorised-IP restriction.
+const BREVO_SMTP_PASSWORD = defineSecret("BREVO_SMTP_PASSWORD");
+const BREVO_SMTP_USER = defineSecret("BREVO_SMTP_USER");
 
 // Resend kept as an automatic fallback if Brevo is not configured.
 const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
@@ -52,7 +56,7 @@ const TWILIO_AUTH_TOKEN = defineSecret("TWILIO_AUTH_TOKEN");
 const TWILIO_FROM_NUMBER = defineSecret("TWILIO_FROM_NUMBER");
 
 // Convenience arrays for binding to functions.
-const BREVO_SECRETS = [BREVO_API_KEY, BREVO_FROM_EMAIL, BREVO_FROM_NAME, BREVO_REPLY_TO];
+const BREVO_SECRETS = [BREVO_API_KEY, BREVO_FROM_EMAIL, BREVO_FROM_NAME, BREVO_REPLY_TO, BREVO_SMTP_PASSWORD, BREVO_SMTP_USER];
 const EMAIL_SECRETS = [...BREVO_SECRETS, RESEND_API_KEY, RESEND_FROM_EMAIL];
 const SMS_SECRETS = [TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM_NUMBER];
 const ALL_SECRETS = [...EMAIL_SECRETS, ...SMS_SECRETS];
@@ -163,13 +167,64 @@ function parseSender(str, fallbackEmail, fallbackName) {
   return { name: fallbackName, email: fallbackEmail };
 }
 
-// Send a transactional email. Provider order: Brevo (HTTP API) → Resend →
-// stub (log-only). Returns { ok, provider, stub, status?, error? } so callers
-// and the admin test tool can see exactly what happened.
+// Reusable SMTP transport. Created once per instance (not per send) so a batch
+// of stage-update emails reuses one authenticated connection pool rather than
+// re-handshaking for every recipient.
+let smtpTransport;
+async function getSmtpTransport() {
+  const pass = cfg(process.env.BREVO_SMTP_PASSWORD);
+  if (!pass) return null;
+  if (smtpTransport) return smtpTransport;
+  const user = cfg(process.env.BREVO_SMTP_USER);
+  if (!user) return null;
+  const { default: nodemailer } = await import("nodemailer");
+  smtpTransport = nodemailer.createTransport({
+    host: "smtp-relay.brevo.com",
+    port: 587,
+    secure: false,
+    pool: true,
+    maxConnections: 3,
+    auth: { user, pass },
+  });
+  return smtpTransport;
+}
+
+// Send a transactional email. Provider order: Brevo SMTP relay → Brevo HTTP API
+// → Resend → stub (log-only). Returns { ok, provider, stub, status?, error? }
+// so callers and the admin test tool can see exactly what happened.
+//
+// SMTP is FIRST deliberately: this Brevo account enforces an authorised-IP
+// restriction that rejects the v3 HTTP API from Cloud Functions' (rotating)
+// egress IPs with a 401, while the SMTP relay authenticates by credential and
+// is unaffected. The HTTP API is kept as a fallback for when that is lifted.
 async function sendEmail({ to, subject, html, replyTo }) {
   const recipients = Array.isArray(to) ? to : [to];
 
-  // ── Brevo transactional HTTP API (primary) ──
+  // ── Brevo SMTP relay (primary) ──
+  try {
+    const tx = await getSmtpTransport();
+    if (tx) {
+      const sender = parseSender(
+        process.env.BREVO_FROM_EMAIL,
+        "info@highclassshippinglogistics.com",
+        cfg(process.env.BREVO_FROM_NAME) || "Highclass Shipping and Logistics"
+      );
+      const reply = cfg(replyTo) || cfg(process.env.BREVO_REPLY_TO);
+      const info = await tx.sendMail({
+        from: `${sender.name} <${sender.email}>`,
+        to: recipients.join(", "),
+        subject,
+        html,
+        ...(reply ? { replyTo: reply } : {}),
+      });
+      return { ok: true, provider: "brevo-smtp", stub: false, messageId: info.messageId || null };
+    }
+  } catch (e) {
+    // Fall through to the HTTP API rather than failing the send outright.
+    console.error("Brevo SMTP send failed, falling back to HTTP API", e);
+  }
+
+  // ── Brevo transactional HTTP API (fallback) ──
   const brevoKey = cfg(process.env.BREVO_API_KEY);
   if (brevoKey) {
     const sender = parseSender(
