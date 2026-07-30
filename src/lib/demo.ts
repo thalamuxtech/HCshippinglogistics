@@ -278,9 +278,15 @@ const DEMO_USA_INVENTORY: {
 ];
 
 // ── Destination inventory (office page, country-scoped) ──
-// Deliberately spans THREE countries so a Ghana/Kenya office login is not empty.
-// The arrival trigger also creates rows for offloading shipments; these are the
-// extra "already at the warehouse, not tied to a demo shipment" items.
+// The office page filters on the signed-in user's `assigned_country`, and the
+// admin inventory page derives from shipments rather than reading this
+// collection — so rows for a country no staff account is assigned to would be
+// invisible to everyone. Most rows therefore target the assigned country of the
+// real office account (Nigeria); a couple of Ghana rows exist so re-assigning
+// that account to Ghana immediately shows data. Update ASSIGNED_DEMO_COUNTRY if
+// the office account's country changes.
+const ASSIGNED_DEMO_COUNTRY = "Nigeria";
+
 const DEMO_DEST_INVENTORY: {
   item_description: string;
   destination_country: string;
@@ -288,12 +294,14 @@ const DEMO_DEST_INVENTORY: {
   dispatched: boolean;
   monthsAgo: number;
 }[] = [
-  { item_description: "3x Barrel (Short) — Lagos walk-in collection", destination_country: "Nigeria", location_notes: "Yaba store, shelf 2", dispatched: false, monthsAgo: 0 },
-  { item_description: "1x Suitcase — awaiting ID verification", destination_country: "Nigeria", location_notes: "Yaba office, secure cage", dispatched: false, monthsAgo: 0 },
-  { item_description: "2x Medium Box — collected by consignee", destination_country: "Nigeria", location_notes: "Yaba store", dispatched: true, monthsAgo: 1 },
+  { item_description: "3x Barrel (Short) — Lagos walk-in collection", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store, shelf 2", dispatched: false, monthsAgo: 0 },
+  { item_description: "1x Suitcase — awaiting ID verification", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba office, secure cage", dispatched: false, monthsAgo: 0 },
+  { item_description: "2x Medium Box — collected by consignee", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store", dispatched: true, monthsAgo: 1 },
+  { item_description: "1x Wardrobe Box — awaiting balance payment", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store, DNR cage", dispatched: false, monthsAgo: 1 },
+  { item_description: "4x Ghana Must Go (Large) — Abuja transfer", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store, outbound pallet", dispatched: true, monthsAgo: 2 },
+  // Ghana rows: visible if the office account is re-assigned to Ghana.
   { item_description: "1x Dish Barrel Box — Accra pickup", destination_country: "Ghana", location_notes: "Osu depot, bay 1", dispatched: false, monthsAgo: 0 },
   { item_description: "1x Large Electronic Box — Kumasi transfer", destination_country: "Ghana", location_notes: "Osu depot, outbound", dispatched: true, monthsAgo: 2 },
-  { item_description: "2x Tote Ex-Large — Nairobi pickup", destination_country: "Kenya", location_notes: "Ngong Rd store", dispatched: false, monthsAgo: 1 },
 ];
 
 // ── Sailing notices (admin: broadcast history) ──
