@@ -65,7 +65,9 @@ export default function AdminContainersPage() {
   );
   const [usPhones, setUsPhones] = React.useState(DEFAULT_US_PHONES);
 
-  const [testEmail, setTestEmail] = React.useState(user?.email || "");
+  // Starts blank: this is a deliberate "send one preview to this address" field,
+  // so it should not be pre-aimed at the signed-in admin.
+  const [testEmail, setTestEmail] = React.useState("");
   const [testing, setTesting] = React.useState(false);
   const [sending, setSending] = React.useState(false);
 
@@ -102,10 +104,6 @@ export default function AdminContainersPage() {
       alive = false;
     };
   }, [load]);
-
-  React.useEffect(() => {
-    if (user?.email && !testEmail) setTestEmail(user.email);
-  }, [user?.email, testEmail]);
 
   // Group shipments by container number.
   const groups = React.useMemo<ContainerGroup[]>(() => {
@@ -172,6 +170,10 @@ export default function AdminContainersPage() {
     [finalRecipients]
   );
 
+  // Gate the test-send button on a well-formed address, so the only way to fire
+  // a send is with something deliverable (same shape the callable validates).
+  const testEmailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(testEmail.trim());
+
   function removeRecipient(email: string) {
     setRemovedEmails((prev) => new Set(prev).add(email.trim().toLowerCase()));
     setExtraEmails((prev) => prev.filter((e) => e.trim().toLowerCase() !== email.trim().toLowerCase()));
@@ -199,8 +201,8 @@ export default function AdminContainersPage() {
 
   async function handleTest() {
     if (!selected) return;
-    if (!testEmail.trim()) {
-      toast.error("Add a test address", "Enter an email to receive the preview.");
+    if (!testEmailValid) {
+      toast.error("Add a test address", "Enter a valid email to receive the preview.");
       return;
     }
     setTesting(true);
@@ -654,7 +656,12 @@ export default function AdminContainersPage() {
                       onChange={(e) => setTestEmail(e.target.value)}
                       placeholder="you@example.com"
                     />
-                    <Button variant="outline" onClick={handleTest} loading={testing} disabled={testing}>
+                    <Button
+                      variant="outline"
+                      onClick={handleTest}
+                      loading={testing}
+                      disabled={testing || !testEmailValid}
+                    >
                       Send test
                     </Button>
                   </div>
