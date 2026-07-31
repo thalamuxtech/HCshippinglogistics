@@ -15,7 +15,14 @@ import {
   FileText,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getShipment, advanceStage, listStatusLogs, logNotification } from "@/lib/db";
+import {
+  getShipment,
+  advanceStage,
+  listStatusLogs,
+  logNotification,
+  updateShipment,
+  serverTimestamp,
+} from "@/lib/db";
 import { sendStageUpdateEmail } from "@/lib/notify";
 import type { Shipment, StatusLog, ShipmentStatus } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,6 +104,24 @@ function OfficeShipmentDetailPageInner() {
         updatedBy: user.id,
         updatedByName: user.full_name,
       });
+
+      // Completing at the office IS a warehouse collection — the customer came to
+      // the counter rather than a rider going out. Record it the same way the
+      // dispatch app records a delivery, so admin can tell the two apart and
+      // always knows who released the cargo. Non-fatal: the stage change above
+      // is already committed and the status log is authoritative.
+      if (next === "completed") {
+        try {
+          await updateShipment(shipment.id, {
+            handover_method: "warehouse_pickup",
+            delivered_by: user.id,
+            delivered_by_name: user.full_name,
+            delivered_at: serverTimestamp() as unknown as Shipment["delivered_at"],
+          });
+        } catch {
+          /* status log above is authoritative */
+        }
+      }
       // Notify the customer. The stage change is already committed, so a
       // notification (or notification-log) failure must NOT be reported as a
       // failed stage update — that made staff re-advance shipments that had

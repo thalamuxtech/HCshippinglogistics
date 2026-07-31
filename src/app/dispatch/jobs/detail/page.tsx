@@ -15,15 +15,22 @@ import {
   Truck,
   Lock,
   Container,
+  Warehouse,
 } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { getShipment, advanceStage, requestDnrRelease } from "@/lib/db";
+import {
+  getShipment,
+  advanceStage,
+  requestDnrRelease,
+  updateShipment,
+  serverTimestamp,
+} from "@/lib/db";
 import { sendStageUpdateEmail } from "@/lib/notify";
 import type { Shipment } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Label, Textarea } from "@/components/ui/input";
+import { Input, Label, Textarea } from "@/components/ui/input";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { isDnr } from "@/lib/utils";
@@ -42,6 +49,11 @@ function DispatchJobDetailPageInner() {
   const [previews, setPreviews] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const [requesting, setRequesting] = React.useState(false);
+  // How the cargo left: door delivery by this rider, or collected by the
+  // customer at the warehouse counter. Both are completions, but the audit
+  // trail must not call a walk-in collection a "delivery".
+  const [method, setMethod] = React.useState<"delivery" | "warehouse_pickup">("delivery");
+  const [receivedBy, setReceivedBy] = React.useState("");
 
   const loadJob = React.useCallback(async () => {
     const s = await getShipment(id);
@@ -111,14 +123,40 @@ function DispatchJobDetailPageInner() {
         })
       );
 
+      // Record HOW the cargo left and WHO signed for it, in the note that goes
+      // onto the append-only log — so the audit trail reads correctly even for a
+      // warehouse collection, which is not a "delivery" by a rider.
+      const who = receivedBy.trim();
+      const methodLabel =
+        method === "warehouse_pickup"
+          ? `Collected at warehouse${who ? ` by ${who}` : ""}`
+          : `Delivered${who ? ` to ${who}` : ""}`;
+      const logNote = [methodLabel, notes.trim()].filter(Boolean).join(" — ");
+
       await advanceStage({
         shipmentId: job.id,
         status: "completed",
-        notes: notes.trim() || "Delivered by dispatcher.",
+        notes: logNote,
         updatedBy: user.id,
         updatedByName: user.full_name,
         photos: urls,
       });
+
+      // Materialize the hand-over onto the shipment so admin lists can show who
+      // released it without opening the timeline. Non-fatal: the delivery is
+      // already recorded above, so a failure here must not fail the job.
+      try {
+        await updateShipment(job.id, {
+          handover_method: method,
+          delivered_by: user.id,
+          delivered_by_name: user.full_name,
+          delivered_at: serverTimestamp() as unknown as Shipment["delivered_at"],
+          received_by_name: who || null,
+          proof_photos: urls,
+        });
+      } catch {
+        /* audit log above is authoritative */
+      }
 
       // The delivery is already recorded at this point. A notification failure
       // must NOT be reported as a failed delivery — that made riders re-submit
@@ -136,10 +174,11 @@ function DispatchJobDetailPageInner() {
         notified = false;
       }
 
+      const title = method === "warehouse_pickup" ? "Collection confirmed!" : "Delivered!";
       if (notified) {
-        toast.success("Delivered!", "Marked complete and customer notified.");
+        toast.success(title, "Recorded against your name and the customer was notified.");
       } else {
-        toast.success("Delivered!", "Marked complete. Customer email did not send.");
+        toast.success(title, "Recorded against your name. Customer email did not send.");
       }
       router.push("/dispatch/completed");
     } catch {
@@ -314,9 +353,75 @@ function DispatchJobDetailPageInner() {
         </div>
       ) : (
         <div className="space-y-5 rounded-2xl border border-border bg-white p-5 shadow-card">
+          {/* How the cargo is leaving */}
+          <div>
+            <Label>How is this being handed over?</Label>
+            <div className="mt-1.5 grid grid-cols-2 gap-2">
+              {(
+                [
+                  { key: "delivery", label: "Delivered", icon: Truck, hint: "Taken to the address" },
+                  {
+                    key: "warehouse_pickup",
+                    label: "Picked up",
+                    icon: Warehouse,
+                    hint: "Collected at warehouse",
+                  },
+                ] as const
+              ).map((opt) => {
+                const OptIcon = opt.icon;
+                const on = method === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setMethod(opt.key)}
+                    aria-pressed={on}
+                    className={`flex min-h-[72px] flex-col items-center justify-center gap-1 rounded-xl border-2 px-3 py-2.5 text-center transition-colors focus-ring ${
+                      on
+                        ? "border-gold bg-gold/10"
+                        : "border-border bg-white active:bg-secondary/50"
+                    }`}
+                  >
+                    <OptIcon className={`h-5 w-5 ${on ? "text-gold-700" : "text-ink-muted"}`} />
+                    <span
+                      className={`text-sm font-semibold ${on ? "text-navy" : "text-ink"}`}
+                    >
+                      {opt.label}
+                    </span>
+                    <span className="text-[11px] leading-tight text-ink-muted">{opt.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Who took the goods */}
+          <div>
+            <Label htmlFor="received-by">
+              {method === "warehouse_pickup" ? "Collected by" : "Received by"}
+            </Label>
+            <Input
+              id="received-by"
+              value={receivedBy}
+              onChange={(e) => setReceivedBy(e.target.value)}
+              placeholder={
+                job.receiver?.full_name
+                  ? `e.g. ${job.receiver.full_name}`
+                  : "Name of the person who took it"
+              }
+              autoComplete="off"
+            />
+            <p className="mt-1.5 text-xs text-ink-muted">
+              Recorded against this shipment with your name, so the office can see who released it
+              and who signed for it.
+            </p>
+          </div>
+
           {/* Proof of delivery */}
           <div>
-            <Label>Proof of delivery (photo)</Label>
+            <Label>
+              {method === "warehouse_pickup" ? "Proof of collection (photo)" : "Proof of delivery (photo)"}
+            </Label>
             <label className="mt-1 flex min-h-[88px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-secondary/30 p-4 text-center transition-colors active:bg-secondary/60 focus-within:ring-2 focus-within:ring-gold">
               <Camera className="h-7 w-7 text-navy" />
               <span className="text-sm font-medium text-navy">Take / add photo</span>
@@ -351,26 +456,36 @@ function DispatchJobDetailPageInner() {
             )}
           </div>
 
-          {/* Delivery notes */}
+          {/* Hand-over notes */}
           <div>
-            <Label htmlFor="notes">Delivery notes</Label>
+            <Label htmlFor="notes">
+              {method === "warehouse_pickup" ? "Collection notes" : "Delivery notes"}
+            </Label>
             <Textarea
               id="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. Handed to recipient at front door"
+              placeholder={
+                method === "warehouse_pickup"
+                  ? "e.g. ID checked at the counter"
+                  : "e.g. Handed to recipient at front door"
+              }
             />
           </div>
 
-          {/* Big Mark Delivered button, min 56px height, high contrast */}
+          {/* Big submit button, min 56px height, high contrast */}
           <Button
             variant="gold"
             onClick={handleDelivered}
             loading={submitting}
             className="h-14 w-full text-lg"
           >
-            <CheckCircle2 className="h-6 w-6" /> Mark Delivered
+            <CheckCircle2 className="h-6 w-6" />
+            {method === "warehouse_pickup" ? "Confirm Collection" : "Mark Delivered"}
           </Button>
+          <p className="text-center text-xs text-ink-muted">
+            Submitted as <strong className="text-navy">{user?.full_name}</strong>
+          </p>
         </div>
       )}
     </div>

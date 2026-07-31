@@ -18,6 +18,9 @@ import {
   LockOpen,
   Pencil,
   Trash2,
+  Truck,
+  Warehouse,
+  UserCheck,
 } from "lucide-react";
 import {
   getShipment,
@@ -532,6 +535,85 @@ function AdminShipmentDetailPageInner() {
             )}
           </Card>
 
+          {/* Hand-over record — who released the cargo, how, and who signed. */}
+          {(s.delivered_by_name || s.handover_method || s.current_status === "completed") && (
+            <Card>
+              <CardHeader className="flex-row items-center gap-2 space-y-0">
+                {s.handover_method === "warehouse_pickup" ? (
+                  <Warehouse className="h-4 w-4 text-gold" aria-hidden />
+                ) : (
+                  <Truck className="h-4 w-4 text-gold" aria-hidden />
+                )}
+                <CardTitle>Hand-over record</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+                <InfoRow
+                  icon={s.handover_method === "warehouse_pickup" ? Warehouse : Truck}
+                  label="Method"
+                  value={
+                    s.handover_method === "warehouse_pickup"
+                      ? "Collected at warehouse"
+                      : s.handover_method === "delivery"
+                      ? "Delivered to address"
+                      : "Not recorded"
+                  }
+                />
+                <InfoRow
+                  icon={UserCheck}
+                  label="Released by"
+                  value={s.delivered_by_name || "Not recorded"}
+                />
+                <InfoRow
+                  icon={User}
+                  label="Signed for by"
+                  value={s.received_by_name || "Not recorded"}
+                />
+                <InfoRow
+                  icon={History}
+                  label="Completed at"
+                  value={
+                    s.delivered_at ? formatDateTime(tsToDate(s.delivered_at)) : "Not recorded"
+                  }
+                />
+              </CardContent>
+              {s.proof_photos && s.proof_photos.length > 0 && (
+                <CardContent className="border-t border-border pt-4">
+                  <p className="text-xs uppercase tracking-wide text-ink-muted">
+                    Proof of hand-over
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {s.proof_photos.map((src, i) => (
+                      <a
+                        key={src}
+                        href={src}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="group relative block h-24 w-24 overflow-hidden rounded-lg border border-border focus-ring"
+                        title="Open full size"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={src}
+                          alt={`Proof ${i + 1}`}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </CardContent>
+              )}
+              {!s.delivered_by_name && s.current_status === "completed" && (
+                <CardContent className="pt-0">
+                  <p className="text-xs text-ink-muted">
+                    This shipment was completed before hand-over details were captured. The status
+                    timeline below still shows who marked it complete.
+                  </p>
+                </CardContent>
+              )}
+            </Card>
+          )}
+
           {/* Timeline */}
           <Card>
             <CardHeader className="flex-row items-center gap-2 space-y-0">
@@ -561,6 +643,31 @@ function AdminShipmentDetailPageInner() {
                         {log.notes && <p className="mt-1 text-sm text-ink">{log.notes}</p>}
                         {log.updated_by_name && (
                           <p className="mt-0.5 text-xs text-ink-muted">by {log.updated_by_name}</p>
+                        )}
+                        {/* Proof-of-delivery photos were uploaded by riders but
+                            never shown anywhere — the whole point of capturing
+                            them is that the office can check the hand-over. */}
+                        {log.photos && log.photos.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {log.photos.map((src, i) => (
+                              <a
+                                key={src}
+                                href={src}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="group relative block h-20 w-20 overflow-hidden rounded-lg border border-border focus-ring"
+                                title="Open full size"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={src}
+                                  alt={`Proof ${i + 1}`}
+                                  className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                                  loading="lazy"
+                                />
+                              </a>
+                            ))}
+                          </div>
                         )}
                       </li>
                     );

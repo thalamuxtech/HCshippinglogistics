@@ -123,6 +123,17 @@ export interface Shipment {
   paid_at?: Timestamp | null;
   // Receiver / consignee (for the receipt)
   receiver?: Receiver;
+  // ── Hand-over record (who released the cargo, and how) ──
+  // Materialized onto the shipment when it is completed so admin lists can show
+  // "delivered by" without reading the per-shipment status log. The append-only
+  // log remains the authoritative audit trail.
+  handover_method?: "delivery" | "warehouse_pickup";
+  delivered_by?: string | null; // uid of the rider / office staff who released it
+  delivered_by_name?: string | null;
+  delivered_at?: Timestamp | null;
+  /** Who physically took the goods — signed for at the door or at the counter. */
+  received_by_name?: string | null;
+  proof_photos?: string[];
   // Latest generated receipt (for quick access)
   receipt_number?: string;
   receipt_pdf_url?: string;
