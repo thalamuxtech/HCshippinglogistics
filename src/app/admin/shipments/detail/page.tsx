@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { PageLoader } from "@/components/ui/misc";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -16,6 +16,8 @@ import {
   Container,
   Lock,
   LockOpen,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   getShipment,
@@ -25,6 +27,9 @@ import {
   logActivity,
   updateShipment,
   listUsers,
+  deleteShipment,
+  planDeleteShipment,
+  type DeleteShipmentPlan,
 } from "@/lib/db";
 import { sendStageUpdateEmail } from "@/lib/notify";
 import type { Shipment, StatusLog, ShipmentStatus, AppUser } from "@/lib/types";
@@ -36,6 +41,8 @@ import { Input, Select, Textarea, Label } from "@/components/ui/input";
 import { StageBadge, Badge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { PaymentReceiptCard } from "@/components/portal/PaymentReceiptCard";
+import { ConfirmDeleteModal } from "@/components/portal/ConfirmDeleteModal";
+import { EditShipmentModal } from "@/components/portal/EditShipmentModal";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDateTime, isDnr, containerLabel } from "@/lib/utils";
 import type { Timestamp } from "firebase/firestore";
@@ -51,6 +58,7 @@ function tsToDate(ts?: Timestamp | null): Date | null {
 
 function AdminShipmentDetailPageInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const id = searchParams.get("id") ?? "";
   const { user } = useAuth();
   const toast = useToast();
@@ -73,6 +81,12 @@ function AdminShipmentDetailPageInner() {
   const [savingCnt, setSavingCnt] = React.useState(false);
   const [savingDnr, setSavingDnr] = React.useState(false);
 
+  // Edit / delete
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [delPlan, setDelPlan] = React.useState<DeleteShipmentPlan | null>(null);
+  const [deleting, setDeleting] = React.useState(false);
+
   const load = React.useCallback(async () => {
     const [s, l, disp] = await Promise.all([
       getShipment(id),
@@ -89,6 +103,60 @@ function AdminShipmentDetailPageInner() {
       setCntDate(s.container_shipped_on || "");
     }
   }, [id]);
+
+  async function handleSaveEdit(patch: Partial<Shipment>) {
+    if (!shipment || !user) return;
+    await updateShipment(shipment.id, patch);
+    await logActivity({
+      actor_id: user.id,
+      actor_name: user.full_name,
+      actor_role: "admin",
+      action: "edited shipment record",
+      target: shipment.tracking_number,
+      meta: { shipment_id: shipment.id, fields: Object.keys(patch) },
+    });
+    await load();
+    toast.success("Shipment updated", "The record has been saved.");
+  }
+
+  // Counts are fetched when the dialog OPENS (not on page load) so the warning
+  // reflects the state at the moment of the decision.
+  async function openDelete() {
+    if (!shipment) return;
+    setDeleteOpen(true);
+    setDelPlan(null);
+    try {
+      setDelPlan(await planDeleteShipment(shipment.id));
+    } catch {
+      // Leave the plan null: the dialog still works, just without counts.
+    }
+  }
+
+  async function handleDeleteShipment() {
+    if (!shipment || !user) return;
+    setDeleting(true);
+    const tracking = shipment.tracking_number;
+    try {
+      await deleteShipment(shipment.id);
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: "deleted shipment",
+        target: tracking,
+        meta: {
+          shipment_id: shipment.id,
+          customer_id: shipment.customer_id,
+          container_number: shipment.container_number ?? null,
+        },
+      });
+      toast.success("Shipment deleted", `${tracking} has been permanently removed.`);
+      router.push("/admin/shipments");
+    } catch {
+      toast.error("Delete failed", "Could not delete the shipment. Please try again.");
+      setDeleting(false);
+    }
+  }
 
   async function handleSaveContainer() {
     if (!shipment || !user) return;
@@ -326,11 +394,21 @@ function AdminShipmentDetailPageInner() {
             {s.destination_city ? `, ${s.destination_city}` : ""}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs uppercase tracking-wide text-ink-muted">Total</p>
-          <p className="font-mono text-lg font-bold text-navy">
-            {formatCurrency(s.total_price, s.currency)}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="text-right">
+            <p className="text-xs uppercase tracking-wide text-ink-muted">Total</p>
+            <p className="font-mono text-lg font-bold text-navy">
+              {formatCurrency(s.total_price, s.currency)}
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+              <Pencil className="h-4 w-4" /> Edit
+            </Button>
+            <Button variant="destructive" size="sm" onClick={openDelete}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -734,6 +812,39 @@ function AdminShipmentDetailPageInner() {
           </Card>
         </div>
       </div>
+
+      <EditShipmentModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        shipment={s}
+        onSave={handleSaveEdit}
+      />
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={handleDeleteShipment}
+        title="Delete shipment"
+        subject={`shipment ${s.tracking_number}`}
+        description={
+          s.container_number
+            ? `It will also be removed from ${containerLabel(s.container_number)} and from the dispatch queue.`
+            : "It will also be removed from the dispatch queue and all admin lists."
+        }
+        requireTyped={s.tracking_number}
+        impact={
+          delPlan
+            ? [
+                { label: "Shipment record", count: 1 },
+                { label: "Invoices / receipts", count: delPlan.receipts },
+                { label: "Warehouse inventory rows", count: delPlan.inventory },
+                { label: "RORO documents", count: delPlan.roroDocs },
+                { label: "Status history entries (audit trail)", count: delPlan.statusLogs, retained: true },
+              ]
+            : []
+        }
+        busy={deleting}
+      />
     </div>
   );
 }

@@ -5,10 +5,12 @@ import { FeatureGuard } from "@/components/providers/FeatureGuard";
 import { PortalShell, type PortalNavItem } from "@/components/portal/PortalShell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { effectiveFeatureKeys, type FeatureKey } from "@/lib/features";
-import { ClipboardList, CheckCircle2 } from "lucide-react";
+import { ClipboardList, CheckCircle2, Container } from "lucide-react";
 
+// Container → Shipments → Deliveries, matching the office portal.
 const NAV: (PortalNavItem & { key: FeatureKey })[] = [
   { key: "dispatch.jobs", href: "/dispatch", label: "My Jobs", icon: ClipboardList },
+  { key: "dispatch.containers", href: "/dispatch/containers", label: "Containers", icon: Container },
   { key: "dispatch.completed", href: "/dispatch/completed", label: "Completed Today", icon: CheckCircle2 },
 ];
 

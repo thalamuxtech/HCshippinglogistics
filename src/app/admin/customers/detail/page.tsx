@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   Users,
   Mail,
+  MailCheck,
   Phone,
   Hash,
   MapPin,
@@ -26,6 +27,9 @@ import {
   updateUserDoc,
   logNotification,
   logActivity,
+  planDeleteCustomer,
+  deleteCustomerCascade,
+  type DeleteCustomerPlan,
 } from "@/lib/db";
 import { sendStageUpdateEmail, sendAccessCodeEmail } from "@/lib/notify";
 import { regenerateAccessCode } from "@/lib/auth-service";
@@ -36,6 +40,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StageBadge, Badge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
+import { ConfirmDeleteModal } from "@/components/portal/ConfirmDeleteModal";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate, initialsOf } from "@/lib/utils";
 import type { Timestamp } from "firebase/firestore";
@@ -61,6 +66,12 @@ function AdminCustomerDetailPageInner() {
   const [shipments, setShipments] = React.useState<Shipment[]>([]);
   const [busy, setBusy] = React.useState<string | null>(null);
   const [regenerated, setRegenerated] = React.useState<string | null>(null);
+  // Whether the code currently shown has been emailed yet (see regenerateCode).
+  const [codeEmailed, setCodeEmailed] = React.useState(false);
+
+  const [deleteOpen, setDeleteOpen] = React.useState(false);
+  const [delPlan, setDelPlan] = React.useState<DeleteCustomerPlan | null>(null);
+  const [delProgress, setDelProgress] = React.useState<{ done: number; total: number } | null>(null);
 
   const load = React.useCallback(async () => {
     const [c, s] = await Promise.all([getUser(id), listShipmentsByCustomer(id)]);
@@ -105,30 +116,59 @@ function AdminCustomerDetailPageInner() {
     }
   }
 
+  // Impact counts are gathered when the dialog opens so the warning names real
+  // numbers (and real tracking numbers) instead of a vague caution.
+  async function openDelete() {
+    if (!customer) return;
+    setDeleteOpen(true);
+    setDelPlan(null);
+    setDelProgress(null);
+    try {
+      setDelPlan(await planDeleteCustomer(customer.id));
+    } catch {
+      // Dialog still functions without counts; the typed guard still applies.
+    }
+  }
+
   async function deleteCustomer() {
     if (!customer || !user) return;
-    if (
-      !window.confirm(
-        `Delete ${customer.full_name}? Their account will be hidden and deactivated. Shipment and receipt records are kept for your files. This can be restored by support if needed.`
-      )
-    )
-      return;
     setBusy("delete");
+    const name = customer.full_name;
     try {
-      await updateUserDoc(customer.id, { is_active: false, deleted: true });
+      // Audit FIRST: activity_log requires actor_id == the caller's uid, and the
+      // entry must survive the delete. Writing it afterwards would also work,
+      // but logging the intent before a destructive cascade means a partial
+      // failure still leaves a record that it was attempted.
       await logActivity({
         actor_id: user.id,
         actor_name: user.full_name,
         actor_role: "admin",
-        action: "deleted customer",
-        target: customer.full_name,
-        meta: { customer_id: customer.id },
+        action: "deleted customer and all their shipments",
+        target: name,
+        meta: {
+          customer_id: customer.id,
+          email: customer.email,
+          shipments_deleted: delPlan?.shipments ?? null,
+          tracking_numbers: delPlan?.trackingNumbers ?? [],
+        },
       });
-      toast.success("Customer deleted", `${customer.full_name} has been hidden.`);
+      const { shipmentsDeleted } = await deleteCustomerCascade(customer.id, (done, total) =>
+        setDelProgress({ done, total })
+      );
+      toast.success(
+        "Customer deleted",
+        shipmentsDeleted > 0
+          ? `${name} and ${shipmentsDeleted} shipment(s) permanently removed.`
+          : `${name} has been permanently removed.`
+      );
       router.push("/admin/customers");
     } catch {
-      toast.error("Delete failed", "Could not delete the customer.");
+      toast.error(
+        "Delete failed",
+        "Some records may not have been removed. Re-open the customer and try again."
+      );
       setBusy(null);
+      setDelProgress(null);
     }
   }
 
@@ -165,7 +205,7 @@ function AdminCustomerDetailPageInner() {
     if (!customer || !user) return;
     if (
       !window.confirm(
-        "Regenerate this customer's access code? The old code will stop working immediately and the new one will be emailed to them."
+        "Regenerate this customer's access code? The old code stops working immediately. The new code is shown to you here — nothing is emailed until you choose to send it."
       )
     )
       return;
@@ -174,25 +214,68 @@ function AdminCustomerDetailPageInner() {
       // Mint a brand-new code (new serial, salt, hash, prefix); invalidates the old.
       const res = await regenerateAccessCode(customer.id);
       if (!res) throw new Error("no-user");
-      // Email the NEW plaintext code to the customer's verified address.
-      await sendAccessCodeEmail({
-        email: customer.email,
-        fullName: customer.full_name,
-        code: res.accessCode,
-      });
+      // Deliberately NOT emailed here. The admin may be regenerating while the
+      // customer is on the phone, or for an address that is known-bad, so
+      // sending is an explicit second step ("Email code to customer" below).
       await logActivity({
         actor_id: user.id,
         actor_name: user.full_name,
         actor_role: "admin",
-        action: "regenerated access code",
+        action: "regenerated access code (not yet sent)",
         target: customer.full_name,
         meta: { customer_id: customer.id },
       });
       await load();
       setRegenerated(res.accessCode);
-      toast.success("New code generated & emailed", "The previous code no longer works.");
+      setCodeEmailed(false);
+      toast.success(
+        "New code generated",
+        "The previous code no longer works. Choose how to share the new one."
+      );
     } catch {
       toast.error("Action failed", "Could not regenerate the access code.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  // Send the code currently on screen. Separate from minting it, so an admin can
+  // read it out over the phone and never email it, or email it later.
+  async function emailRegeneratedCode() {
+    if (!customer || !user || !regenerated) return;
+    setBusy("email-code");
+    try {
+      const res = await sendAccessCodeEmail({
+        email: customer.email,
+        fullName: customer.full_name,
+        code: regenerated,
+      });
+      await logNotification({
+        customer_id: customer.id,
+        channel: "email",
+        type: "access_code",
+        subject: "Your new access code",
+        status: res.ok ? "sent" : "failed",
+      });
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: "emailed regenerated access code",
+        target: customer.full_name,
+        meta: { customer_id: customer.id },
+      });
+      if (res.ok) {
+        setCodeEmailed(true);
+        toast.success("Code emailed", `Sent to ${customer.email}.`);
+      } else {
+        toast.error(
+          "Email not delivered",
+          "The provider rejected the send. Read the code to the customer instead."
+        );
+      }
+    } catch {
+      toast.error("Send failed", "Could not email the access code.");
     } finally {
       setBusy(null);
     }
@@ -317,7 +400,7 @@ function AdminCustomerDetailPageInner() {
             <Button
               variant="destructive"
               size="sm"
-              onClick={deleteCustomer}
+              onClick={openDelete}
               loading={busy === "delete"}
               disabled={busy !== null}
             >
@@ -335,11 +418,11 @@ function AdminCustomerDetailPageInner() {
           </div>
 
           {regenerated && (
-            <div className="mt-4 rounded-xl border-2 border-dashed border-gold/40 bg-gold-50/60 p-4">
+            <div className="mt-4 w-full rounded-xl border-2 border-dashed border-gold/40 bg-gold-50/60 p-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-gold-700">
-                New access code (shown once, also emailed to the customer)
+                New access code — shown once
               </p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <code className="select-all rounded bg-white px-3 py-1.5 font-mono text-lg font-bold tracking-[0.15em] text-navy">
                   {regenerated}
                 </code>
@@ -354,6 +437,29 @@ function AdminCustomerDetailPageInner() {
                   <Copy className="h-4 w-4" />
                 </button>
               </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {codeEmailed ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                    <MailCheck className="h-3.5 w-3.5" /> Emailed to {c.email}
+                  </span>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={emailRegeneratedCode}
+                    loading={busy === "email-code"}
+                    disabled={busy !== null}
+                  >
+                    <Mail className="h-4 w-4" /> Email code to customer
+                  </Button>
+                )}
+              </div>
+              <p className="mt-2 text-xs text-ink-muted">
+                {codeEmailed
+                  ? "The customer has been sent the new code."
+                  : "Nothing has been emailed yet. Copy it to share by phone or WhatsApp, or email it above. It cannot be shown again after you leave this page."}
+              </p>
             </div>
           )}
         </CardContent>
@@ -459,6 +565,41 @@ function AdminCustomerDetailPageInner() {
           </div>
         )}
       </Card>
+
+      <ConfirmDeleteModal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onConfirm={deleteCustomer}
+        title="Delete customer"
+        subject={`${c.full_name} and everything belonging to them`}
+        description={
+          delPlan === null
+            ? "Checking what this will remove…"
+            : delPlan.shipments > 0
+            ? `All ${delPlan.shipments} of their shipments will be deleted too, and will disappear from the container lists and the dispatch queue. This cannot be undone.`
+            : "This customer has no shipments. Their account will be permanently removed. This cannot be undone."
+        }
+        requireTyped={c.full_name}
+        impact={
+          delPlan
+            ? [
+                { label: "Customer account", count: 1 },
+                { label: "Shipments", count: delPlan.shipments },
+                { label: "Invoices / receipts", count: delPlan.receipts },
+                { label: "Warehouse inventory rows", count: delPlan.inventory },
+                { label: "RORO documents", count: delPlan.roroDocs },
+                {
+                  label: "Status history entries (audit trail)",
+                  count: delPlan.statusLogs,
+                  retained: true,
+                },
+              ]
+            : []
+        }
+        busy={busy === "delete"}
+        progress={delProgress}
+        confirmLabel="Delete customer & shipments"
+      />
     </div>
   );
 }

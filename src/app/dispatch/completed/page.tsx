@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, MapPin, Package, ChevronRight } from "lucide-react";
+import { CheckCircle2, MapPin, Package, ChevronRight, Container } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { listShipments, listStatusLogs, where } from "@/lib/db";
+import { getShipment, listCompletedLogsSince } from "@/lib/db";
 import type { Shipment } from "@/lib/types";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { formatDateTime } from "@/lib/utils";
@@ -17,6 +17,12 @@ function tsToDate(ts?: Timestamp | null): Date | null {
   } catch {
     return null;
   }
+}
+
+function startOfToday(): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
 }
 
 function isToday(d: Date | null): boolean {
@@ -44,18 +50,35 @@ export default function DispatchCompletedPage() {
     (async () => {
       setLoading(true);
       try {
-        const rows = await listShipments([where("current_status", "==", "completed")]);
-        const completed = rows;
-        // Resolve when THIS dispatcher marked it completed (from the status log).
-        const withTimes = await Promise.all(
-          completed.map(async (s) => {
-            const logs = await listStatusLogs(s.id);
-            const doneLog = logs.find((l) => l.status === "completed");
-            return { ...s, completedAt: tsToDate(doneLog?.created_at) } as CompletedJob;
+        // Read TODAY'S completion logs directly rather than every completed
+        // shipment ever. The previous version fetched all completed shipments
+        // and then ran one listStatusLogs() per shipment — an N+1 that grew
+        // without bound as the business completed more deliveries.
+        const logs = await listCompletedLogsSince(startOfToday());
+        // Only this rider's own completions: the heading promises "you marked
+        // complete", but the old query was unfiltered, so every dispatcher saw
+        // everyone else's deliveries as their own.
+        const mine = logs.filter((l) => l.updated_by === user.id);
+        if (mine.length === 0) {
+          if (active) setJobs([]);
+          return;
+        }
+        // Newest first, and keep only the latest completion per shipment in case
+        // a delivery was re-marked.
+        const latest = new Map<string, Date | null>();
+        for (const l of mine) {
+          const at = tsToDate(l.created_at);
+          const seen = latest.get(l.shipment_id);
+          if (!seen || (at && at.getTime() > seen.getTime())) latest.set(l.shipment_id, at);
+        }
+        const resolved = await Promise.all(
+          Array.from(latest.keys()).map(async (sid) => {
+            const s = await getShipment(sid);
+            return s ? ({ ...s, completedAt: latest.get(sid) ?? null } as CompletedJob) : null;
           })
         );
-        const todays = withTimes
-          .filter((s) => isToday(s.completedAt))
+        const todays = resolved
+          .filter((s): s is CompletedJob => s !== null && isToday(s.completedAt))
           .sort((a, b) => (b.completedAt?.getTime() ?? 0) - (a.completedAt?.getTime() ?? 0));
         if (active) setJobs(todays);
       } catch {
@@ -107,7 +130,14 @@ export default function DispatchCompletedPage() {
                   <CheckCircle2 className="h-6 w-6" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm font-bold text-navy">{job.tracking_number}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-mono text-sm font-bold text-navy">{job.tracking_number}</p>
+                    {job.container_number && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 font-mono text-[11px] font-semibold text-secondary-foreground">
+                        <Container className="h-3 w-3" /> CNT #{job.container_number}
+                      </span>
+                    )}
+                  </div>
                   <p className="mt-1 flex items-center gap-1.5 truncate text-sm text-ink-muted">
                     <MapPin className="h-3.5 w-3.5 shrink-0" />
                     {job.delivery_address || job.destination_city || job.destination_country}

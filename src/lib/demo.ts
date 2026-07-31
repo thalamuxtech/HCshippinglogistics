@@ -277,32 +277,11 @@ const DEMO_USA_INVENTORY: {
   { item_description: "4x Ghana Must Go (Large)", location_notes: "Bay C, pallet 12", monthsAgo: 1 },
 ];
 
-// ── Destination inventory (office page, country-scoped) ──
-// The office page filters on the signed-in user's `assigned_country`, and the
-// admin inventory page derives from shipments rather than reading this
-// collection — so rows for a country no staff account is assigned to would be
-// invisible to everyone. Most rows therefore target the assigned country of the
-// real office account (Nigeria); a couple of Ghana rows exist so re-assigning
-// that account to Ghana immediately shows data. Update ASSIGNED_DEMO_COUNTRY if
-// the office account's country changes.
-const ASSIGNED_DEMO_COUNTRY = "Nigeria";
-
-const DEMO_DEST_INVENTORY: {
-  item_description: string;
-  destination_country: string;
-  location_notes: string;
-  dispatched: boolean;
-  monthsAgo: number;
-}[] = [
-  { item_description: "3x Barrel (Short) — Lagos walk-in collection", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store, shelf 2", dispatched: false, monthsAgo: 0 },
-  { item_description: "1x Suitcase — awaiting ID verification", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba office, secure cage", dispatched: false, monthsAgo: 0 },
-  { item_description: "2x Medium Box — collected by consignee", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store", dispatched: true, monthsAgo: 1 },
-  { item_description: "1x Wardrobe Box — awaiting balance payment", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store, DNR cage", dispatched: false, monthsAgo: 1 },
-  { item_description: "4x Ghana Must Go (Large) — Abuja transfer", destination_country: ASSIGNED_DEMO_COUNTRY, location_notes: "Yaba store, outbound pallet", dispatched: true, monthsAgo: 2 },
-  // Ghana rows: visible if the office account is re-assigned to Ghana.
-  { item_description: "1x Dish Barrel Box — Accra pickup", destination_country: "Ghana", location_notes: "Osu depot, bay 1", dispatched: false, monthsAgo: 0 },
-  { item_description: "1x Large Electronic Box — Kumasi transfer", destination_country: "Ghana", location_notes: "Osu depot, outbound", dispatched: true, monthsAgo: 2 },
-];
+// ── Destination inventory ──
+// Not seeded as standalone rows: both the office Warehouse view and the admin
+// inventory page DERIVE destination stock from shipments (Container → Shipments
+// → Items), so the demo shipments already populate them. The clear routine below
+// still purges destination_inventory to remove legacy rows from earlier seeds.
 
 // ── Sailing notices (admin: broadcast history) ──
 const DEMO_SAILINGS: {
@@ -535,21 +514,11 @@ export async function seedDemoData(actor: { id: string }): Promise<{
     inventory += 1;
   }
 
-  // ── Destination inventory (office, country-scoped) ──
-  for (const it of DEMO_DEST_INVENTORY) {
-    const at = backdated(it.monthsAgo);
-    await addDoc(collection(db, COL.destInventory), {
-      ...DEMO,
-      shipment_id: "",
-      item_description: it.item_description,
-      destination_country: it.destination_country,
-      location_notes: it.location_notes,
-      received_at: at,
-      dispatched_at: it.dispatched ? at : null,
-      created_at: at,
-    });
-    inventory += 1;
-  }
+  // ── Destination inventory ──
+  // Deliberately NOT seeded. The office Warehouse view derives stock from
+  // shipments at destination stages (Container → Shipments → Items), so the
+  // demo shipments above already populate it. Writing standalone
+  // destination_inventory rows here would create records no screen reads.
 
   // ── Sailing notices (admin broadcast history) ──
   for (const sn of DEMO_SAILINGS) {

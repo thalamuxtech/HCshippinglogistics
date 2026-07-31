@@ -11,6 +11,8 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
+  writeBatch,
   query,
   where,
   orderBy,
@@ -110,6 +112,137 @@ export async function getShipment(id: string): Promise<Shipment | null> {
 
 export async function updateShipment(id: string, data: Partial<Shipment>): Promise<void> {
   await updateDoc(doc(db, COL.shipments, id), { ...data, updated_at: serverTimestamp() });
+}
+
+// ---- Deletion (admin only; enforced by Firestore rules) ----
+
+/**
+ * Everything that hangs off a single shipment. Status logs are immutable to
+ * clients (`allow update, delete: if false`), so they are deliberately NOT
+ * deleted here — the audit trail outlives the record it describes, which is the
+ * point of an append-only log. Callers surface the count so the operator knows.
+ */
+async function childRefsOfShipment(shipmentId: string) {
+  const [receipts, roro, destInv, usaInv] = await Promise.all([
+    getDocs(query(collection(db, COL.receipts), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.roroDocs), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.destInventory), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.usaInventory), where("shipment_id", "==", shipmentId))),
+  ]);
+  return [...receipts.docs, ...roro.docs, ...destInv.docs, ...usaInv.docs].map((d) => d.ref);
+}
+
+export interface DeleteShipmentPlan {
+  receipts: number;
+  inventory: number;
+  roroDocs: number;
+  statusLogs: number;
+}
+
+/** Count what a shipment delete would remove, so the UI can warn precisely. */
+export async function planDeleteShipment(shipmentId: string): Promise<DeleteShipmentPlan> {
+  const [receipts, roro, destInv, usaInv, logs] = await Promise.all([
+    getDocs(query(collection(db, COL.receipts), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.roroDocs), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.destInventory), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.usaInventory), where("shipment_id", "==", shipmentId))),
+    getDocs(query(collection(db, COL.statusLogs), where("shipment_id", "==", shipmentId))),
+  ]);
+  return {
+    receipts: receipts.size,
+    inventory: destInv.size + usaInv.size,
+    roroDocs: roro.size,
+    statusLogs: logs.size,
+  };
+}
+
+/**
+ * Permanently delete a shipment and its dependent records in one atomic batch,
+ * so a shipment can never be left half-deleted with orphaned receipts.
+ */
+export async function deleteShipment(shipmentId: string): Promise<void> {
+  const children = await childRefsOfShipment(shipmentId);
+  const batch = writeBatch(db);
+  children.forEach((ref) => batch.delete(ref));
+  batch.delete(doc(db, COL.shipments, shipmentId));
+  await batch.commit();
+}
+
+export interface DeleteCustomerPlan {
+  shipments: number;
+  receipts: number;
+  inventory: number;
+  roroDocs: number;
+  statusLogs: number;
+  trackingNumbers: string[];
+}
+
+/**
+ * Count everything a customer delete would destroy. Called BEFORE the confirm
+ * dialog so the warning states real numbers rather than a vague caution.
+ */
+export async function planDeleteCustomer(customerId: string): Promise<DeleteCustomerPlan> {
+  const shipments = await listShipmentsByCustomer(customerId);
+  const plans = await Promise.all(shipments.map((s) => planDeleteShipment(s.id)));
+  return {
+    shipments: shipments.length,
+    receipts: plans.reduce((n, p) => n + p.receipts, 0),
+    inventory: plans.reduce((n, p) => n + p.inventory, 0),
+    roroDocs: plans.reduce((n, p) => n + p.roroDocs, 0),
+    statusLogs: plans.reduce((n, p) => n + p.statusLogs, 0),
+    trackingNumbers: shipments.map((s) => s.tracking_number).filter(Boolean),
+  };
+}
+
+/**
+ * Permanently delete a customer AND every shipment they own, with dependents.
+ *
+ * Order matters: shipments (and their children) go first, and the user doc is
+ * deleted LAST. If the run dies partway, the customer still exists and the
+ * operation is safely repeatable — deleting the user first would strand any
+ * remaining shipments with a customer_id that resolves to nothing.
+ *
+ * Batched in chunks because a Firestore batch is capped at 500 writes.
+ */
+export async function deleteCustomerCascade(
+  customerId: string,
+  onProgress?: (done: number, total: number) => void
+): Promise<{ shipmentsDeleted: number }> {
+  const shipments = await listShipmentsByCustomer(customerId);
+  const total = shipments.length;
+  let done = 0;
+  onProgress?.(0, total);
+
+  const BATCH_LIMIT = 450; // headroom under Firestore's 500-write cap
+  let batch = writeBatch(db);
+  let writes = 0;
+  const flush = async () => {
+    if (writes > 0) {
+      await batch.commit();
+      batch = writeBatch(db);
+      writes = 0;
+    }
+  };
+
+  for (const s of shipments) {
+    const children = await childRefsOfShipment(s.id);
+    // Keep one shipment and its children in the SAME batch so a flush never
+    // splits a shipment from its receipts.
+    if (writes + children.length + 1 > BATCH_LIMIT) await flush();
+    children.forEach((ref) => {
+      batch.delete(ref);
+      writes += 1;
+    });
+    batch.delete(doc(db, COL.shipments, s.id));
+    writes += 1;
+    done += 1;
+    onProgress?.(done, total);
+  }
+  await flush();
+
+  // User doc last — see the ordering note above.
+  await deleteDoc(doc(db, COL.users, customerId));
+  return { shipmentsDeleted: total };
 }
 
 // Set payment status + deposit/balance for a shipment (admin/office).
@@ -235,6 +368,27 @@ export async function advanceStage(params: {
     created_at: serverTimestamp(),
   });
   await updateShipment(shipmentId, { current_status: status });
+}
+
+/**
+ * Completion log entries created since `since` (newest first).
+ *
+ * Powers the dispatcher "Completed today" screen. Querying the log directly
+ * replaces an N+1 that read every completed shipment and then one log query per
+ * shipment — that grew without bound as deliveries accumulated. Two equality
+ * filters plus a range on the same field need a composite index
+ * (status + created_at), declared in firestore.indexes.json.
+ */
+export async function listCompletedLogsSince(since: Date): Promise<StatusLog[]> {
+  const snap = await getDocs(
+    query(
+      collection(db, COL.statusLogs),
+      where("status", "==", "completed"),
+      where("created_at", ">=", Timestamp.fromDate(since)),
+      orderBy("created_at", "desc")
+    )
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as object) }) as StatusLog);
 }
 
 export async function listStatusLogs(shipmentId: string): Promise<StatusLog[]> {
@@ -412,6 +566,10 @@ export async function updateInventoryItem(
   data: Partial<InventoryItem>
 ): Promise<void> {
   await updateDoc(doc(db, col, id), { ...data });
+}
+
+export async function deleteInventoryItem(col: string, id: string): Promise<void> {
+  await deleteDoc(doc(db, col, id));
 }
 
 // ---- RORO consignee documents ----

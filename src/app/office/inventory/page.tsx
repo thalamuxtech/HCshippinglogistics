@@ -1,224 +1,323 @@
 "use client";
 
+// ─────────────────────────────────────────────────────────────
+// Destination warehouse — DERIVED from shipments, never hand-entered.
+//
+// The model is Container → Shipments → Items. A container's contents are
+// already fully described by the shipments assigned to it, so warehouse stock
+// is a projection of shipment stage, not a separate list someone re-types:
+// when the admin advances a container to a destination stage the cargo appears
+// here automatically, and it leaves when the shipment completes.
+//
+// This replaced a manual "Receive Item" form that wrote to a parallel
+// `destination_inventory` collection with an empty shipment_id — those rows
+// duplicated shipment data, could not be reconciled against a container, and
+// drifted the moment either side changed.
+// ─────────────────────────────────────────────────────────────
+
 import * as React from "react";
-import { Boxes, Plus, PackageCheck, PackageOpen } from "lucide-react";
-import { useAuth } from "@/components/providers/AuthProvider";
+import Link from "next/link";
 import {
-  listDestinationInventory,
-  addInventoryItem,
-  updateInventoryItem,
-  serverTimestamp,
-  COL,
-} from "@/lib/db";
-import type { InventoryItem } from "@/lib/types";
+  Boxes,
+  Search,
+  Container as ContainerIcon,
+  PackageCheck,
+  Truck,
+  Lock,
+  ChevronRight,
+  Info,
+} from "lucide-react";
+import { useAuth } from "@/components/providers/AuthProvider";
+import { listShipments, where } from "@/lib/db";
+import type { Shipment } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input, Label, Textarea } from "@/components/ui/input";
+import { Badge, StageBadge } from "@/components/ui/badge";
+import { Input, Select } from "@/components/ui/input";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
-import { useToast } from "@/components/ui/toast";
-import { formatDate } from "@/lib/utils";
+import { StatCard } from "@/components/portal/StatCard";
+import { formatDate, isDnr } from "@/lib/utils";
+import { stageOrder } from "@/lib/constants";
+
+// Stages at which cargo is physically at (or leaving) the destination
+// warehouse. Below 5 it has not arrived; "completed" has been handed over.
+const IN_WAREHOUSE: Shipment["current_status"][] = ["clearance", "offloading", "delivery"];
+
+interface ContainerBucket {
+  cnt: string;
+  label: string;
+  shipments: Shipment[];
+  itemCount: number;
+}
+
+function itemCountOf(s: Shipment): number {
+  if (s.items?.length) {
+    return s.items.reduce((n, it) => n + (Number(it.quantity) || 1), 0);
+  }
+  return 1; // air / RORO shipments are a single unit
+}
+
+function itemsLabel(s: Shipment): string {
+  if (s.items?.length) {
+    return s.items
+      .map((it) => `${it.quantity && it.quantity > 1 ? `${it.quantity}× ` : ""}${it.description}`)
+      .join(", ");
+  }
+  return s.item_category || s.vehicle_details || "Shipment cargo";
+}
 
 export default function OfficeInventoryPage() {
   const { user } = useAuth();
   const country = user?.assigned_country || "Nigeria";
-  const toast = useToast();
 
-  const [items, setItems] = React.useState<InventoryItem[]>([]);
+  const [shipments, setShipments] = React.useState<Shipment[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const [saving, setSaving] = React.useState(false);
-
-  const [desc, setDesc] = React.useState("");
-  const [tracking, setTracking] = React.useState("");
-  const [locNotes, setLocNotes] = React.useState("");
-
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const rows = await listDestinationInventory(country);
-      setItems(rows);
-    } catch {
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [country]);
+  const [q, setQ] = React.useState("");
+  const [view, setView] = React.useState<"warehouse" | "delivery" | "handed_over" | "all">(
+    "warehouse"
+  );
 
   React.useEffect(() => {
-    load();
-  }, [load]);
+    let active = true;
+    (async () => {
+      setLoading(true);
+      try {
+        const rows = await listShipments([where("destination_country", "==", country)]);
+        if (active) setShipments(rows);
+      } catch {
+        if (active) setShipments([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [country]);
 
-  async function handleIntake(e: React.FormEvent) {
-    e.preventDefault();
-    if (!desc.trim()) {
-      toast.error("Description required", "Enter an item description.");
-      return;
-    }
-    setSaving(true);
-    try {
-      await addInventoryItem(COL.destInventory, {
-        item_description: desc.trim(),
-        tracking_number: tracking.trim() || undefined,
-        location_notes: locNotes.trim() || undefined,
-        destination_country: country,
-        shipment_id: "",
-      });
-      toast.success("Item received", "Added to destination inventory.");
-      setDesc("");
-      setTracking("");
-      setLocNotes("");
-      await load();
-    } catch {
-      toast.error("Failed to add item", "Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  // Only cargo that has reached the destination is warehouse stock.
+  const arrived = React.useMemo(
+    () => shipments.filter((s) => stageOrder(s.current_status) >= 5),
+    [shipments]
+  );
 
-  async function markDispatched(item: InventoryItem) {
-    try {
-      await updateInventoryItem(COL.destInventory, item.id, {
-        dispatched_at: serverTimestamp() as unknown as InventoryItem["dispatched_at"],
-      });
-      toast.success("Marked dispatched", item.item_description);
-      await load();
-    } catch {
-      toast.error("Update failed", "Please try again.");
+  const stats = React.useMemo(() => {
+    const inWarehouse = arrived.filter((s) => IN_WAREHOUSE.includes(s.current_status));
+    return {
+      units: inWarehouse.reduce((n, s) => n + itemCountOf(s), 0),
+      shipments: inWarehouse.length,
+      containers: new Set(inWarehouse.map((s) => (s.container_number || "").trim()).filter(Boolean))
+        .size,
+      held: inWarehouse.filter((s) => isDnr(s)).length,
+    };
+  }, [arrived]);
+
+  const filtered = React.useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return arrived.filter((s) => {
+      if (view === "warehouse" && !IN_WAREHOUSE.includes(s.current_status)) return false;
+      if (view === "delivery" && s.current_status !== "delivery") return false;
+      if (view === "handed_over" && s.current_status !== "completed") return false;
+      if (!term) return true;
+      return (
+        s.tracking_number?.toLowerCase().includes(term) ||
+        s.customer_name?.toLowerCase().includes(term) ||
+        s.container_number?.toLowerCase().includes(term) ||
+        s.receiver?.full_name?.toLowerCase().includes(term) ||
+        itemsLabel(s).toLowerCase().includes(term)
+      );
+    });
+  }, [arrived, q, view]);
+
+  // Group into containers — the unit warehouse staff actually work with.
+  const buckets = React.useMemo<ContainerBucket[]>(() => {
+    const map = new Map<string, ContainerBucket>();
+    for (const s of filtered) {
+      const cnt = (s.container_number || "").trim();
+      const key = cnt || "__none__";
+      if (!map.has(key)) {
+        map.set(key, {
+          cnt,
+          label: cnt ? `CNT #${cnt}` : "No container assigned",
+          shipments: [],
+          itemCount: 0,
+        });
+      }
+      const b = map.get(key)!;
+      b.shipments.push(s);
+      b.itemCount += itemCountOf(s);
     }
-  }
+    return Array.from(map.values()).sort((a, b) => {
+      // Unassigned last, otherwise natural container order.
+      if (!a.cnt) return 1;
+      if (!b.cnt) return -1;
+      return a.cnt.localeCompare(b.cnt, undefined, { numeric: true });
+    });
+  }, [filtered]);
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">
-          Warehouse Inventory
+          Warehouse
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
-          Destination warehouse intake &amp; dispatch tracking for {country}.
+          Cargo held at the {country} warehouse, grouped by container. Updates automatically as
+          shipment stages change — nothing to enter by hand.
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Intake form */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-gold" /> Receive Item
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleIntake} className="space-y-4">
-              <div>
-                <Label htmlFor="desc" required>
-                  Item description
-                </Label>
-                <Input
-                  id="desc"
-                  value={desc}
-                  onChange={(e) => setDesc(e.target.value)}
-                  placeholder="e.g. Large Electronic Box"
-                />
-              </div>
-              <div>
-                <Label htmlFor="tracking">Tracking #</Label>
-                <Input
-                  id="tracking"
-                  value={tracking}
-                  onChange={(e) => setTracking(e.target.value)}
-                  placeholder="HC-SEA-2026-00001"
-                  className="font-mono"
-                />
-              </div>
-              <div>
-                <Label htmlFor="loc">Location notes</Label>
-                <Textarea
-                  id="loc"
-                  value={locNotes}
-                  onChange={(e) => setLocNotes(e.target.value)}
-                  placeholder="e.g. Bay 3, Rack B"
-                />
-              </div>
-              <Button type="submit" loading={saving} className="w-full">
-                <PackageCheck className="h-4 w-4" /> Add to inventory
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      {/* Stock summary */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-xl" />)
+        ) : (
+          <>
+            <StatCard label="Units in warehouse" value={stats.units} icon={Boxes} accent="navy" />
+            <StatCard label="Shipments" value={stats.shipments} icon={PackageCheck} accent="blue" />
+            <StatCard
+              label="Containers"
+              value={stats.containers}
+              icon={ContainerIcon}
+              accent="gold"
+            />
+            <StatCard
+              label="On hold (DNR)"
+              value={stats.held}
+              icon={Lock}
+              accent="orange"
+              hint={stats.held > 0 ? "Do not release until head office clears" : undefined}
+            />
+          </>
+        )}
+      </div>
 
-        {/* Inventory table */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Current Inventory</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <Skeleton key={i} className="h-14 rounded-lg" />
-                ))}
-              </div>
-            ) : items.length === 0 ? (
-              <EmptyState
-                icon={<Boxes className="h-6 w-6" />}
-                title="No inventory yet"
-                description="Received items will appear here. Use the intake form to log arrivals."
-              />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-ink-muted">
-                      <th className="pb-2 pr-3 font-medium">Item</th>
-                      <th className="pb-2 pr-3 font-medium">Tracking</th>
-                      <th className="pb-2 pr-3 font-medium">Location</th>
-                      <th className="pb-2 pr-3 font-medium">Status</th>
-                      <th className="pb-2 font-medium" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {items.map((it) => {
-                      const dispatched = !!it.dispatched_at;
-                      return (
-                        <tr key={it.id} className="align-top">
-                          <td className="py-3 pr-3">
-                            <span className="font-medium text-navy">{it.item_description}</span>
-                            <div className="text-xs text-ink-muted">
-                              Received {formatDate(it.received_at)}
+      {/* Filters */}
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
+          <Input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search tracking #, container, customer, or item…"
+            className="pl-10"
+            aria-label="Search warehouse"
+          />
+        </div>
+        <Select
+          value={view}
+          onChange={(e) => setView(e.target.value as typeof view)}
+          className="sm:w-60"
+          aria-label="Filter warehouse view"
+        >
+          <option value="warehouse">In warehouse</option>
+          <option value="delivery">Ready for delivery</option>
+          <option value="handed_over">Handed over</option>
+          <option value="all">All arrived cargo</option>
+        </Select>
+      </div>
+
+      {loading ? (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-40 rounded-xl" />
+          ))}
+        </div>
+      ) : buckets.length === 0 ? (
+        <EmptyState
+          icon={<Boxes className="h-6 w-6" />}
+          title={arrived.length === 0 ? "Nothing in the warehouse yet" : "No matching cargo"}
+          description={
+            arrived.length === 0
+              ? `Cargo appears here automatically once head office advances a container to a ${country} destination stage.`
+              : "Try a different search or view."
+          }
+        />
+      ) : (
+        <div className="space-y-5">
+          {buckets.map((b) => (
+            <Card key={b.label} className="overflow-hidden">
+              <CardHeader className="flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+                <CardTitle className="flex items-center gap-2">
+                  <ContainerIcon className="h-4 w-4 text-gold" aria-hidden />
+                  <span className="font-mono">{b.label}</span>
+                </CardTitle>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="muted">{b.shipments.length} shipment(s)</Badge>
+                  <Badge variant="gold">{b.itemCount} unit(s)</Badge>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                  {b.shipments.map((s) => {
+                    const held = isDnr(s);
+                    return (
+                      <li key={s.id}>
+                        <Link
+                          href={`/office/shipments/detail?id=${s.id}`}
+                          className="flex items-start justify-between gap-4 px-5 py-4 transition-colors hover:bg-secondary/40 focus-ring"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-mono text-sm font-semibold text-navy">
+                                {s.tracking_number}
+                              </span>
+                              <StageBadge status={s.current_status} />
+                              {held && (
+                                <Badge variant="danger">
+                                  <Lock className="mr-1 h-3 w-3" /> DNR
+                                </Badge>
+                              )}
+                              {s.current_status === "delivery" && !held && (
+                                <Badge variant="success">
+                                  <Truck className="mr-1 h-3 w-3" /> Ready
+                                </Badge>
+                              )}
                             </div>
-                          </td>
-                          <td className="py-3 pr-3 font-mono text-xs text-ink-muted">
-                            {it.tracking_number || "-"}
-                          </td>
-                          <td className="py-3 pr-3 text-xs text-ink-muted">
-                            {it.location_notes || "-"}
-                          </td>
-                          <td className="py-3 pr-3">
-                            {dispatched ? (
-                              <Badge variant="muted">Dispatched</Badge>
-                            ) : (
-                              <Badge variant="success">Received</Badge>
-                            )}
-                          </td>
-                          <td className="py-3 text-right">
-                            {!dispatched && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => markDispatched(it)}
-                              >
-                                <PackageOpen className="h-4 w-4" /> Dispatch
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
+                            <p className="mt-1 text-sm text-ink">{itemsLabel(s)}</p>
+
+                            <p className="mt-0.5 truncate text-xs text-ink-muted">
+                              {s.receiver?.full_name || s.customer_name || "Recipient"}
+                              {s.receiver?.phone ? ` · ${s.receiver.phone}` : ""}
+                              {s.destination_city ? ` · ${s.destination_city}` : ""}
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center gap-3">
+                            <div className="text-right">
+                              <p className="font-mono text-sm font-semibold text-navy">
+                                {itemCountOf(s)}
+                              </p>
+                              <p className="text-[11px] uppercase tracking-wide text-ink-muted">
+                                unit(s)
+                              </p>
+                              <p className="mt-0.5 text-[11px] text-ink-muted">
+                                {formatDate(s.updated_at)}
+                              </p>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-ink-muted" />
+                          </div>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-start gap-2.5 rounded-xl border border-border bg-secondary/40 p-4">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
+        <p className="text-xs text-ink-muted">
+          This list is generated from shipment records, so it always matches what head office and
+          dispatch see. To move cargo out of the warehouse, advance its shipment stage from{" "}
+          <Link href="/office/shipments" className="font-semibold text-gold-700 hover:underline">
+            Shipments
+          </Link>{" "}
+          — you can select a whole container there and update it in one action.
+        </p>
       </div>
     </div>
   );

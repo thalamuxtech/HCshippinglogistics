@@ -13,17 +13,22 @@ import {
   Plus,
   Search,
   X,
+  Layers,
+  Pencil,
+  Check,
 } from "lucide-react";
 import { listAllShipments, listUsers, logActivity, updateShipment } from "@/lib/db";
 import { sendContainerBroadcast } from "@/lib/notify";
 import type { Shipment, AppUser } from "@/lib/types";
-import { COMPANY, SERVICES } from "@/lib/constants";
+import { COMPANY, SERVICES, STAGE_MAP } from "@/lib/constants";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input, Textarea, Label } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { StageBadge } from "@/components/ui/badge";
 import { Skeleton, EmptyState, Modal } from "@/components/ui/misc";
+import { BulkAdvanceBar } from "@/components/portal/BulkAdvanceBar";
 import { useToast } from "@/components/ui/toast";
 
 // A container grouped from shipments.
@@ -76,6 +81,14 @@ export default function AdminContainersPage() {
   const [removedEmails, setRemovedEmails] = React.useState<Set<string>>(new Set());
   const [extraEmails, setExtraEmails] = React.useState<string[]>([]);
   const [newEmail, setNewEmail] = React.useState("");
+
+  // Inline CNT rename (the composer header doubles as the editor).
+  const [editingCnt, setEditingCnt] = React.useState(false);
+  const [cntDraft, setCntDraft] = React.useState("");
+  const [renaming, setRenaming] = React.useState(false);
+
+  // Stage selection for the container's shipments (bulk advance).
+  const [stageSel, setStageSel] = React.useState<Set<string>>(new Set());
 
   // Create / assign container modal
   const [assignOpen, setAssignOpen] = React.useState(false);
@@ -145,7 +158,84 @@ export default function AdminContainersPage() {
     setRemovedEmails(new Set());
     setExtraEmails([]);
     setNewEmail("");
+    // Also drop any stage selection and close the rename editor — both belong to
+    // the container being left behind.
+    setStageSel(new Set());
+    setEditingCnt(false);
+    setCntDraft(selected);
   }, [selected]);
+
+  /**
+   * Rename a container: rewrites container_number on every shipment in the
+   * group. Written per-shipment with failures collected, so one rejected write
+   * cannot leave the operator thinking nothing changed when most did.
+   */
+  async function handleRenameCnt() {
+    if (!user || !selectedGroup) return;
+    const from = selectedGroup.cnt;
+    const to = cntDraft.trim();
+    if (!to || to === from) {
+      setEditingCnt(false);
+      setCntDraft(from);
+      return;
+    }
+    const merging = groups.some((g) => g.cnt === to);
+    if (
+      !window.confirm(
+        merging
+          ? `CNT #${to} already exists. Move all ${selectedGroup.shipments.length} shipment(s) from CNT #${from} into it? The two containers will be merged.`
+          : `Rename CNT #${from} to CNT #${to}? This updates ${selectedGroup.shipments.length} shipment(s).`
+      )
+    )
+      return;
+
+    setRenaming(true);
+    const failed: string[] = [];
+    try {
+      for (const s of selectedGroup.shipments) {
+        try {
+          await updateShipment(s.id, { container_number: to });
+        } catch {
+          failed.push(s.tracking_number || s.id.slice(0, 8));
+        }
+      }
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: merging
+          ? `merged CNT #${from} into CNT #${to}`
+          : `renamed CNT #${from} to CNT #${to}`,
+        target: `CNT #${to}`,
+        meta: {
+          from,
+          to,
+          count: selectedGroup.shipments.length - failed.length,
+          failed: failed.length,
+        },
+      });
+      await load();
+      setSelected(to);
+      setEditingCnt(false);
+      if (failed.length === 0) {
+        toast.success(
+          merging ? "Containers merged" : "Container renamed",
+          `Now CNT #${to}.`
+        );
+      } else {
+        toast.info(
+          "Renamed with issues",
+          `${selectedGroup.shipments.length - failed.length} moved, ${failed.length} failed: ${failed
+            .slice(0, 3)
+            .join(", ")}.`
+        );
+      }
+    } catch {
+      toast.error("Rename failed", "Could not rename the container.");
+    } finally {
+      setRenaming(false);
+    }
+  }
 
   const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -342,27 +432,52 @@ export default function AdminContainersPage() {
     setAssigning(true);
     try {
       const ids = Array.from(assignPicked);
+      // Per-shipment error capture: a single rejected write must not be reported
+      // as a total failure when the rest succeeded, or the operator re-runs the
+      // whole batch trying to fix one item.
+      const failed: string[] = [];
+      let ok = 0;
       for (const id of ids) {
-        await updateShipment(id, {
-          container_number: cnt,
-          container_shipped_on: assignDate || null,
-        });
+        try {
+          await updateShipment(id, {
+            container_number: cnt,
+            // Only stamp the sail date when one was entered, so assigning to an
+            // existing container does not blank out the date already recorded.
+            ...(assignDate ? { container_shipped_on: assignDate } : {}),
+          });
+          ok += 1;
+        } catch {
+          const s = shipments.find((x) => x.id === id);
+          failed.push(s?.tracking_number || id.slice(0, 8));
+        }
       }
       await logActivity({
         actor_id: user.id,
         actor_name: user.full_name,
         actor_role: "admin",
-        action: `assigned ${ids.length} shipment(s) to CNT #${cnt}`,
+        action: `assigned ${ok} shipment(s) to CNT #${cnt}`,
         target: `CNT #${cnt}`,
-        meta: { container_number: cnt, count: ids.length },
+        meta: { container_number: cnt, count: ok, failed: failed.length },
       });
-      setAssignOpen(false);
       await load();
       setSelected(cnt);
-      toast.success(
-        "Shipments assigned",
-        `${ids.length} shipment(s) added to CNT #${cnt}.`
-      );
+      if (failed.length === 0) {
+        setAssignOpen(false);
+        toast.success("Shipments assigned", `${ok} shipment(s) added to CNT #${cnt}.`);
+      } else if (ok === 0) {
+        toast.error("Assign failed", "Could not assign any of the selected shipments.");
+      } else {
+        // Keep the modal open on partial success so the operator can see and
+        // retry just the ones that failed.
+        setAssignPicked(new Set(ids.filter((id) => {
+          const s = shipments.find((x) => x.id === id);
+          return failed.includes(s?.tracking_number || id.slice(0, 8));
+        })));
+        toast.info(
+          "Assigned with issues",
+          `${ok} added, ${failed.length} failed: ${failed.slice(0, 3).join(", ")}.`
+        );
+      }
     } catch {
       toast.error("Assign failed", "Could not assign the selected shipments.");
     } finally {
@@ -444,9 +559,63 @@ export default function AdminContainersPage() {
           {/* Recipients — editable */}
           <Card>
             <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="font-mono">CNT #{selectedGroup.cnt}</span>
+              <div className="min-w-0">
+                <CardTitle className="flex flex-wrap items-center gap-2">
+                  {editingCnt ? (
+                    <span className="flex items-center gap-1.5">
+                      <Input
+                        value={cntDraft}
+                        onChange={(e) => setCntDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleRenameCnt();
+                          }
+                          if (e.key === "Escape") {
+                            setEditingCnt(false);
+                            setCntDraft(selectedGroup.cnt);
+                          }
+                        }}
+                        className="h-9 w-28 font-mono"
+                        aria-label="Container number"
+                        autoFocus
+                        disabled={renaming}
+                      />
+                      <Button
+                        size="sm"
+                        variant="gold"
+                        onClick={handleRenameCnt}
+                        loading={renaming}
+                        disabled={renaming || !cntDraft.trim()}
+                      >
+                        <Check className="h-3.5 w-3.5" /> Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingCnt(false);
+                          setCntDraft(selectedGroup.cnt);
+                        }}
+                        disabled={renaming}
+                      >
+                        Cancel
+                      </Button>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCntDraft(selectedGroup.cnt);
+                        setEditingCnt(true);
+                      }}
+                      className="group inline-flex items-center gap-1.5 rounded-md px-1 py-0.5 font-mono transition-colors hover:bg-secondary focus-ring"
+                      title="Rename this container"
+                    >
+                      CNT #{selectedGroup.cnt}
+                      <Pencil className="h-3.5 w-3.5 text-ink-muted transition-colors group-hover:text-navy" />
+                    </button>
+                  )}
                   <Badge variant="gold">{finalEmails.length} recipient(s)</Badge>
                 </CardTitle>
                 <CardDescription className="mt-1">
@@ -520,6 +689,100 @@ export default function AdminContainersPage() {
                   Restore removed customers
                 </button>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Shipments on this container — stage control for the whole container.
+              Moving a container through a stage is ONE physical event, so it
+              belongs here rather than forcing the admin to re-find the same
+              shipments on the Shipments list and filter by CNT. */}
+          <Card>
+            <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-gold" aria-hidden />
+                  Shipments on this container
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Select shipments to move them through a stage together. Advancing to a
+                  destination stage is what places them in the Lagos office warehouse and the
+                  dispatch queue.
+                </CardDescription>
+              </div>
+              <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-medium text-ink-muted">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 cursor-pointer accent-navy"
+                  checked={
+                    selectedGroup.shipments.length > 0 &&
+                    selectedGroup.shipments.every((s) => stageSel.has(s.id))
+                  }
+                  ref={(el) => {
+                    if (el)
+                      el.indeterminate =
+                        selectedGroup.shipments.some((s) => stageSel.has(s.id)) &&
+                        !selectedGroup.shipments.every((s) => stageSel.has(s.id));
+                  }}
+                  onChange={(e) => {
+                    setStageSel(() => {
+                      const next = new Set<string>();
+                      if (e.target.checked) selectedGroup.shipments.forEach((s) => next.add(s.id));
+                      return next;
+                    });
+                  }}
+                />
+                Select all
+              </label>
+            </CardHeader>
+            <CardContent>
+              <ul className="divide-y divide-border">
+                {selectedGroup.shipments.map((s) => (
+                  <li key={s.id} className="flex items-center gap-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${s.tracking_number}`}
+                      className="h-5 w-5 shrink-0 cursor-pointer accent-navy"
+                      checked={stageSel.has(s.id)}
+                      onChange={() =>
+                        setStageSel((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(s.id)) next.delete(s.id);
+                          else next.add(s.id);
+                          return next;
+                        })
+                      }
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <a
+                          href={`/admin/shipments/detail?id=${s.id}`}
+                          className="font-mono text-xs font-semibold text-navy hover:text-gold-700 focus-ring"
+                        >
+                          {s.tracking_number || s.id.slice(0, 8)}
+                        </a>
+                        <StageBadge status={s.current_status} />
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-ink-muted">
+                        {s.customer_name || "Customer"} · {s.destination_country}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Where the container currently sits, at a glance. */}
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-border pt-3">
+                {Object.entries(
+                  selectedGroup.shipments.reduce<Record<string, number>>((acc, s) => {
+                    acc[s.current_status] = (acc[s.current_status] || 0) + 1;
+                    return acc;
+                  }, {})
+                ).map(([status, count]) => (
+                  <Badge key={status} variant="muted">
+                    {count} · {STAGE_MAP[status as keyof typeof STAGE_MAP]?.short ?? status}
+                  </Badge>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
@@ -706,6 +969,18 @@ export default function AdminContainersPage() {
             </Card>
           </div>
         </div>
+      )}
+
+      {/* Bulk stage advance for the selected container's shipments (same rules
+          and audit trail as the Shipments list). */}
+      {user && (
+        <BulkAdvanceBar
+          selected={stageSel}
+          shipments={shipments}
+          actor={{ id: user.id, full_name: user.full_name, role: user.role }}
+          onDone={load}
+          onClear={() => setStageSel(new Set())}
+        />
       )}
 
       {/* Create / assign container modal */}

@@ -101,19 +101,30 @@ service cloud.firestore {
       // the stored values). This enforces the hold model server-side.
       allow update: if isAdmin() || (
         // Destination office: only shipments bound for their assigned country,
-        // and they may not reassign a shipment out of that country.
+        // and they may not reassign a shipment out of that country. Same
+        // .get() defaulting as the dispatcher branch below, so a doc that omits
+        // destination_country fails the country check explicitly instead of
+        // silently denying every office write.
         isNigeriaOffice()
-        && resource.data.destination_country == assignedCountry()
-        && request.resource.data.destination_country == assignedCountry()
+        && resource.data.get('destination_country', '') == assignedCountry()
+        && request.resource.data.get('destination_country', '') == assignedCountry()
       ) || (
+        // Dispatchers must not change money or the DNR hold. Every comparison
+        // uses .get(field, default) on BOTH sides: `request.resource.data` is the
+        // full post-write document, and most shipment docs legitimately omit
+        // these fields (dnr_override is unset until an admin overrides; deposit /
+        // balance are absent until a payment is recorded). Comparing two MISSING
+        // fields directly does not evaluate true in rules, so the bare `==` form
+        // denied every dispatcher write on a normal doc — that is what surfaced
+        // as "Could not complete / check your connection" on Mark Delivered.
         isDispatcher()
         && request.resource.data.customer_id == resource.data.customer_id
-        && request.resource.data.total_price == resource.data.total_price
-        && request.resource.data.deposit == resource.data.deposit
-        && request.resource.data.balance == resource.data.balance
-        && request.resource.data.payment_status == resource.data.payment_status
-        && request.resource.data.dnr == resource.data.dnr
-        && request.resource.data.dnr_override == resource.data.dnr_override
+        && request.resource.data.get('total_price', 0) == resource.data.get('total_price', 0)
+        && request.resource.data.get('deposit', 0) == resource.data.get('deposit', 0)
+        && request.resource.data.get('balance', 0) == resource.data.get('balance', 0)
+        && request.resource.data.get('payment_status', '') == resource.data.get('payment_status', '')
+        && request.resource.data.get('dnr', false) == resource.data.get('dnr', false)
+        && request.resource.data.get('dnr_override', null) == resource.data.get('dnr_override', null)
       );
       allow delete: if isAdmin();
     }

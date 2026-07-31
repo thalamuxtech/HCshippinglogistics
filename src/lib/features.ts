@@ -28,10 +28,12 @@ export type FeatureKey =
   | "admin.content"
   // Destination office
   | "office.dashboard"
+  | "office.containers"
   | "office.shipments"
   | "office.inventory"
   // Dispatch
   | "dispatch.jobs"
+  | "dispatch.containers"
   | "dispatch.completed";
 
 export interface FeatureMeta {
@@ -57,10 +59,17 @@ export const FEATURES: FeatureMeta[] = [
   { key: "admin.content", label: "Content", href: "/admin/content", role: "admin" },
   // ── Destination office ──
   { key: "office.dashboard", label: "Dashboard", href: "/office", role: "nigeria_office", required: true },
+  // Order reflects the operating model: a Container holds Shipments, and those
+  // shipments are what the Warehouse view lists. Warehouse is read-only —
+  // stock appears automatically when a container reaches a destination stage.
+  { key: "office.containers", label: "Containers", href: "/office/containers", role: "nigeria_office" },
   { key: "office.shipments", label: "Shipments", href: "/office/shipments", role: "nigeria_office" },
-  { key: "office.inventory", label: "Inventory", href: "/office/inventory", role: "nigeria_office" },
+  { key: "office.inventory", label: "Warehouse", href: "/office/inventory", role: "nigeria_office" },
   // ── Dispatch ──
   { key: "dispatch.jobs", label: "My Jobs", href: "/dispatch", role: "dispatcher", required: true },
+  // Same Container → Shipments → Deliveries hierarchy the office portal uses,
+  // read-only: a rider receives a container and works the deliveries inside it.
+  { key: "dispatch.containers", label: "Containers", href: "/dispatch/containers", role: "dispatcher" },
   { key: "dispatch.completed", label: "Completed Today", href: "/dispatch/completed", role: "dispatcher" },
 ];
 
