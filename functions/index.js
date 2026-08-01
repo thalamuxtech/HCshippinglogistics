@@ -1008,6 +1008,10 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
       city: d.destination_city || "",
     },
     notes: d.notes || "",
+    // Customer-declared fragile cargo — carried through to the warehouse,
+    // destination office and rider so handling instructions are not lost.
+    fragile: !!d.fragile,
+    fragile_note: d.fragile ? String(d.fragile_note || "").slice(0, 300) : "",
     declared_value: Number(d.declared_value) || 0,
     total_price: total,
     currency: "USD",

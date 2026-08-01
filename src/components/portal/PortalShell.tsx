@@ -4,7 +4,15 @@ import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
-import { Menu, X, LogOut, ChevronDown, PanelLeftClose, PanelLeft } from "lucide-react";
+import {
+  Menu,
+  X,
+  LogOut,
+  ChevronDown,
+  PanelLeftClose,
+  PanelLeft,
+  ExternalLink,
+} from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { LogoMark } from "@/components/brand/Logo";
 import { cn, initialsOf } from "@/lib/utils";
@@ -74,35 +82,44 @@ function NavLinks({
   );
 }
 
-// Brand block is a link to the portal home; collapses to just the mark.
+// Brand block opens the PUBLIC website in a new tab, so staff can check the
+// customer-facing site without navigating out of the portal and losing their
+// place. Portal home is still one click away via the first nav item (Dashboard).
 function SidebarBrand({
   roleLabel,
-  homeHref,
   collapsed,
 }: {
   roleLabel: string;
-  homeHref: string;
   collapsed?: boolean;
 }) {
   return (
-    <Link
-      href={homeHref}
+    <a
+      href="/"
+      target="_blank"
+      rel="noreferrer"
       className={cn(
-        "flex items-center gap-3 border-b border-white/10 px-5 py-5 transition-colors hover:bg-white/5 focus-ring",
+        "group flex items-center gap-3 border-b border-white/10 px-5 py-5 transition-colors hover:bg-white/5 focus-ring",
         collapsed && "justify-center px-0"
       )}
-      aria-label="Portal home"
+      aria-label="Open the public website in a new tab"
+      title="Open the public website in a new tab"
     >
       <LogoMark className="h-9 w-9 shrink-0" />
       {!collapsed && (
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold leading-tight text-white">Highclass Shipping</p>
+        <div className="min-w-0 flex-1">
+          <p className="flex items-center gap-1.5 truncate text-sm font-bold leading-tight text-white">
+            Highclass Shipping
+            <ExternalLink
+              className="h-3 w-3 shrink-0 text-gold-300 opacity-0 transition-opacity group-hover:opacity-100"
+              aria-hidden
+            />
+          </p>
           <p className="text-[11px] font-medium uppercase tracking-[0.12em] text-gold-200">
             {roleLabel}
           </p>
         </div>
       )}
-    </Link>
+    </a>
   );
 }
 
@@ -113,7 +130,7 @@ export function PortalShell({ nav, title, roleLabel, children, headerActions }: 
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement>(null);
-  const homeHref = nav[0]?.href ?? "/";
+
 
   // Restore collapse preference.
   React.useEffect(() => {
@@ -161,7 +178,7 @@ export function PortalShell({ nav, title, roleLabel, children, headerActions }: 
           collapsed ? "w-[76px]" : "w-64"
         )}
       >
-        <SidebarBrand roleLabel={roleLabel} homeHref={homeHref} collapsed={collapsed} />
+        <SidebarBrand roleLabel={roleLabel} collapsed={collapsed} />
         <NavLinks nav={nav} pathname={pathname} collapsed={collapsed} />
         <div className="space-y-1 border-t border-white/10 px-3 py-4">
           <button
@@ -205,7 +222,7 @@ export function PortalShell({ nav, title, roleLabel, children, headerActions }: 
           />
           <aside className="absolute inset-y-0 left-0 flex w-72 max-w-[80%] flex-col bg-navy-gradient shadow-premium animate-fade-up">
             <div className="flex items-center justify-between border-b border-white/10 pr-3">
-              <SidebarBrand roleLabel={roleLabel} homeHref={homeHref} />
+              <SidebarBrand roleLabel={roleLabel} />
               <button
                 onClick={() => setMobileOpen(false)}
                 className="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white focus-ring cursor-pointer"

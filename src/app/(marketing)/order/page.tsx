@@ -17,6 +17,7 @@ import {
   Copy,
   PackageCheck,
   ShieldCheck,
+  AlertTriangle,
 } from "lucide-react";
 import { useToast } from "@/components/ui/toast";
 import {
@@ -27,11 +28,11 @@ import {
   type SeaSelection,
 } from "@/lib/pricing";
 import { usePricingSettings } from "@/lib/pricing-settings";
+import { useSeaPriceList, categoriesOf } from "@/lib/sea-price-list";
 import {
-  SEA_PRICE_LIST,
-  PRICE_CATEGORIES,
   DESTINATION_COUNTRIES,
   SERVICES,
+  type SeedPriceItem,
 } from "@/lib/constants";
 import type {
   ServiceType,
@@ -91,6 +92,8 @@ function OrderFlow() {
   const [senderAddress, setSenderAddress] = React.useState("");
 
   // ---- Sea state: s_n -> quantity ----
+  // Live admin-managed price list; the order total is built from this.
+  const seaPriceList = useSeaPriceList();
   const [seaQty, setSeaQty] = React.useState<Record<number, number>>({});
   const [seaCategory, setSeaCategory] = React.useState<string>(ALL);
 
@@ -113,6 +116,10 @@ function OrderFlow() {
   const [doorToDoor, setDoorToDoor] = React.useState(false);
   const [pickupAddress, setPickupAddress] = React.useState<string>("");
   const [notes, setNotes] = React.useState<string>("");
+  // Fragile declaration — travels with the shipment to the warehouse, the
+  // destination office and the rider.
+  const [fragile, setFragile] = React.useState(false);
+  const [fragileNote, setFragileNote] = React.useState("");
   const [declaredValue, setDeclaredValue] = React.useState<string>("");
 
   // ---- Receiver / consignee (for the receipt & delivery) ----
@@ -203,7 +210,13 @@ function OrderFlow() {
         .filter((s) => s.quantity > 0),
     [seaQty]
   );
-  const seaQuote = React.useMemo(() => buildSeaQuote(seaSelections), [seaSelections]);
+  // Price the order from the LIVE list. Passing seaPriceList is what makes an
+  // admin price change reach the customer's total — the default argument is the
+  // hardcoded constant, so omitting it silently quoted stale prices.
+  const seaQuote = React.useMemo(
+    () => buildSeaQuote(seaSelections, seaPriceList),
+    [seaSelections, seaPriceList]
+  );
 
   const airDims =
     airL && airW && airH
@@ -238,8 +251,8 @@ function OrderFlow() {
   // ---- Sea helpers ----
   const filteredSea =
     seaCategory === ALL
-      ? SEA_PRICE_LIST
-      : SEA_PRICE_LIST.filter((i) => i.category === seaCategory);
+      ? seaPriceList
+      : seaPriceList.filter((i) => i.category === seaCategory);
 
   function setQty(sn: number, next: number) {
     setSeaQty((cur) => {
@@ -255,6 +268,9 @@ function OrderFlow() {
     if (!senderName.trim()) return "Please enter your full name.";
     if (!senderEmail.trim() || !/.+@.+\..+/.test(senderEmail.trim()))
       return "Please enter a valid email address.";
+    // Phone is as essential as email: it is how the destination office and the
+    // rider reach the sender about a hold, a customs query, or a failed delivery.
+    if (!senderPhone.trim()) return "Please enter your phone number.";
     if (!destCountry) return "Please select a destination country.";
     if (!rcvName.trim()) return "Please enter the receiver's full name.";
     if (!rcvPhone.trim()) return "Please enter the receiver's phone number.";
@@ -285,7 +301,7 @@ function OrderFlow() {
         service_type: service,
         full_name: senderName.trim(),
         email: senderEmail.trim(),
-        phone: senderPhone.trim() || undefined,
+        phone: senderPhone.trim(),
         dob: senderDob || undefined,
         address: senderAddress.trim() || undefined,
         destination_country: destCountry,
@@ -293,6 +309,8 @@ function OrderFlow() {
         door_to_door: doorToDoor,
         pickup_address: doorToDoor ? pickupAddress.trim() : undefined,
         notes: notes.trim() || undefined,
+        fragile,
+        fragile_note: fragile ? fragileNote.trim() || undefined : undefined,
         declared_value: declaredValue ? Number(declaredValue) : undefined,
         receiver: {
           full_name: rcvName.trim(),
@@ -457,7 +475,9 @@ function OrderFlow() {
                 </div>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
-                    <Label htmlFor="sender-phone">Phone (optional)</Label>
+                    <Label htmlFor="sender-phone" required>
+                      Phone
+                    </Label>
                     <Input
                       id="sender-phone"
                       type="tel"
@@ -499,6 +519,7 @@ function OrderFlow() {
                 items={filteredSea}
                 qty={seaQty}
                 setQty={setQty}
+                categories={categoriesOf(seaPriceList)}
               />
             )}
 
@@ -687,6 +708,53 @@ function OrderFlow() {
                     />
                     <FieldHint>Used for insurance and customs documentation.</FieldHint>
                   </div>
+                </div>
+
+                {/* Fragile declaration */}
+                <div
+                  className={cn(
+                    "rounded-xl border-2 p-4 transition-colors",
+                    fragile ? "border-amber-300 bg-amber-50" : "border-border bg-white"
+                  )}
+                >
+                  <label className="flex cursor-pointer items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={fragile}
+                      onChange={(e) => setFragile(e.target.checked)}
+                      className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer accent-navy"
+                    />
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5 text-sm font-semibold text-navy">
+                        <AlertTriangle
+                          className={cn(
+                            "h-4 w-4",
+                            fragile ? "text-amber-600" : "text-ink-muted"
+                          )}
+                        />
+                        This shipment contains fragile items
+                      </span>
+                      <span className="mt-0.5 block text-xs text-ink-muted">
+                        We tag it for careful handling at every stage, and the warehouse team and
+                        delivery rider both see the warning.
+                      </span>
+                    </span>
+                  </label>
+
+                  {fragile && (
+                    <div className="mt-3">
+                      <Label htmlFor="fragile-note">
+                        What is fragile? (helps us pack and handle it)
+                      </Label>
+                      <Input
+                        id="fragile-note"
+                        value={fragileNote}
+                        onChange={(e) => setFragileNote(e.target.value)}
+                        placeholder="e.g. Glassware in box 2, flat-screen TV"
+                        className="bg-white"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -915,14 +983,17 @@ function SeaBuilder({
   items,
   qty,
   setQty,
+  categories,
 }: {
   category: string;
   setCategory: (c: string) => void;
-  items: typeof SEA_PRICE_LIST;
+  items: SeedPriceItem[];
   qty: Record<number, number>;
   setQty: (sn: number, next: number) => void;
+  /** Categories from the live list, so admin-added ones are selectable. */
+  categories: string[];
 }) {
-  const chips = [ALL, ...PRICE_CATEGORIES];
+  const chips = [ALL, ...categories];
   return (
     <Card>
       <CardHeader>

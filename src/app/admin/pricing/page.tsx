@@ -11,6 +11,7 @@ import {
 } from "@/lib/db";
 import type { PriceListItem } from "@/lib/types";
 import { SEA_PRICE_LIST } from "@/lib/constants";
+import { primeSeaPriceCache } from "@/lib/sea-price-list";
 import {
   PRICING_DEFAULTS,
   mergePricingSettings,
@@ -158,6 +159,20 @@ function SeaSection() {
         meta: { s_n: row.s_n, price: row.price },
       });
       setDirty((d) => ({ ...d, [row.s_n]: false }));
+      // Refresh the shared price cache so the public pricing pages and the
+      // customer order form pick the new price up without a reload.
+      setRows((current) => {
+        primeSeaPriceCache(
+          current.map((r) => ({
+            s_n: r.s_n,
+            dimensions: r.dimensions,
+            description: r.description,
+            price: Number(r.price) || 0,
+            category: r.category,
+          }))
+        );
+        return current;
+      });
       toast.success("Saved", `${row.description} updated.`);
     } catch {
       toast.error("Save failed", "Could not save this price item.");

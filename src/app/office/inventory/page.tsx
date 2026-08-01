@@ -31,7 +31,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { listShipments, where } from "@/lib/db";
 import type { Shipment } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge, StageBadge } from "@/components/ui/badge";
+import { Badge, StageBadge, FragileBadge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { StatCard } from "@/components/portal/StatCard";
@@ -94,9 +94,14 @@ export default function OfficeInventoryPage() {
     };
   }, [country]);
 
-  // Only cargo that has reached the destination is warehouse stock.
+  // Only cargo that has reached the destination is warehouse stock. RORO is
+  // excluded: a vehicle is not shelved stock and is monitored in Operations, so
+  // counting it here too would double-count the same cargo across two screens.
   const arrived = React.useMemo(
-    () => shipments.filter((s) => stageOrder(s.current_status) >= 5),
+    () =>
+      shipments.filter(
+        (s) => stageOrder(s.current_status) >= 5 && s.service_type !== "roro"
+      ),
     [shipments]
   );
 
@@ -162,7 +167,11 @@ export default function OfficeInventoryPage() {
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
           Cargo held at the {country} warehouse, grouped by container. Updates automatically as
-          shipment stages change — nothing to enter by hand.
+          shipment stages change — nothing to enter by hand. Vehicles are tracked in{" "}
+          <Link href="/office/operations" className="font-semibold text-gold-700 hover:underline">
+            Operations
+          </Link>
+          .
         </p>
       </div>
 
@@ -262,6 +271,7 @@ export default function OfficeInventoryPage() {
                                 {s.tracking_number}
                               </span>
                               <StageBadge status={s.current_status} />
+                              {s.fragile && <FragileBadge note={s.fragile_note} />}
                               {held && (
                                 <Badge variant="danger">
                                   <Lock className="mr-1 h-3 w-3" /> DNR

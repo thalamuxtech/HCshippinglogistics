@@ -32,7 +32,7 @@ import {
 import { useAuth } from "@/components/providers/AuthProvider";
 import { listArrivedShipments, listCompletedLogsSince } from "@/lib/db";
 import type { Shipment } from "@/lib/types";
-import { StageBadge } from "@/components/ui/badge";
+import { StageBadge, FragileBadge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { StatCard } from "@/components/portal/StatCard";
@@ -316,6 +316,7 @@ export default function DispatchJobsPage() {
 
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <StageBadge status={job.current_status} />
+                          {job.fragile && <FragileBadge note={job.fragile_note} />}
                           {isMine && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-navy px-2.5 py-0.5 text-xs font-bold text-gold-300">
                               <UserCheck className="h-3 w-3" /> Assigned to you

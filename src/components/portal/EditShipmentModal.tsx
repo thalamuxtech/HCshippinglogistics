@@ -12,12 +12,12 @@
 // ─────────────────────────────────────────────────────────────
 
 import * as React from "react";
-import { Plus, Trash2, Save } from "lucide-react";
+import { Plus, Trash2, Save, AlertTriangle } from "lucide-react";
 import { Modal } from "@/components/ui/misc";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea, Label, FieldHint } from "@/components/ui/input";
 import { DESTINATION_COUNTRIES } from "@/lib/constants";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, cn } from "@/lib/utils";
 import type { Shipment, ShipmentItem, ServiceType, ShippingLine } from "@/lib/types";
 
 type Draft = {
@@ -39,6 +39,8 @@ type Draft = {
   receiver_address: string;
   notes: string;
   total_price: string;
+  fragile: boolean;
+  fragile_note: string;
 };
 
 function draftFrom(s: Shipment): Draft {
@@ -61,6 +63,8 @@ function draftFrom(s: Shipment): Draft {
     receiver_address: s.receiver?.address ?? "",
     notes: s.notes ?? "",
     total_price: s.total_price != null ? String(s.total_price) : "0",
+    fragile: !!s.fragile,
+    fragile_note: s.fragile_note ?? "",
   };
 }
 
@@ -148,7 +152,12 @@ export function EditShipmentModal({
     // (payment, stage) with values this modal read at open time.
     const patch: Partial<Shipment> = {};
     const orig = draftFrom(shipment);
-    const str = (k: keyof Draft, field: keyof Shipment) => {
+    // Restricted to the Draft's string fields so a boolean (fragile) can never
+    // be routed through .trim() — those are handled explicitly below.
+    type StringDraftKey = {
+      [K in keyof Draft]: Draft[K] extends string ? K : never;
+    }[keyof Draft];
+    const str = (k: StringDraftKey, field: keyof Shipment) => {
       if (draft[k] !== orig[k]) (patch as Record<string, unknown>)[field] = draft[k].trim() || null;
     };
 
@@ -162,6 +171,9 @@ export function EditShipmentModal({
     str("delivery_address", "delivery_address");
     str("notes", "notes");
 
+    if (draft.fragile !== orig.fragile) patch.fragile = draft.fragile;
+    if (draft.fragile_note !== orig.fragile_note)
+      patch.fragile_note = draft.fragile ? draft.fragile_note.trim() : "";
     if (draft.service_type !== orig.service_type) patch.service_type = draft.service_type;
     if (draft.destination_country !== orig.destination_country)
       patch.destination_country = draft.destination_country.trim();
@@ -357,6 +369,41 @@ export function EditShipmentModal({
                 onChange={(e) => set("vehicle_details", e.target.value)}
               />
             </div>
+          </div>
+
+          {/* Fragile flag — visible to the warehouse, office and rider. */}
+          <div
+            className={cn(
+              "rounded-lg border-2 p-3 transition-colors",
+              draft.fragile ? "border-amber-300 bg-amber-50" : "border-border"
+            )}
+          >
+            <label className="flex cursor-pointer items-center gap-2.5">
+              <input
+                type="checkbox"
+                checked={draft.fragile}
+                onChange={(e) => set("fragile", e.target.checked)}
+                className="h-5 w-5 cursor-pointer accent-navy"
+              />
+              <span className="flex items-center gap-1.5 text-sm font-semibold text-navy">
+                <AlertTriangle
+                  className={cn("h-4 w-4", draft.fragile ? "text-amber-600" : "text-ink-muted")}
+                />
+                Fragile — handle with care
+              </span>
+            </label>
+            {draft.fragile && (
+              <div className="mt-2.5">
+                <Label htmlFor="e-fragile-note">Handling note</Label>
+                <Input
+                  id="e-fragile-note"
+                  value={draft.fragile_note}
+                  onChange={(e) => set("fragile_note", e.target.value)}
+                  placeholder="e.g. Glassware in box 2"
+                  className="bg-white"
+                />
+              </div>
+            )}
           </div>
         </section>
 

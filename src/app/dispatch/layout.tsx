@@ -22,7 +22,9 @@ export default function DispatchLayout({ children }: { children: React.ReactNode
   return (
     <RequireRole roles={["dispatcher"]}>
       <FeatureGuard>
-        <PortalShell nav={nav} title="Dispatch" roleLabel="Dispatcher">
+        {/* Team is named "Logistics"; the role key and /dispatch routes are
+            unchanged so existing accounts and saved links keep working. */}
+        <PortalShell nav={nav} title="Logistics" roleLabel="Logistics">
           {children}
         </PortalShell>
       </FeatureGuard>

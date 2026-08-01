@@ -33,13 +33,15 @@ import type { AppUser, Role } from "@/lib/types";
 const STAFF_ROLES: { value: Exclude<Role, "customer">; label: string; icon: React.ElementType }[] = [
   { value: "admin", label: "Administrator", icon: ShieldCheck },
   { value: "nigeria_office", label: "Destination Office", icon: Building2 },
-  { value: "dispatcher", label: "Dispatcher", icon: Truck },
+  // Display name only — the stored role key stays "dispatcher" so existing
+  // accounts, Firestore rules and /dispatch routes are unaffected.
+  { value: "dispatcher", label: "Logistics", icon: Truck },
 ];
 
 const ROLE_LABEL: Record<string, string> = {
   admin: "Administrator",
   nigeria_office: "Destination Office",
-  dispatcher: "Dispatcher",
+  dispatcher: "Logistics",
   customer: "Customer",
 };
 

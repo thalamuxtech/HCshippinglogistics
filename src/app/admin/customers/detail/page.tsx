@@ -20,6 +20,8 @@ import {
   UserX,
   Copy,
   Trash2,
+  Pencil,
+  Save,
 } from "lucide-react";
 import {
   getUser,
@@ -29,6 +31,7 @@ import {
   logActivity,
   planDeleteCustomer,
   deleteCustomerCascade,
+  updateShipment,
   type DeleteCustomerPlan,
 } from "@/lib/db";
 import { sendStageUpdateEmail, sendAccessCodeEmail } from "@/lib/notify";
@@ -39,7 +42,8 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StageBadge, Badge } from "@/components/ui/badge";
-import { Skeleton, EmptyState } from "@/components/ui/misc";
+import { Skeleton, EmptyState, Modal } from "@/components/ui/misc";
+import { Input, Label } from "@/components/ui/input";
 import { ConfirmDeleteModal } from "@/components/portal/ConfirmDeleteModal";
 import { useToast } from "@/components/ui/toast";
 import { formatCurrency, formatDate, initialsOf } from "@/lib/utils";
@@ -72,6 +76,107 @@ function AdminCustomerDetailPageInner() {
   const [deleteOpen, setDeleteOpen] = React.useState(false);
   const [delPlan, setDelPlan] = React.useState<DeleteCustomerPlan | null>(null);
   const [delProgress, setDelProgress] = React.useState<{ done: number; total: number } | null>(null);
+
+  // ── Contact editing ──
+  // Notification emails are addressed from users/{id}.email server-side, so a
+  // typo made at signup keeps every email bouncing until the stored value is
+  // corrected. There was no UI to do that at all.
+  const [editOpen, setEditOpen] = React.useState(false);
+  const [fEmail, setFEmail] = React.useState("");
+  const [fPhone, setFPhone] = React.useState("");
+  const [fName, setFName] = React.useState("");
+  const [fAddress, setFAddress] = React.useState("");
+  const [savingContact, setSavingContact] = React.useState(false);
+  const [contactError, setContactError] = React.useState<string | null>(null);
+
+  function openEdit() {
+    if (!customer) return;
+    setFEmail(customer.email ?? "");
+    setFPhone(customer.phone ?? "");
+    setFName(customer.full_name ?? "");
+    setFAddress(customer.address ?? "");
+    setContactError(null);
+    setEditOpen(true);
+  }
+
+  async function saveContact() {
+    if (!customer || !user) return;
+    const email = fEmail.trim().toLowerCase();
+    const phone = fPhone.trim();
+    const name = fName.trim();
+    if (!name) {
+      setContactError("Full name is required.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      setContactError("Enter a valid email address.");
+      return;
+    }
+    if (!phone) {
+      setContactError("Phone number is required.");
+      return;
+    }
+    setSavingContact(true);
+    setContactError(null);
+    const emailChanged = email !== (customer.email ?? "").toLowerCase();
+    try {
+      await updateUserDoc(customer.id, {
+        email,
+        phone,
+        full_name: name,
+        address: fAddress.trim() || undefined,
+      });
+      // Shipments carry denormalized copies of the customer's contact details
+      // (used by invoices and the dispatch job card). Leaving them stale is what
+      // makes a "corrected" address look correct in one place and wrong in
+      // another, so update them alongside the account.
+      const stale = shipments.filter(
+        (s) =>
+          (s.customer_email ?? "") !== email ||
+          (s.customer_phone ?? "") !== phone ||
+          (s.customer_name ?? "") !== name
+      );
+      let shipmentFailures = 0;
+      for (const s of stale) {
+        try {
+          await updateShipment(s.id, {
+            customer_email: email,
+            customer_phone: phone,
+            customer_name: name,
+          });
+        } catch {
+          shipmentFailures += 1;
+        }
+      }
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: emailChanged ? "corrected customer email" : "updated customer contact details",
+        target: name,
+        meta: {
+          customer_id: customer.id,
+          old_email: customer.email ?? null,
+          new_email: email,
+          shipments_updated: stale.length - shipmentFailures,
+        },
+      });
+      await load();
+      setEditOpen(false);
+      toast.success(
+        "Contact details saved",
+        shipmentFailures > 0
+          ? `Account updated. ${shipmentFailures} shipment record(s) could not be synced.`
+          : emailChanged
+          ? "Future emails will go to the new address."
+          : undefined
+      );
+    } catch {
+      setContactError("Could not save. Please try again.");
+    } finally {
+      setSavingContact(false);
+    }
+  }
 
   const load = React.useCallback(async () => {
     const [c, s] = await Promise.all([getUser(id), listShipmentsByCustomer(id)]);
@@ -388,6 +493,9 @@ function AdminCustomerDetailPageInner() {
                 </>
               )}
             </Button>
+            <Button variant="outline" size="sm" onClick={openEdit} disabled={busy !== null}>
+              <Pencil className="h-4 w-4" /> Edit details
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -565,6 +673,86 @@ function AdminCustomerDetailPageInner() {
           </div>
         )}
       </Card>
+
+      {/* Edit contact details — the fix for a signup typo. */}
+      <Modal
+        open={editOpen}
+        onClose={() => !savingContact && setEditOpen(false)}
+        title="Edit customer details"
+        description="Notification emails are sent to the address stored here, so correcting it here fixes future delivery."
+      >
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="c-name" required>
+              Full name
+            </Label>
+            <Input id="c-name" value={fName} onChange={(e) => setFName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="c-email" required>
+              Email
+            </Label>
+            <Input
+              id="c-email"
+              type="email"
+              value={fEmail}
+              onChange={(e) => setFEmail(e.target.value)}
+              autoComplete="off"
+              className="font-mono"
+            />
+            {fEmail.trim().toLowerCase() !== (c.email ?? "").toLowerCase() && (
+              <p className="mt-1.5 text-xs font-medium text-amber-600">
+                Changing from {c.email || "(none)"}. The customer signs in with their access code,
+                not this address, so their login is unaffected.
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="c-phone" required>
+              Phone
+            </Label>
+            <Input id="c-phone" value={fPhone} onChange={(e) => setFPhone(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="c-address">Address</Label>
+            <Input id="c-address" value={fAddress} onChange={(e) => setFAddress(e.target.value)} />
+          </div>
+
+          {shipments.length > 0 && (
+            <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-ink-muted">
+              {shipments.length} shipment record(s) carry a copy of these contact details for
+              invoices and dispatch job cards. They will be updated too, so nothing is left
+              showing the old value.
+            </p>
+          )}
+
+          {contactError && (
+            <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+              {contactError}
+            </p>
+          )}
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setEditOpen(false)}
+              disabled={savingContact}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="gold"
+              className="flex-1"
+              onClick={saveContact}
+              loading={savingContact}
+              disabled={savingContact}
+            >
+              <Save className="h-4 w-4" /> Save details
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       <ConfirmDeleteModal
         open={deleteOpen}

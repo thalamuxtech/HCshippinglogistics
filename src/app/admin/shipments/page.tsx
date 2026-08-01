@@ -9,7 +9,7 @@ import type { Shipment, ShipmentStatus, ServiceType } from "@/lib/types";
 import { STAGES, SERVICES } from "@/lib/constants";
 import { Card } from "@/components/ui/card";
 import { Input, Select } from "@/components/ui/input";
-import { StageBadge, Badge } from "@/components/ui/badge";
+import { StageBadge, Badge, FragileBadge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { BulkAdvanceBar } from "@/components/portal/BulkAdvanceBar";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
@@ -248,6 +248,11 @@ export default function AdminShipmentsPage() {
                       {s.container_number && (
                         <div className="mt-1 font-mono text-[10px] text-ink-muted">
                           CNT #{s.container_number}
+                        </div>
+                      )}
+                      {s.fragile && (
+                        <div className="mt-1">
+                          <FragileBadge note={s.fragile_note} />
                         </div>
                       )}
                     </td>

@@ -16,6 +16,7 @@ import {
   Lock,
   Container,
   Warehouse,
+  PackageOpen,
 } from "lucide-react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { storage } from "@/lib/firebase";
@@ -34,6 +35,7 @@ import { Input, Label, Textarea } from "@/components/ui/input";
 import { PageLoader, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { isDnr } from "@/lib/utils";
+import { compressImages } from "@/lib/image-compress";
 
 function DispatchJobDetailPageInner() {
   const searchParams = useSearchParams();
@@ -112,11 +114,17 @@ function DispatchJobDetailPageInner() {
     }
     setSubmitting(true);
     try {
-      // Upload proof-of-delivery photos in parallel — a rider on mobile data
-      // would otherwise wait for each one in turn.
+      // Downscale before upload: phone cameras produce multi-megabyte JPEGs and
+      // proof of delivery only needs to be legible, so this saves both the
+      // rider's mobile data and Storage cost over time. Fails open — an
+      // uncompressible file uploads as-is rather than being dropped.
+      const prepared = await compressImages(photos);
+
+      // Upload in parallel — a rider on mobile data would otherwise wait for
+      // each one in turn.
       const stamp = Date.now();
       const urls: string[] = await Promise.all(
-        photos.map(async (file, i) => {
+        prepared.map(async (file, i) => {
           const storageRef = ref(storage, `shipments/${job.id}/pod/${stamp}_${i}_${file.name}`);
           await uploadBytes(storageRef, file);
           return getDownloadURL(storageRef);
@@ -284,6 +292,22 @@ function DispatchJobDetailPageInner() {
                 : job.item_category || job.vehicle_details || "Shipment items"}
             </span>
           </div>
+
+          {/* Fragile warning — prominent, above the general notes, because a
+              rider must see it before lifting anything. */}
+          {job.fragile && (
+            <div className="flex items-start gap-2.5 rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+              <PackageOpen className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <span className="min-w-0">
+                <span className="block text-sm font-bold uppercase tracking-wide text-amber-800">
+                  Fragile — handle with care
+                </span>
+                {job.fragile_note && (
+                  <span className="mt-0.5 block text-sm text-amber-800">{job.fragile_note}</span>
+                )}
+              </span>
+            </div>
+          )}
 
           {job.notes && (
             <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 p-3">

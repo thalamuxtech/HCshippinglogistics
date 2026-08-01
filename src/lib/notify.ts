@@ -49,9 +49,11 @@ export interface PublicOrderInput {
   service_type: "sea" | "air" | "roro";
   full_name: string;
   email: string;
-  phone?: string;
+  phone: string;
   dob?: string; // YYYY-MM-DD (age computed server-side)
   address?: string; // sender full address
+  fragile?: boolean;
+  fragile_note?: string;
   destination_country: string;
   destination_city?: string;
   door_to_door?: boolean; // pickup requested (+$50)

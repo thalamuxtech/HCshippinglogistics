@@ -85,6 +85,10 @@ export interface Shipment {
   service_type: ServiceType;
   items?: ShipmentItem[]; // sea cargo line items
   item_category?: string;
+  // Customer-declared fragile cargo. Surfaced to the warehouse, the destination
+  // office and the rider so handling instructions travel with the shipment.
+  fragile?: boolean;
+  fragile_note?: string;
   dimensions?: Dimensions;
   weight?: number; // lbs (air)
   dimensional_weight?: number; // lbs (air)

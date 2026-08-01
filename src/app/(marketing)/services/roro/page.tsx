@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { RoroEstimator } from "@/components/marketing/RoroEstimator";
-import { RORO_LINES, VEHICLE_CLASSES } from "@/lib/constants";
+import { RoroLineCards, VehicleClassCards } from "@/components/marketing/RoroRateCards";
 import type { ShippingLine, VehicleClass } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -22,9 +22,6 @@ export const metadata: Metadata = {
   description:
     "Roll-on, roll-off vehicle shipping from the USA to African ports via Grimaldi, Sallaum, and MSC. Class-based rates plus a live curb-weight estimator.",
 };
-
-const lineKeys = Object.keys(RORO_LINES) as ShippingLine[];
-const classKeys = Object.keys(VEHICLE_CLASSES) as VehicleClass[];
 
 const documents = [
   {
@@ -102,31 +99,7 @@ export default function RoroPage() {
             your route. Base ocean rates below (Class A & B).
           </p>
         </Reveal>
-        <div className="mt-14 grid gap-6 md:grid-cols-3">
-          {lineKeys.map((key, i) => {
-            const line = RORO_LINES[key];
-            return (
-              <Reveal key={key} delay={i * 0.06}>
-                <Card className="flex h-full flex-col p-6">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-navy text-gold-300 shadow-premium">
-                    <Anchor className="h-5 w-5" />
-                  </span>
-                  <h3 className="mt-5 font-bold text-navy">{line.label}</h3>
-                  <div className="mt-4 flex items-baseline gap-1">
-                    <span className="font-mono text-3xl font-bold text-navy">
-                      ${line.classA.toLocaleString()}
-                    </span>
-                    <span className="text-sm text-ink-muted">base</span>
-                  </div>
-                  <p className="mt-1 text-xs text-ink-muted">Class A & Class B ocean rate</p>
-                  <p className="mt-4 border-t border-border pt-4 text-sm text-ink-muted">
-                    Class C (trucks & trailers): {line.classC}
-                  </p>
-                </Card>
-              </Reveal>
-            );
-          })}
-        </div>
+        <RoroLineCards />
       </section>
 
       {/* Vehicle classes */}
@@ -142,25 +115,7 @@ export default function RoroPage() {
               rate; Class C is quoted individually.
             </p>
           </Reveal>
-          <div className="mt-14 grid gap-6 md:grid-cols-3">
-            {classKeys.map((key, i) => {
-              const cls = VEHICLE_CLASSES[key];
-              return (
-                <Reveal key={key} delay={i * 0.06}>
-                  <Card className="h-full p-6">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
-                        <Car className="h-5 w-5" />
-                      </span>
-                      <Badge variant="gold">{key.replace("_", " ").toUpperCase()}</Badge>
-                    </div>
-                    <h3 className="mt-4 font-bold text-navy">{cls.label}</h3>
-                    <p className="mt-1.5 text-sm text-ink-muted">{cls.basis}</p>
-                  </Card>
-                </Reveal>
-              );
-            })}
-          </div>
+          <VehicleClassCards />
         </div>
       </section>
 

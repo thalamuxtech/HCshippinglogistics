@@ -94,7 +94,7 @@ export default function AboutPage() {
                 We are registered in Maryland, USA and in Nigeria (CAC), so the company you deal with
                 is a legal entity on both ends of the corridor. We started as a licensed freight
                 forwarder and grew by doing the small things right, from a single barrel going home to
-                a hospital's multi-container equipment order.
+                a hospital&apos;s multi-container equipment order.
               </p>
               <p>
                 Two offices, one team. Our warehouse in Upper Marlboro, Maryland and our office in
@@ -104,7 +104,8 @@ export default function AboutPage() {
               </p>
               <p>
                 Every shipment is weighed, measured, photographed, and receipted before it leaves our
-                Maryland warehouse, then tracked through 8 stages until it is in the recipient's hands.
+                Maryland warehouse, then tracked through 8 stages until it is in the
+                recipient&apos;s hands.
                 You get a formal receipt and a record you can pull up later, not a string of chat
                 messages. That record is exactly what government, hospital, and embassy buyers ask to
                 see before they sign, and it is why they come back.

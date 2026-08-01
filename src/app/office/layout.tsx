@@ -10,15 +10,18 @@ import {
   Package,
   Boxes,
   Container,
+  Car,
 } from "lucide-react";
 
 // Ordered to mirror the operating model: a Container holds Shipments, and those
-// shipments are what the Warehouse view shows.
+// shipments are what the Warehouse view shows. Operations sits alongside for
+// vehicles/RORO, which are routed there instead of into warehouse stock.
 const NAV: (PortalNavItem & { key: FeatureKey })[] = [
   { key: "office.dashboard", href: "/office", label: "Dashboard", icon: LayoutDashboard },
   { key: "office.containers", href: "/office/containers", label: "Containers", icon: Container },
   { key: "office.shipments", href: "/office/shipments", label: "Shipments", icon: Package },
   { key: "office.inventory", href: "/office/inventory", label: "Warehouse", icon: Boxes },
+  { key: "office.operations", href: "/office/operations", label: "Operations", icon: Car },
 ];
 
 export default function OfficeLayout({ children }: { children: React.ReactNode }) {

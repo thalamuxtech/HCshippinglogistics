@@ -23,7 +23,7 @@ import type { Role } from "@/lib/types";
 const DEMO: { role: Role; label: string; email: string; password: string; icon: React.ElementType }[] = [
   { role: "admin", label: "Administrator", email: "admin@highclassshippinglogistics.com", password: "HCshipping@54321", icon: ShieldCheck },
   { role: "nigeria_office", label: "Destination Office", email: "nigeria.office@highclassshippinglogistics.com", password: "HCshipping@54321", icon: Building2 },
-  { role: "dispatcher", label: "Dispatcher", email: "dispatcher@highclassshippinglogistics.com", password: "HCshipping@54321", icon: Truck },
+  { role: "dispatcher", label: "Logistics", email: "dispatcher@highclassshippinglogistics.com", password: "HCshipping@54321", icon: Truck },
 ];
 
 export function StaffQuickLogin() {

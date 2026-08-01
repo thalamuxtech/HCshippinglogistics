@@ -31,7 +31,8 @@ export type FeatureKey =
   | "office.containers"
   | "office.shipments"
   | "office.inventory"
-  // Dispatch
+  | "office.operations"
+  // Logistics (formerly "Dispatch" — the team handles pickup and delivery)
   | "dispatch.jobs"
   | "dispatch.containers"
   | "dispatch.completed";
@@ -65,7 +66,10 @@ export const FEATURES: FeatureMeta[] = [
   { key: "office.containers", label: "Containers", href: "/office/containers", role: "nigeria_office" },
   { key: "office.shipments", label: "Shipments", href: "/office/shipments", role: "nigeria_office" },
   { key: "office.inventory", label: "Warehouse", href: "/office/inventory", role: "nigeria_office" },
-  // ── Dispatch ──
+  // Vehicles (RORO) route straight to Operations rather than through general
+  // warehouse stock — a car is not shelved cargo and is monitored separately.
+  { key: "office.operations", label: "Operations", href: "/office/operations", role: "nigeria_office" },
+  // ── Logistics (pickup & delivery) ──
   { key: "dispatch.jobs", label: "My Jobs", href: "/dispatch", role: "dispatcher", required: true },
   // Same Container → Shipments → Deliveries hierarchy the office portal uses,
   // read-only: a rider receives a container and works the deliveries inside it.

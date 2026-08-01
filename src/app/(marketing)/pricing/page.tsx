@@ -14,8 +14,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
-import { SEA_PRICE_LIST, PRICE_CATEGORIES } from "@/lib/constants";
 import { usePricingSettings } from "@/lib/pricing-settings";
+import { useSeaPriceList, categoriesOf } from "@/lib/sea-price-list";
 import type { ShippingLine } from "@/lib/types";
 import { formatCurrency, cn } from "@/lib/utils";
 
@@ -26,6 +26,8 @@ const lineKeys: ShippingLine[] = ["grimaldi", "sallaum", "msc"];
 
 export default function PricingPage() {
   const pricing = usePricingSettings();
+  // Live admin-managed price list; falls back to built-ins until it resolves.
+  const seaPriceList = useSeaPriceList();
   const [category, setCategory] = React.useState<string>("All");
   const [sortKey, setSortKey] = React.useState<SortKey>("s_n");
   const [sortDir, setSortDir] = React.useState<SortDir>("asc");
@@ -33,8 +35,8 @@ export default function PricingPage() {
   const rows = React.useMemo(() => {
     const filtered =
       category === "All"
-        ? [...SEA_PRICE_LIST]
-        : SEA_PRICE_LIST.filter((i) => i.category === category);
+        ? [...seaPriceList]
+        : seaPriceList.filter((i) => i.category === category);
     filtered.sort((a, b) => {
       let cmp = 0;
       if (sortKey === "price") cmp = a.price - b.price;
@@ -43,7 +45,7 @@ export default function PricingPage() {
       return sortDir === "asc" ? cmp : -cmp;
     });
     return filtered;
-  }, [category, sortKey, sortDir]);
+  }, [seaPriceList, category, sortKey, sortDir]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -54,7 +56,8 @@ export default function PricingPage() {
     }
   }
 
-  const chips = ["All", ...PRICE_CATEGORIES];
+  // Derived from the live list, so a category the admin adds shows up here.
+  const chips = ["All", ...categoriesOf(seaPriceList)];
 
   return (
     <>
@@ -94,7 +97,7 @@ export default function PricingPage() {
               <p className="mt-1 text-sm text-ink-muted">Priced per item. See the full table below.</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-mono text-3xl font-bold text-navy">
-                  {formatCurrency(Math.min(...SEA_PRICE_LIST.map((i) => i.price)))}
+                  {formatCurrency(Math.min(...seaPriceList.map((i) => i.price)))}
                 </span>
                 <span className="text-sm text-ink-muted">starting</span>
               </div>

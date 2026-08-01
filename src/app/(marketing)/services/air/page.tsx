@@ -5,7 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { AirCalculator } from "@/components/marketing/AirCalculator";
-import { AIR_RATE_PER_LB, SERVICES } from "@/lib/constants";
+import { SERVICES } from "@/lib/constants";
+import { AirRate } from "@/components/marketing/LiveRate";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -23,7 +24,12 @@ const highlights = [
   {
     icon: Scale,
     title: "Simple, flat rate",
-    desc: `A single ${formatCurrency(AIR_RATE_PER_LB)} per pound on billable weight, with no fuel surcharges or hidden line items on the base freight.`,
+    desc: (
+      <>
+        A single <AirRate /> per pound on billable weight, with no fuel surcharges or hidden line
+        items on the base freight.
+      </>
+    ),
   },
   {
     icon: ShieldCheck,
@@ -57,8 +63,8 @@ export default function AirFreightPage() {
             </Reveal>
             <Reveal delay={0.16}>
               <p className="mx-auto mt-6 max-w-2xl text-balance text-lg leading-relaxed text-white/75">
-                {meta.tagline} A flat {formatCurrency(AIR_RATE_PER_LB)}/lb, delivered to Nigeria and
-                across Africa in {meta.leadTime}.
+                {meta.tagline} A flat <AirRate />/lb, delivered to Nigeria and across Africa in{" "}
+                {meta.leadTime}.
               </p>
             </Reveal>
             <Reveal delay={0.22}>
@@ -153,7 +159,7 @@ export default function AirFreightPage() {
                 <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-navy/5 font-mono text-xs font-bold text-navy">
                   3
                 </span>
-                You are billed on the greater of the two, at {formatCurrency(AIR_RATE_PER_LB)}/lb.
+                You are billed on the greater of the two, at <AirRate />/lb.
               </li>
             </ul>
           </Reveal>

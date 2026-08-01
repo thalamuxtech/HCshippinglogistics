@@ -41,7 +41,7 @@ import { useAuth } from "@/components/providers/AuthProvider";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea, Label } from "@/components/ui/input";
-import { StageBadge, Badge } from "@/components/ui/badge";
+import { StageBadge, Badge, FragileBadge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { PaymentReceiptCard } from "@/components/portal/PaymentReceiptCard";
 import { ConfirmDeleteModal } from "@/components/portal/ConfirmDeleteModal";
@@ -385,6 +385,7 @@ function AdminShipmentDetailPageInner() {
                 {containerLabel(s.container_number)}
               </Badge>
             )}
+            {s.fragile && <FragileBadge note={s.fragile_note} />}
             {isDnr(s) && (
               <Badge variant="danger">
                 <Lock className="mr-1 h-3.5 w-3.5" />

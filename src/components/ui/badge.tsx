@@ -1,4 +1,5 @@
 import * as React from "react";
+import { PackageOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { STAGE_MAP } from "@/lib/constants";
 import type { ShipmentStatus } from "@/lib/types";
@@ -60,6 +61,32 @@ export function StageBadge({
         <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: stage.color }} />
       )}
       {stage.short}
+    </span>
+  );
+}
+
+/**
+ * Fragile-cargo marker. Shared so the warning looks identical everywhere it
+ * appears (admin lists, office warehouse, dispatch job cards) — handling
+ * instructions lose their force if each screen styles them differently.
+ */
+export function FragileBadge({
+  note,
+  className,
+}: {
+  note?: string;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700 ring-1 ring-amber-300",
+        className
+      )}
+      title={note ? `Fragile: ${note}` : "Fragile — handle with care"}
+    >
+      <PackageOpen className="h-3 w-3" aria-hidden />
+      Fragile
     </span>
   );
 }

@@ -28,7 +28,7 @@ import {
 import { useAuth } from "@/components/providers/AuthProvider";
 import { listArrivedShipments } from "@/lib/db";
 import type { Shipment } from "@/lib/types";
-import { StageBadge } from "@/components/ui/badge";
+import { StageBadge, FragileBadge } from "@/components/ui/badge";
 import { Input, Select } from "@/components/ui/input";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { isDnr } from "@/lib/utils";
@@ -251,6 +251,7 @@ export default function DispatchContainersPage() {
                               {job.tracking_number}
                             </span>
                             <StageBadge status={job.current_status} />
+                            {job.fragile && <FragileBadge note={job.fragile_note} />}
                             {held && !doneJob && (
                               <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-bold text-red-700 ring-1 ring-red-200">
                                 Do Not Release
