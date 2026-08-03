@@ -5,6 +5,7 @@ import { FeatureGuard } from "@/components/providers/FeatureGuard";
 import { PortalShell, type PortalNavItem } from "@/components/portal/PortalShell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { effectiveFeatureKeys, type FeatureKey } from "@/lib/features";
+import { useRoleLabels } from "@/lib/role-labels";
 import {
   LayoutDashboard,
   Package,
@@ -28,11 +29,12 @@ export default function OfficeLayout({ children }: { children: React.ReactNode }
   const { user, role } = useAuth();
   const eff = role ? effectiveFeatureKeys(role, user?.allowed_features) : new Set<FeatureKey>();
   const nav = NAV.filter((item) => eff.has(item.key));
+  const teamName = useRoleLabels().nigeria_office;
 
   return (
     <RequireRole roles={["nigeria_office"]}>
       <FeatureGuard>
-        <PortalShell nav={nav} title="Destination Office" roleLabel="Destination Office">
+        <PortalShell nav={nav} title={teamName} roleLabel={teamName}>
           {children}
         </PortalShell>
       </FeatureGuard>

@@ -20,7 +20,7 @@ const SECTIONS: { h: string; p: string[] }[] = [
     h: "How we use your information",
     p: [
       "We use your information to process and deliver your shipment, issue invoices and receipts, send status updates by email and SMS, and provide customer support.",
-      "Staff access is limited by role. Office and dispatch staff only see the shipments relevant to their work.",
+      "Staff access is limited by role. Office and Logistics staff only see the shipments relevant to their work.",
     ],
   },
   {

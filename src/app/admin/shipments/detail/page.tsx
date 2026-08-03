@@ -245,11 +245,11 @@ function AdminShipmentDetailPageInner() {
       });
       await load();
       toast.success(
-        assignee ? "Dispatcher assigned" : "Dispatcher removed",
+        assignee ? "Logistics staff assigned" : "Logistics staff removed",
         assignee ? `${name} will see this job.` : undefined
       );
     } catch {
-      toast.error("Assignment failed", "Could not update the assigned dispatcher.");
+      toast.error("Assignment failed", "Could not update the assigned Logistics staff.");
     } finally {
       setAssigning(false);
     }
@@ -832,7 +832,7 @@ function AdminShipmentDetailPageInner() {
                 {isDnr(s) && s.dnr_release_requested && (
                   <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3">
                     <p className="text-xs font-semibold text-amber-800">
-                      Release requested by {s.dnr_release_requested_by_name || "a dispatcher"}
+                      Release requested by {s.dnr_release_requested_by_name || "Logistics"}
                     </p>
                     {s.dnr_release_note && (
                       <p className="mt-1 text-xs text-amber-700">&ldquo;{s.dnr_release_note}&rdquo;</p>
@@ -878,17 +878,17 @@ function AdminShipmentDetailPageInner() {
             </CardContent>
           </Card>
 
-          {/* Assign dispatcher for last-mile delivery */}
+          {/* Assign a Logistics rider for last-mile delivery */}
           <Card>
             <CardHeader>
-              <CardTitle>Last-mile dispatcher</CardTitle>
+              <CardTitle>Last-mile logistics</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <p className="text-sm text-ink-muted">
-                Assign a dispatcher so this delivery appears in their mobile job list.
+                Assign a Logistics team member so this delivery appears in their mobile job list.
               </p>
               <div>
-                <Label htmlFor="assignee">Dispatcher</Label>
+                <Label htmlFor="assignee">Logistics staff</Label>
                 <Select
                   id="assignee"
                   value={assignee}
@@ -903,7 +903,7 @@ function AdminShipmentDetailPageInner() {
                 </Select>
                 {dispatchers.length === 0 && (
                   <p className="mt-1.5 text-xs text-ink-muted">
-                    No active dispatchers yet. Add one under Staff &amp; Roles.
+                    No active Logistics staff yet. Add one under Staff &amp; Roles.
                   </p>
                 )}
               </div>
@@ -936,8 +936,8 @@ function AdminShipmentDetailPageInner() {
         subject={`shipment ${s.tracking_number}`}
         description={
           s.container_number
-            ? `It will also be removed from ${containerLabel(s.container_number)} and from the dispatch queue.`
-            : "It will also be removed from the dispatch queue and all admin lists."
+            ? `It will also be removed from ${containerLabel(s.container_number)} and from the Logistics queue.`
+            : "It will also be removed from the Logistics queue and all admin lists."
         }
         requireTyped={s.tracking_number}
         impact={

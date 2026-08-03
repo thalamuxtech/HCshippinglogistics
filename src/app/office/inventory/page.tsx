@@ -322,7 +322,7 @@ export default function OfficeInventoryPage() {
         <Info className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" aria-hidden />
         <p className="text-xs text-ink-muted">
           This list is generated from shipment records, so it always matches what head office and
-          dispatch see. To move cargo out of the warehouse, advance its shipment stage from{" "}
+          Logistics see. To move cargo out of the warehouse, advance its shipment stage from{" "}
           <Link href="/office/shipments" className="font-semibold text-gold-700 hover:underline">
             Shipments
           </Link>{" "}

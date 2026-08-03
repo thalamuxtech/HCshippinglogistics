@@ -314,7 +314,7 @@ export default function OfficeContainersPage() {
           <Link href="/office/inventory" className="font-semibold text-gold-700 hover:underline">
             Warehouse
           </Link>{" "}
-          list and the dispatch queue automatically.
+          list and the Logistics queue automatically.
         </p>
       </div>
 

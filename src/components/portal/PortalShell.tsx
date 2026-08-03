@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { LogoMark } from "@/components/brand/Logo";
+import { useRoleLabels } from "@/lib/role-labels";
 import { cn, initialsOf } from "@/lib/utils";
 
 export interface PortalNavItem {
@@ -26,6 +27,11 @@ export interface PortalNavItem {
 export interface PortalShellProps {
   nav: PortalNavItem[];
   title: string;
+  /**
+   * Fallback label. The live, admin-renameable name for the signed-in user's
+   * role wins when available, so renaming a role in Staff & Roles updates every
+   * portal chrome without each layout hardcoding its own string.
+   */
   roleLabel: string;
   children: React.ReactNode;
   /** Optional actions rendered in the top bar, before the account menu. */
@@ -123,9 +129,19 @@ function SidebarBrand({
   );
 }
 
-export function PortalShell({ nav, title, roleLabel, children, headerActions }: PortalShellProps) {
+export function PortalShell({
+  nav,
+  title,
+  roleLabel: roleLabelProp,
+  children,
+  headerActions,
+}: PortalShellProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const labels = useRoleLabels();
+  // Prefer the live label for the signed-in role; fall back to the prop (which
+  // still covers the brief moment before the auth user resolves).
+  const roleLabel = user?.role ? labels[user.role] ?? roleLabelProp : roleLabelProp;
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [collapsed, setCollapsed] = React.useState(false);

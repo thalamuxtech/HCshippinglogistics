@@ -5,6 +5,7 @@ import { FeatureGuard } from "@/components/providers/FeatureGuard";
 import { PortalShell, type PortalNavItem } from "@/components/portal/PortalShell";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { effectiveFeatureKeys, type FeatureKey } from "@/lib/features";
+import { useRoleLabels } from "@/lib/role-labels";
 import { ClipboardList, CheckCircle2, Container } from "lucide-react";
 
 // Container → Shipments → Deliveries, matching the office portal.
@@ -18,13 +19,15 @@ export default function DispatchLayout({ children }: { children: React.ReactNode
   const { user, role } = useAuth();
   const eff = role ? effectiveFeatureKeys(role, user?.allowed_features) : new Set<FeatureKey>();
   const nav = NAV.filter((item) => eff.has(item.key));
+  const teamName = useRoleLabels().dispatcher;
 
   return (
     <RequireRole roles={["dispatcher"]}>
       <FeatureGuard>
-        {/* Team is named "Logistics"; the role key and /dispatch routes are
-            unchanged so existing accounts and saved links keep working. */}
-        <PortalShell nav={nav} title="Logistics" roleLabel="Logistics">
+        {/* Title and role label both follow the admin-renameable role name. The
+            role key and /dispatch routes are unchanged so existing accounts and
+            saved links keep working. */}
+        <PortalShell nav={nav} title={teamName} roleLabel={teamName}>
           {children}
         </PortalShell>
       </FeatureGuard>

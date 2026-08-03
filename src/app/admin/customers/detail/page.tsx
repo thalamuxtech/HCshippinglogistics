@@ -721,7 +721,7 @@ function AdminCustomerDetailPageInner() {
           {shipments.length > 0 && (
             <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-ink-muted">
               {shipments.length} shipment record(s) carry a copy of these contact details for
-              invoices and dispatch job cards. They will be updated too, so nothing is left
+              invoices and Logistics job cards. They will be updated too, so nothing is left
               showing the old value.
             </p>
           )}
@@ -764,7 +764,7 @@ function AdminCustomerDetailPageInner() {
           delPlan === null
             ? "Checking what this will remove…"
             : delPlan.shipments > 0
-            ? `All ${delPlan.shipments} of their shipments will be deleted too, and will disappear from the container lists and the dispatch queue. This cannot be undone.`
+            ? `All ${delPlan.shipments} of their shipments will be deleted too, and will disappear from the container lists and the Logistics queue. This cannot be undone.`
             : "This customer has no shipments. Their account will be permanently removed. This cannot be undone."
         }
         requireTyped={c.full_name}

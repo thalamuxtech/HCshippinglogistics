@@ -11,6 +11,8 @@ import {
   Power,
   SlidersHorizontal,
   Check,
+  Pencil,
+  Tags,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,9 +20,15 @@ import { Input, Label, Select, FieldError, FieldHint } from "@/components/ui/inp
 import { Badge } from "@/components/ui/badge";
 import { Modal, PageLoader, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { listUsers } from "@/lib/db";
+import { listUsers, setSiteContent } from "@/lib/db";
 import { createStaffUser, updateStaffUser } from "@/lib/notify";
 import { DESTINATION_COUNTRIES } from "@/lib/constants";
+import {
+  useRoleLabels,
+  primeRoleLabels,
+  ROLE_LABEL_DEFAULTS,
+  type RoleLabels,
+} from "@/lib/role-labels";
 import {
   featuresForRole,
   defaultFeatureKeys,
@@ -30,23 +38,62 @@ import {
 import { formatDate, initialsOf } from "@/lib/utils";
 import type { AppUser, Role } from "@/lib/types";
 
-const STAFF_ROLES: { value: Exclude<Role, "customer">; label: string; icon: React.ElementType }[] = [
-  { value: "admin", label: "Administrator", icon: ShieldCheck },
-  { value: "nigeria_office", label: "Destination Office", icon: Building2 },
-  // Display name only — the stored role key stays "dispatcher" so existing
-  // accounts, Firestore rules and /dispatch routes are unaffected.
-  { value: "dispatcher", label: "Logistics", icon: Truck },
-];
+// Role KEYS are fixed (rules and menus match on them); only the labels are
+// admin-editable, via the "Rename roles" editor on this page.
+const STAFF_ROLE_KEYS: Exclude<Role, "customer">[] = ["admin", "nigeria_office", "dispatcher"];
 
-const ROLE_LABEL: Record<string, string> = {
-  admin: "Administrator",
-  nigeria_office: "Destination Office",
-  dispatcher: "Logistics",
-  customer: "Customer",
+const ROLE_ICON: Record<string, React.ElementType> = {
+  admin: ShieldCheck,
+  nigeria_office: Building2,
+  dispatcher: Truck,
 };
 
 export default function AdminStaffPage() {
   const toast = useToast();
+  // Live, admin-editable role display names.
+  const ROLE_LABEL = useRoleLabels();
+  const STAFF_ROLES = React.useMemo(
+    () =>
+      STAFF_ROLE_KEYS.map((value) => ({
+        value,
+        label: ROLE_LABEL[value],
+        icon: ROLE_ICON[value],
+      })),
+    [ROLE_LABEL]
+  );
+
+  // ── Rename roles editor ──
+  const [renameOpen, setRenameOpen] = React.useState(false);
+  const [renameDraft, setRenameDraft] = React.useState<RoleLabels>(ROLE_LABEL_DEFAULTS);
+  const [savingNames, setSavingNames] = React.useState(false);
+
+  function openRename() {
+    setRenameDraft({ ...ROLE_LABEL });
+    setRenameOpen(true);
+  }
+
+  async function saveRoleNames() {
+    setSavingNames(true);
+    try {
+      // Blank entries fall back to the shipped default rather than saving an
+      // empty label that would render as a nameless badge.
+      const cleaned = Object.fromEntries(
+        (Object.keys(ROLE_LABEL_DEFAULTS) as Role[]).map((k) => [
+          k,
+          renameDraft[k]?.trim() || ROLE_LABEL_DEFAULTS[k],
+        ])
+      ) as RoleLabels;
+      await setSiteContent("role_labels", cleaned);
+      primeRoleLabels(cleaned);
+      setRenameOpen(false);
+      toast.success("Role names saved", "They update across every portal.");
+    } catch {
+      toast.error("Could not save", "Please try again.");
+    } finally {
+      setSavingNames(false);
+    }
+  }
+
   const [staff, setStaff] = React.useState<AppUser[] | null>(null);
   const [open, setOpen] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
@@ -68,6 +115,87 @@ export default function AdminStaffPage() {
 
   // Per-user "Manage access" modal.
   const [accessUser, setAccessUser] = React.useState<AppUser | null>(null);
+
+  // ── Per-user "Edit staff" modal ──
+  // Previously only country and menu access were editable, so a misspelled name
+  // or a wrong sign-in email could not be corrected, and a staff member could
+  // not be moved between roles without deleting and recreating the account.
+  const [editUser, setEditUser] = React.useState<AppUser | null>(null);
+  const [editForm, setEditForm] = React.useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    role: "nigeria_office" as Exclude<Role, "customer">,
+    assignedCountry: "Nigeria",
+  });
+  const [editErr, setEditErr] = React.useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = React.useState(false);
+
+  function openEdit(u: AppUser) {
+    setEditUser(u);
+    setEditForm({
+      fullName: u.full_name ?? "",
+      email: u.email ?? "",
+      phone: u.phone ?? "",
+      role: (u.role === "customer" ? "nigeria_office" : u.role) as Exclude<Role, "customer">,
+      assignedCountry: u.assigned_country || "Nigeria",
+    });
+    setEditErr(null);
+  }
+
+  async function saveEdit() {
+    if (!editUser) return;
+    const name = editForm.fullName.trim();
+    const email = editForm.email.trim().toLowerCase();
+    if (name.length < 2) {
+      setEditErr("Enter the staff member's name.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      setEditErr("Enter a valid email address.");
+      return;
+    }
+    const roleChanged = editForm.role !== editUser.role;
+    // Changing role changes which menus exist, so a stale per-user override would
+    // no longer make sense — reset to the new role's defaults and let the admin
+    // re-customise via Manage access.
+    if (
+      roleChanged &&
+      !window.confirm(
+        `Change ${name}'s role from ${ROLE_LABEL[editUser.role]} to ${
+          ROLE_LABEL[editForm.role]
+        }? Their menu access resets to the new role's defaults.`
+      )
+    )
+      return;
+
+    setSavingEdit(true);
+    setEditErr(null);
+    try {
+      await updateStaffUser({
+        uid: editUser.id,
+        fullName: name,
+        email,
+        phone: editForm.phone.trim(),
+        role: editForm.role,
+        assignedCountry:
+          editForm.role === "nigeria_office" ? editForm.assignedCountry : undefined,
+        ...(roleChanged ? { allowedFeatures: null } : {}),
+      });
+      setEditUser(null);
+      await load();
+      toast.success(
+        "Staff updated",
+        email !== (editUser.email ?? "").toLowerCase()
+          ? `${name} now signs in with ${email}.`
+          : name
+      );
+    } catch (err: unknown) {
+      setEditErr(err instanceof Error ? err.message : "Could not save the changes.");
+    } finally {
+      setSavingEdit(false);
+    }
+  }
 
   // Reset the feature selection to the role default whenever the role changes.
   React.useEffect(() => {
@@ -165,16 +293,21 @@ export default function AdminStaffPage() {
             Create staff accounts, assign roles, and scope destination offices by country.
           </p>
         </div>
-        <Button variant="gold" onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" /> Add staff
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={openRename}>
+            <Tags className="h-4 w-4" /> Rename roles
+          </Button>
+          <Button variant="gold" onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" /> Add staff
+          </Button>
+        </div>
       </div>
 
       {staff.length === 0 ? (
         <EmptyState
           icon={<UserCog className="h-6 w-6" />}
           title="No staff accounts yet"
-          description="Add administrators, destination-office coordinators, and dispatchers."
+          description="Add administrators, destination-office coordinators, and Logistics staff."
           action={
             <Button variant="gold" onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4" /> Add your first staff member
@@ -242,9 +375,14 @@ export default function AdminStaffPage() {
                         <span className="font-semibold text-navy">{eff}</span> of {total} menus
                         {custom ? " · customized" : " · role default"}
                       </span>
-                      <Button size="sm" variant="ghost" onClick={() => setAccessUser(u)}>
-                        <SlidersHorizontal className="h-3.5 w-3.5" /> Manage access
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button size="sm" variant="ghost" onClick={() => openEdit(u)}>
+                          <Pencil className="h-3.5 w-3.5" /> Edit
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setAccessUser(u)}>
+                          <SlidersHorizontal className="h-3.5 w-3.5" /> Access
+                        </Button>
+                      </div>
                     </div>
                   );
                 })()}
@@ -439,6 +577,182 @@ export default function AdminStaffPage() {
               Create staff account
             </Button>
           </form>
+        )}
+      </Modal>
+
+      {/* Rename roles — labels only; the underlying keys never change */}
+      <Modal
+        open={renameOpen}
+        onClose={() => !savingNames && setRenameOpen(false)}
+        title="Rename roles"
+        description="Change what each role is called across every portal, badge and staff list."
+      >
+        <div className="space-y-4">
+          {(Object.keys(ROLE_LABEL_DEFAULTS) as Role[]).map((key) => (
+            <div key={key}>
+              <Label htmlFor={`rn-${key}`}>
+                {ROLE_LABEL_DEFAULTS[key]}
+                {key === "customer" && " (public-facing)"}
+              </Label>
+              <Input
+                id={`rn-${key}`}
+                value={renameDraft[key] ?? ""}
+                onChange={(e) =>
+                  setRenameDraft((d) => ({ ...d, [key]: e.target.value }))
+                }
+                placeholder={ROLE_LABEL_DEFAULTS[key]}
+              />
+            </div>
+          ))}
+
+          <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-ink-muted">
+            This changes the display name only. Permissions, menus and existing accounts are
+            unaffected, so renaming is always safe and reversible. Leave a field blank to restore
+            its default.
+          </p>
+
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => setRenameOpen(false)}
+              disabled={savingNames}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="gold"
+              className="flex-1"
+              onClick={saveRoleNames}
+              loading={savingNames}
+              disabled={savingNames}
+            >
+              <Check className="h-4 w-4" /> Save names
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit staff member — name, sign-in email, phone, role */}
+      <Modal
+        open={editUser !== null}
+        onClose={() => !savingEdit && setEditUser(null)}
+        title="Edit staff member"
+        description="Rename, correct the sign-in email, or move this person to a different role."
+      >
+        {editUser && (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="ed-name" required>
+                Full name
+              </Label>
+              <Input
+                id="ed-name"
+                value={editForm.fullName}
+                onChange={(e) => setEditForm((f) => ({ ...f, fullName: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="ed-email" required>
+                Email (sign-in)
+              </Label>
+              <Input
+                id="ed-email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))}
+                className="font-mono"
+                autoComplete="off"
+              />
+              {editForm.email.trim().toLowerCase() !== (editUser.email ?? "").toLowerCase() && (
+                <FieldHint>
+                  This is their login. They must use the new address next time they sign in — their
+                  password does not change.
+                </FieldHint>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="ed-phone">Phone</Label>
+              <Input
+                id="ed-phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="ed-role" required>
+                Role
+              </Label>
+              <Select
+                id="ed-role"
+                value={editForm.role}
+                onChange={(e) =>
+                  setEditForm((f) => ({
+                    ...f,
+                    role: e.target.value as Exclude<Role, "customer">,
+                  }))
+                }
+              >
+                {STAFF_ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </Select>
+              {editForm.role !== editUser.role && (
+                <FieldHint>
+                  Menu access resets to the {ROLE_LABEL[editForm.role]} defaults; adjust it
+                  afterwards with Access.
+                </FieldHint>
+              )}
+            </div>
+
+            {editForm.role === "nigeria_office" && (
+              <div>
+                <Label htmlFor="ed-country" required>
+                  Assigned destination country
+                </Label>
+                <Select
+                  id="ed-country"
+                  value={editForm.assignedCountry}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, assignedCountry: e.target.value }))
+                  }
+                >
+                  {DESTINATION_COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+
+            {editErr && <FieldError>{editErr}</FieldError>}
+
+            <div className="flex gap-2 pt-1">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setEditUser(null)}
+                disabled={savingEdit}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="gold"
+                className="flex-1"
+                onClick={saveEdit}
+                loading={savingEdit}
+                disabled={savingEdit}
+              >
+                <Check className="h-4 w-4" /> Save changes
+              </Button>
+            </div>
+          </div>
         )}
       </Modal>
 

@@ -287,11 +287,15 @@ export async function createStaffUser(payload: {
 
 export async function updateStaffUser(payload: {
   uid: string;
-  role?: "admin" | "nigeria_office" | "dispatcher" | "customer";
+  role?: "admin" | "nigeria_office" | "dispatcher";
   assignedCountry?: string;
   isActive?: boolean;
   // null clears the override (back to role defaults); an array sets exact access.
   allowedFeatures?: string[] | null;
+  fullName?: string;
+  /** Also updates the Firebase Auth sign-in email, not just the profile. */
+  email?: string;
+  phone?: string;
 }): Promise<{ ok: boolean }> {
   const fn = httpsCallable(functions, "updateStaffUser");
   const res = await fn(payload);

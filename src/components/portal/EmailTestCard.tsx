@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/misc";
 import { sendTestEmail } from "@/lib/notify";
+import { COMPANY } from "@/lib/constants";
 import { useAuth } from "@/components/providers/AuthProvider";
 
 type Result =
@@ -187,14 +188,19 @@ function EmailPreview() {
 
         {/* Office footer */}
         <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 text-xs">
+          {/* Read from COMPANY rather than repeating the addresses: this preview
+              had its own hardcoded copy, which silently went stale when the real
+              warehouse address changed. */}
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wide text-gold-700">USA Office</p>
             <p className="mt-1 leading-relaxed text-ink-muted">
-              6600 Foxley Road, Gate C
-              <br />
-              Upper Marlboro, Maryland 20772
-              <br />
-              +1 (240) 374-8394
+              {COMPANY.usa.lines.map((line) => (
+                <React.Fragment key={line}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
+              {COMPANY.usa.phones[0]}
             </p>
           </div>
           <div>
@@ -202,11 +208,13 @@ function EmailPreview() {
               Nigeria Office
             </p>
             <p className="mt-1 leading-relaxed text-ink-muted">
-              28 Moleye Street, Alagomeji
-              <br />
-              Yaba, Lagos
-              <br />
-              +234 808 029 1754
+              {COMPANY.nigeria.lines.map((line) => (
+                <React.Fragment key={line}>
+                  {line}
+                  <br />
+                </React.Fragment>
+              ))}
+              {COMPANY.nigeria.phones[0]}
             </p>
           </div>
         </div>

@@ -218,7 +218,7 @@ export const COMPANY = {
   email: "info@highclassshippinglogistics.com",
   usa: {
     label: "USA Office & Warehouse",
-    lines: ["6600 Foxley Road", "Gate C", "Upper Marlboro, Maryland 20772"],
+    lines: ["8611 Westphalia Road", "Upper Marlboro, Maryland 20774", "USA"],
     phones: ["+1 (240) 374-8394", "+1 (240) 499-6237"],
   },
   nigeria: {

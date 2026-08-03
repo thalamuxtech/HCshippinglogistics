@@ -706,7 +706,7 @@ export default function AdminContainersPage() {
                 <CardDescription className="mt-1">
                   Select shipments to move them through a stage together. Advancing to a
                   destination stage is what places them in the Lagos office warehouse and the
-                  dispatch queue.
+                  Logistics queue.
                 </CardDescription>
               </div>
               <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-medium text-ink-muted">

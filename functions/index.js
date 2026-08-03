@@ -383,7 +383,7 @@ function emailShell({ heading, body, trackingNumber, ctaUrl, ctaLabel, preheader
               <tr>
                 <td width="50%" valign="top" style="padding:18px 12px 6px 0">
                   <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:${BLUE};font-weight:700">USA Office</div>
-                  <div style="margin-top:5px;font-size:12px;line-height:1.6;color:#5B6B7D">6600 Foxley Road, Gate C<br/>Upper Marlboro, Maryland 20772<br/>+1 (240) 374-8394</div>
+                  <div style="margin-top:5px;font-size:12px;line-height:1.6;color:#5B6B7D">8611 Westphalia Road<br/>Upper Marlboro, Maryland 20774, USA<br/>+1 (240) 374-8394</div>
                 </td>
                 <td width="50%" valign="top" style="padding:18px 0 6px 12px">
                   <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:${BLUE};font-weight:700">Nigeria Office</div>
@@ -1577,12 +1577,29 @@ function hashStr(s) {
 // ═══════════════════════════════════════════════════════════════
 // Callable (admin): update a staff member's role / country / active
 // ═══════════════════════════════════════════════════════════════
+const STAFF_ROLE_KEYS = ["admin", "nigeria_office", "dispatcher"];
+
 export const updateStaffUser = onCall(async (req) => {
   await assertAdmin(req);
-  const { uid, role, assignedCountry, isActive, allowedFeatures } = req.data || {};
+  const { uid, role, assignedCountry, isActive, allowedFeatures, fullName, email, phone } =
+    req.data || {};
   if (!uid) throw new HttpsError("invalid-argument", "uid required.");
   const patch = {};
-  if (role) patch.role = role;
+
+  if (role !== undefined) {
+    // Whitelist: an arbitrary string here would create a role no rule or menu
+    // recognises, locking the user out of every portal.
+    if (!STAFF_ROLE_KEYS.includes(role)) {
+      throw new HttpsError("invalid-argument", "Unknown staff role.");
+    }
+    patch.role = role;
+  }
+  if (fullName !== undefined) {
+    const name = String(fullName).trim();
+    if (name.length < 2) throw new HttpsError("invalid-argument", "Name is too short.");
+    patch.full_name = name;
+  }
+  if (phone !== undefined) patch.phone = String(phone).trim();
   if (assignedCountry !== undefined) patch.assigned_country = assignedCountry;
   if (isActive !== undefined) patch.is_active = isActive;
   // allowedFeatures: array => set exact override; null => clear (back to role defaults).
@@ -1591,6 +1608,46 @@ export const updateStaffUser = onCall(async (req) => {
   } else if (Array.isArray(allowedFeatures)) {
     patch.allowed_features = allowedFeatures.filter((k) => typeof k === "string");
   }
+
+  // Email is the staff member's SIGN-IN identity, so it lives in Firebase Auth as
+  // well as Firestore. Auth is updated FIRST: if it rejects (bad format, or the
+  // address already belongs to another account) we must not leave Firestore
+  // showing an address the user cannot actually log in with.
+  if (email !== undefined) {
+    const next = String(email).trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(next)) {
+      throw new HttpsError("invalid-argument", "Enter a valid email address.");
+    }
+    try {
+      await getAuth().updateUser(uid, { email: next });
+    } catch (e) {
+      if (e?.code === "auth/email-already-exists") {
+        throw new HttpsError("already-exists", "Another account already uses that email.");
+      }
+      throw new HttpsError("internal", e?.message || "Could not update the sign-in email.");
+    }
+    patch.email = next;
+  }
+
+  // Guard against removing the last administrator: demoting or disabling the
+  // only admin would leave nobody able to manage staff at all.
+  const demoting = (role !== undefined && role !== "admin") || isActive === false;
+  if (demoting) {
+    const target = await db.collection("users").doc(uid).get();
+    if (target.exists && target.data().role === "admin") {
+      const admins = await db.collection("users").where("role", "==", "admin").get();
+      const otherActive = admins.docs.filter(
+        (d) => d.id !== uid && d.data().is_active !== false && !d.data().deleted
+      );
+      if (otherActive.length === 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          "This is the last active administrator. Promote another admin first."
+        );
+      }
+    }
+  }
+
   await db.collection("users").doc(uid).set(patch, { merge: true });
   // Build a serializable meta (never log the FieldValue.delete sentinel).
   const logMeta = { ...patch };
