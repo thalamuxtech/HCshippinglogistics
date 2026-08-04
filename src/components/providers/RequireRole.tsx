@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { PageLoader } from "@/components/ui/misc";
+import { isPortalHostAllowed, portalUrlForCurrentPath } from "@/lib/portal-host";
 import type { Role } from "@/lib/types";
 
 // Default landing route per STAFF role after login. Customers do not log in
@@ -26,8 +27,21 @@ export function RequireRole({
   const { user, role, loading } = useAuth();
   const router = useRouter();
 
+  // Every portal is wrapped in RequireRole, so this is the single place that
+  // keeps the whole staff back-end on the canonical app host. Without it, a
+  // saved bookmark or an existing session on the marketing domain would keep
+  // working even though sign-in there is blocked.
+  const [wrongHost, setWrongHost] = React.useState(false);
   React.useEffect(() => {
-    if (loading) return;
+    if (isPortalHostAllowed()) return;
+    setWrongHost(true);
+    // Send them to the same page on the right host so a deep link still lands
+    // where they intended once they are on the correct origin.
+    window.location.replace(portalUrlForCurrentPath());
+  }, []);
+
+  React.useEffect(() => {
+    if (wrongHost || loading) return;
     if (!user) {
       router.replace(`/login?next=${encodeURIComponent(window.location.pathname)}`);
       return;
@@ -39,8 +53,9 @@ export function RequireRole({
     if (role && !roles.includes(role)) {
       router.replace(ROLE_HOME[role]);
     }
-  }, [user, role, loading, roles, router]);
+  }, [wrongHost, user, role, loading, roles, router]);
 
+  if (wrongHost) return <PageLoader label="Redirecting to the staff portal…" />;
   if (loading) return <PageLoader label="Verifying access…" />;
   if (!user || !role || !roles.includes(role)) return <PageLoader label="Redirecting…" />;
   return <>{children}</>;
