@@ -9,15 +9,10 @@ import { useToast } from "@/components/ui/toast";
 import { login, resetPassword } from "@/lib/auth-service";
 import { getUser } from "@/lib/db";
 import { ROLE_HOME } from "@/components/providers/RequireRole";
-import { AlertCircle, Eye, EyeOff, Clock, ExternalLink } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Clock } from "lucide-react";
 import { PageLoader } from "@/components/ui/misc";
 import { Logo } from "@/components/brand/Logo";
-import {
-  isPortalHostAllowed,
-  portalUrlForCurrentPath,
-  PORTAL_ORIGIN,
-} from "@/lib/portal-host";
-import { cn } from "@/lib/utils";
+import { isPortalHostAllowed } from "@/lib/portal-host";
 
 export default function LoginPage() {
   return (
@@ -45,22 +40,24 @@ function LoginForm() {
   // Resolved after mount: the host is only knowable on the client, and the
   // static export prerenders this page.
   const [hostAllowed, setHostAllowed] = React.useState(true);
-  const [portalUrl, setPortalUrl] = React.useState(PORTAL_ORIGIN);
   React.useEffect(() => {
     setHostAllowed(isPortalHostAllowed());
-    setPortalUrl(portalUrlForCurrentPath());
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // Staff sign-in is only available on the app host. Blocked before the call
-    // so no credential is ever sent from the marketing domain.
-    if (!hostAllowed) {
-      setError("Staff sign-in is not available on this address. Use the portal link below.");
-      return;
-    }
     setError(null);
     setLoading(true);
+    // Wrong host: fail exactly as a bad password does, and never contact Firebase
+    // so no credential leaves the marketing domain. The small delay matches the
+    // feel of a real round-trip — an instant rejection would itself signal that
+    // something other than the password was wrong.
+    if (!hostAllowed) {
+      await new Promise((r) => setTimeout(r, 900));
+      setError("Incorrect email or password.");
+      setLoading(false);
+      return;
+    }
     try {
       const cred = await login(email, password);
       const profile = await getUser(cred.user.uid);
@@ -84,10 +81,6 @@ function LoginForm() {
   }
 
   async function onReset() {
-    if (!hostAllowed) {
-      setError("Password reset is only available on the portal address below.");
-      return;
-    }
     const target = email.trim();
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) {
       setError("Enter your email address above first, then request the reset link.");
@@ -95,6 +88,14 @@ function LoginForm() {
     }
     setResetting(true);
     setError(null);
+    // On the wrong host, show the same reassuring message without sending
+    // anything. Saying "not available here" would confirm a portal exists.
+    if (!hostAllowed) {
+      await new Promise((r) => setTimeout(r, 700));
+      toast.success("Check your email", `If ${target} is a staff account, a reset link is on its way.`);
+      setResetting(false);
+      return;
+    }
     try {
       await resetPassword(target);
       // Deliberately the same message whether or not the account exists: telling
@@ -137,32 +138,11 @@ function LoginForm() {
         </div>
       )}
 
-      {!hostAllowed && (
-        <div className="mt-5 rounded-xl border border-navy/15 bg-navy/5 p-4">
-          <p className="flex items-center gap-2 text-sm font-semibold text-navy">
-            <AlertCircle className="h-4 w-4 shrink-0" /> Wrong address for staff sign-in
-          </p>
-          <p className="mt-1.5 text-sm text-ink-muted">
-            This is the public website. The staff portal runs on its own secure address.
-          </p>
-          <a
-            href={portalUrl}
-            className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-gold-gradient px-5 text-sm font-semibold text-white shadow-gold focus-ring"
-          >
-            Go to the staff portal <ExternalLink className="h-4 w-4" />
-          </a>
-          <p className="mt-2 break-all text-center font-mono text-[11px] text-ink-muted">
-            {PORTAL_ORIGIN}
-          </p>
-        </div>
-      )}
-
-      <form
-        onSubmit={onSubmit}
-        className={cn("mt-7 space-y-4", !hostAllowed && "pointer-events-none opacity-40")}
-        aria-hidden={!hostAllowed}
-        noValidate
-      >
+      {/* No host notice by design. On the marketing domain this page must look
+          and behave exactly like a normal login that simply rejects the
+          credentials — revealing that a portal lives elsewhere, or linking to
+          it, would publish the address we are keeping private. */}
+      <form onSubmit={onSubmit} className="mt-7 space-y-4" noValidate>
         <div>
           <Label htmlFor="email" required>
             Email
@@ -174,7 +154,6 @@ function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            disabled={!hostAllowed}
           />
         </div>
         <div>
@@ -189,7 +168,6 @@ function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
-              disabled={!hostAllowed}
               className="pr-11"
             />
             <button
@@ -211,7 +189,6 @@ function LoginForm() {
           size="lg"
           className="w-full"
           loading={loading}
-          disabled={!hostAllowed}
         >
           Log in
         </Button>

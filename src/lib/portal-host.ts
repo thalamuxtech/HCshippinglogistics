@@ -3,8 +3,17 @@
 // ─────────────────────────────────────────────────────────────
 // Staff-portal host restriction.
 //
-// Staff may only sign in on the app host (…web.app). The marketing domain
-// (highclassshippinglogistics.com) serves the public site only.
+// Staff sign in ONLY on the app host. The marketing domain serves the public
+// site, and must never reveal that a portal exists on a different address.
+//
+// Two rules follow from that:
+//  1. The portal host is NEVER rendered into public markup. No notice, no link,
+//     no "use this address instead" hint — publishing the URL would defeat the
+//     point of keeping it off the marketing site.
+//  2. On the wrong host the login form stays fully functional-looking and simply
+//     never succeeds, returning the same "Incorrect email or password" a genuine
+//     typo produces. A visitor cannot distinguish a blocked host from bad
+//     credentials, so there is nothing to probe for.
 //
 // Why this is enforced in the app rather than in Firebase Auth: the Auth
 // "authorized domains" list only gates OAuth popup/redirect flows. Email +
@@ -12,11 +21,10 @@
 // login form served from any origin authenticates happily. The gate therefore
 // has to live where the sign-in is initiated.
 //
-// This is a routing/consistency control, not a security boundary: anyone can run
-// their own page against the same Firebase project. The real protections remain
-// the password itself and the role-based Firestore rules. Its purpose is to keep
-// one canonical portal URL — so sessions, saved links and the idle-timeout
-// deadline all live on a single origin instead of being split across two hosts.
+// This is obscurity, not a security boundary: the bundle is public, so a
+// determined reader can find the host. The real protections remain the password
+// and the role-based Firestore rules. Its value is keeping the portal out of
+// casual reach and off search engines.
 // ─────────────────────────────────────────────────────────────
 
 import { COMPANY } from "./constants";
@@ -29,27 +37,19 @@ const ALLOWED_PORTAL_HOSTS = [
   "127.0.0.1",
 ];
 
-/** The canonical portal origin, used to redirect staff to the right host. */
-export const PORTAL_ORIGIN = `https://${COMPANY.webApp}`;
-
 /**
  * Is the current host allowed to run the staff portal?
  *
  * Returns true during server rendering / static export, where there is no
- * `window` — the check is re-evaluated on the client, and defaulting to "blocked"
- * would flash a warning into the prerendered HTML of every portal page.
+ * `window` — the check is re-evaluated on the client, and defaulting to
+ * "blocked" would bake a blocked state into the prerendered HTML.
+ *
+ * Deliberately the ONLY export: a helper that returned the portal URL would
+ * inevitably get rendered into a page somewhere, which is exactly the leak this
+ * module exists to prevent.
  */
 export function isPortalHostAllowed(): boolean {
   if (typeof window === "undefined") return true;
   const host = window.location.hostname.toLowerCase();
-  return ALLOWED_PORTAL_HOSTS.some(
-    (allowed) => host === allowed.toLowerCase()
-  );
-}
-
-/** Same path and query on the canonical portal host. */
-export function portalUrlForCurrentPath(): string {
-  if (typeof window === "undefined") return PORTAL_ORIGIN;
-  const { pathname, search, hash } = window.location;
-  return `${PORTAL_ORIGIN}${pathname}${search}${hash}`;
+  return ALLOWED_PORTAL_HOSTS.some((allowed) => host === allowed.toLowerCase());
 }

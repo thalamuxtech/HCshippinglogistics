@@ -8,7 +8,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/office", "/dispatch", "/portal"],
+        // /login included: the staff sign-in page should not be indexed or
+        // surfaced in search results for the public site.
+        disallow: ["/login", "/admin", "/office", "/dispatch", "/portal"],
       },
     ],
     sitemap: `${base}/sitemap.xml`,
