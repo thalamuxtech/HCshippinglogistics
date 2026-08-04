@@ -58,6 +58,22 @@ function tsToDate(ts?: Timestamp | null): Date | null {
   }
 }
 
+/**
+ * Age from a YYYY-MM-DD date of birth, or null when absent/implausible.
+ * Mirrors the computation in the submitPublicOrder function so a record edited
+ * here and one created at signup agree.
+ */
+function ageFromDob(dob: string): number | null {
+  if (!dob) return null;
+  const d = new Date(`${dob}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let age = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) age -= 1;
+  return age < 0 || age > 130 ? null : age;
+}
+
 function AdminCustomerDetailPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -86,6 +102,10 @@ function AdminCustomerDetailPageInner() {
   const [fPhone, setFPhone] = React.useState("");
   const [fName, setFName] = React.useState("");
   const [fAddress, setFAddress] = React.useState("");
+  const [fDob, setFDob] = React.useState("");
+  const [fZip, setFZip] = React.useState("");
+  const [fNotifyEmail, setFNotifyEmail] = React.useState(true);
+  const [fNotifySms, setFNotifySms] = React.useState(false);
   const [savingContact, setSavingContact] = React.useState(false);
   const [contactError, setContactError] = React.useState<string | null>(null);
 
@@ -95,6 +115,12 @@ function AdminCustomerDetailPageInner() {
     setFPhone(customer.phone ?? "");
     setFName(customer.full_name ?? "");
     setFAddress(customer.address ?? "");
+    setFDob(customer.dob ?? "");
+    setFZip(customer.zip_code ?? "");
+    // notify_email defaults to ON when unset (matches how sends are decided
+    // server-side: `notify_email !== false`).
+    setFNotifyEmail(customer.notify_email !== false);
+    setFNotifySms(customer.notify_sms === true);
     setContactError(null);
     setEditOpen(true);
   }
@@ -116,6 +142,16 @@ function AdminCustomerDetailPageInner() {
       setContactError("Phone number is required.");
       return;
     }
+    const dob = fDob.trim();
+    if (dob && !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+      setContactError("Date of birth must be a valid date.");
+      return;
+    }
+    const age = ageFromDob(dob);
+    if (dob && age === null) {
+      setContactError("That date of birth is not valid.");
+      return;
+    }
     setSavingContact(true);
     setContactError(null);
     const emailChanged = email !== (customer.email ?? "").toLowerCase();
@@ -125,6 +161,18 @@ function AdminCustomerDetailPageInner() {
         phone,
         full_name: name,
         address: fAddress.trim() || undefined,
+        dob: dob || undefined,
+        // Age is DERIVED, never typed: storing both independently lets them
+        // disagree. Recomputed here the same way the order function does.
+        age,
+        zip_code: fZip.trim() || undefined,
+        // Kept in step with the date of birth. Name, YYMM and ZIP are the seeds
+        // for building a NEW access code, so letting them drift would make the
+        // next regenerated code inconsistent with the customer's own details.
+        // Existing codes are stored as hashes and keep working regardless.
+        birth_year_month: dob ? `${dob.slice(2, 4)}${dob.slice(5, 7)}` : undefined,
+        notify_email: fNotifyEmail,
+        notify_sms: fNotifySms,
       });
       // Shipments carry denormalized copies of the customer's contact details
       // (used by invoices and the dispatch job card). Leaving them stale is what
@@ -718,11 +766,74 @@ function AdminCustomerDetailPageInner() {
             <Input id="c-address" value={fAddress} onChange={(e) => setFAddress(e.target.value)} />
           </div>
 
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="c-dob">Date of birth</Label>
+              <Input
+                id="c-dob"
+                type="date"
+                value={fDob}
+                onChange={(e) => setFDob(e.target.value)}
+              />
+              <p className="mt-1.5 text-xs text-ink-muted">
+                {fDob
+                  ? ageFromDob(fDob) !== null
+                    ? `Age ${ageFromDob(fDob)} — recalculated automatically.`
+                    : "That date is not valid."
+                  : "Age is calculated from this date."}
+              </p>
+            </div>
+            <div>
+              <Label htmlFor="c-zip">ZIP / postal code</Label>
+              <Input id="c-zip" value={fZip} onChange={(e) => setFZip(e.target.value)} />
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-border p-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+              Notifications
+            </p>
+            <label className="mt-2 flex cursor-pointer items-center gap-2.5 text-sm text-ink">
+              <input
+                type="checkbox"
+                className="h-4 w-4 cursor-pointer accent-navy"
+                checked={fNotifyEmail}
+                onChange={(e) => setFNotifyEmail(e.target.checked)}
+              />
+              Email this customer stage updates and notices
+            </label>
+            <label className="mt-1.5 flex cursor-pointer items-center gap-2.5 text-sm text-ink">
+              <input
+                type="checkbox"
+                className="h-4 w-4 cursor-pointer accent-navy"
+                checked={fNotifySms}
+                onChange={(e) => setFNotifySms(e.target.checked)}
+              />
+              Send SMS updates
+            </label>
+            {!fNotifyEmail && (
+              <p className="mt-2 text-xs font-medium text-amber-600">
+                With email off they will not receive stage updates, container pickup notices, or
+                their access code — including from bulk sends.
+              </p>
+            )}
+          </div>
+
+          {(fName.trim() !== (c.full_name ?? "") ||
+            fZip.trim() !== (c.zip_code ?? "") ||
+            fDob.trim() !== (c.dob ?? "")) && (
+            <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-ink-muted">
+              Name, date of birth and ZIP are used to build a new access code. Their current code
+              keeps working; only a future <strong>Regenerate</strong> will reflect these values.
+            </p>
+          )}
+
           {shipments.length > 0 && (
             <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-ink-muted">
-              {shipments.length} shipment record(s) carry a copy of these contact details for
-              invoices and Logistics job cards. They will be updated too, so nothing is left
-              showing the old value.
+              {shipments.length} shipment record(s) carry a copy of the name, email and phone for
+              invoices and Logistics job cards. They are updated too, so nothing is left showing
+              the old value. Invoice PDFs already generated are fixed files — re-generate one from
+              its shipment if it needs the new details.
             </p>
           )}
 

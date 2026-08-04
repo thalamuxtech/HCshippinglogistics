@@ -160,20 +160,26 @@ export default function AdminDashboardPage() {
   const earliest = React.useMemo(() => {
     let e: Date | null = null;
     for (const s of shipments) {
-      const d = tsToDate(s.created_at);
+      const d = tsToDate(s.created_at) ?? tsToDate(s.updated_at);
       if (d && (!e || d < e)) e = d;
     }
     return e;
   }, [shipments]);
 
   const rangeOptions = React.useMemo(() => buildRangeOptions(earliest, now), [earliest, now]);
-  // The selected key may not exist in the derived list (e.g. the default "6m"
-  // before data loads, or a year option that disappears). Fall back to the
-  // widest available option so the view is never blank.
-  const activeRange = React.useMemo(
-    () => (rangeOptions.some((r) => r.key === range) ? range : rangeOptions[0]?.key ?? "all"),
-    [rangeOptions, range]
-  );
+  // The selected key may not exist in the derived list — the default "6m" is
+  // absent until there are six months of history, and year options come and go.
+  //
+  // The fallback must be the WIDEST option, not rangeOptions[0]. Options are
+  // built narrowest-first ("This month", "3 months", …), so falling back to
+  // index 0 silently narrowed the dashboard to the current month: a business
+  // with only a few weeks of history saw $0 revenue while last month's paid
+  // shipments sat just outside the window. "All time" is always present, so
+  // preferring the last entry can never leave the view blank.
+  const activeRange = React.useMemo(() => {
+    if (rangeOptions.some((r) => r.key === range)) return range;
+    return rangeOptions[rangeOptions.length - 1]?.key ?? "all";
+  }, [rangeOptions, range]);
   const start = rangeStart(activeRange, now);
   const end = rangeEnd(activeRange);
   const rangeLabel = rangeOptions.find((r) => r.key === activeRange)?.label ?? "";
@@ -182,8 +188,13 @@ export default function AdminDashboardPage() {
   const inRange = React.useMemo(() => {
     if (!start && !end) return shipments;
     return shipments.filter((s) => {
-      const d = tsToDate(s.created_at);
-      if (!d) return false;
+      // A shipment whose created_at has not yet resolved (serverTimestamp is
+      // null for a moment after creation) must not vanish from revenue — that
+      // made freshly created, already-paid shipments invisible. Fall back to
+      // updated_at, and keep the record when neither timestamp exists rather
+      // than silently dropping money from the totals.
+      const d = tsToDate(s.created_at) ?? tsToDate(s.updated_at);
+      if (!d) return true;
       if (start && d < start) return false;
       if (end && d >= end) return false;
       return true;
@@ -192,9 +203,15 @@ export default function AdminDashboardPage() {
 
   // ── Revenue (scoped to range) ──
   const rangeRevenue = inRange.reduce((a, s) => a + (s.total_price || 0), 0);
-  const rangePaid = inRange
-    .filter((s) => s.payment_status === "paid")
-    .reduce((a, s) => a + (s.total_price || 0), 0);
+  // Money actually taken, INCLUDING part-payments. Counting only fully-paid
+  // shipments understated collections and did not reconcile with Outstanding:
+  // a $500 shipment with a $400 deposit showed $0 collected but only $100
+  // outstanding, so Collected + Outstanding did not equal Revenue.
+  const rangePaid = inRange.reduce((a, s) => {
+    if (s.payment_status === "paid") return a + (s.total_price || 0);
+    if (typeof s.deposit === "number") return a + s.deposit;
+    return a;
+  }, 0);
   const rangeOutstanding = inRange.reduce(
     (a, s) => a + (s.balance != null ? s.balance : s.payment_status === "paid" ? 0 : s.total_price || 0),
     0
@@ -309,7 +326,9 @@ export default function AdminDashboardPage() {
     // Bucket from the already range-filtered set so a single-year selection
     // never picks up shipments from outside the window.
     for (const s of inRange) {
-      const d = tsToDate(s.created_at);
+      // Same created_at ?? updated_at fallback as the KPI filter, so the chart
+      // total and the Revenue card can never disagree.
+      const d = tsToDate(s.created_at) ?? tsToDate(s.updated_at);
       if (!d) continue;
       const key = byYear ? `y-${d.getFullYear()}` : `${d.getFullYear()}-${d.getMonth()}`;
       const b = index.get(key);
@@ -390,7 +409,7 @@ export default function AdminDashboardPage() {
           icon={CheckCircle2}
           accent="emerald"
           loading={loading}
-          hint="Fully paid"
+          hint="Payments received"
         />
         <StatCard
           label="Outstanding"
