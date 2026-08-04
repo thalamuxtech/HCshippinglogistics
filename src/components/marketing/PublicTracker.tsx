@@ -150,15 +150,17 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
               </span>
             )}
           </div>
-          <a
-            href="/login"
+          {/* Was a "Log in to view full details" link. Customers have no login —
+              they authenticate with their Customer ID here — so it pointed staff
+              -only, and on the public domain it now leads to a 404. */}
+          <p
             className={cn(
-              "mt-3 inline-flex items-center gap-1.5 text-xs font-semibold",
-              isHero ? "text-gold-200 hover:text-gold" : "text-gold-700 hover:underline"
+              "mt-3 text-xs",
+              isHero ? "text-white/70" : "text-ink-muted"
             )}
           >
-            Log in to view full details &amp; download your receipt →
-          </a>
+            Enter your Customer ID above to see full details and download receipts.
+          </p>
         </div>
       )}
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { COMPANY } from "@/lib/constants";
-import { ShieldCheck, Ship, Lock } from "lucide-react";
+import { ShieldCheck, Ship } from "lucide-react";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 
 const cols = [
@@ -97,15 +97,10 @@ export function SiteFooter() {
             >
               Powered by ThalamuxTech
             </a>
-            {/* Discreet staff entry point (icon only) */}
-            <Link
-              href="/login"
-              className="inline-flex items-center text-white/25 transition-colors hover:text-gold-200 focus-ring rounded"
-              aria-label="Staff sign in"
-              title="Staff sign in"
-            >
-              <Lock className="h-3.5 w-3.5" />
-            </Link>
+            {/* No staff entry point here. The lock icon that used to link to
+                /login advertised the portal on the public site, and on this
+                domain that route is a 404 — so it only ever led somewhere dead.
+                Staff reach the portal by its own address. */}
           </div>
         </div>
       </div>

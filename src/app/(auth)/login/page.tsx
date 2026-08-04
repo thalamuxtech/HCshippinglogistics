@@ -6,13 +6,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { login, resetPassword } from "@/lib/auth-service";
+import { login } from "@/lib/auth-service";
 import { getUser } from "@/lib/db";
 import { ROLE_HOME } from "@/components/providers/RequireRole";
 import { AlertCircle, Eye, EyeOff, Clock } from "lucide-react";
 import { PageLoader } from "@/components/ui/misc";
 import { Logo } from "@/components/brand/Logo";
 import { isPortalHostAllowed } from "@/lib/portal-host";
+import { NotFoundScreen } from "@/components/marketing/NotFoundScreen";
 
 export default function LoginPage() {
   return (
@@ -30,34 +31,29 @@ function LoginForm() {
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
-  const [resetting, setResetting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const disabled = params.get("disabled") === "1";
   const timedOut = params.get("timeout") === "1";
   const next = params.get("next");
 
-  // Resolved after mount: the host is only knowable on the client, and the
-  // static export prerenders this page.
-  const [hostAllowed, setHostAllowed] = React.useState(true);
+  // The host is only knowable on the client (this page is prerendered by the
+  // static export), so start as "unknown" and show nothing until it resolves.
+  // Defaulting to allowed would flash the sign-in form on the public domain
+  // before the 404 replaced it — a glimpse is all it takes to reveal the portal.
+  const [hostAllowed, setHostAllowed] = React.useState<boolean | null>(null);
   React.useEffect(() => {
     setHostAllowed(isPortalHostAllowed());
   }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Belt and braces: on the public domain the form is never rendered, so this
+    // cannot normally be reached — but a submit must never fall through to
+    // Firebase from there.
+    if (hostAllowed !== true) return;
     setError(null);
     setLoading(true);
-    // Wrong host: fail exactly as a bad password does, and never contact Firebase
-    // so no credential leaves the marketing domain. The small delay matches the
-    // feel of a real round-trip — an instant rejection would itself signal that
-    // something other than the password was wrong.
-    if (!hostAllowed) {
-      await new Promise((r) => setTimeout(r, 900));
-      setError("Incorrect email or password.");
-      setLoading(false);
-      return;
-    }
     try {
       const cred = await login(email, password);
       const profile = await getUser(cred.user.uid);
@@ -80,34 +76,12 @@ function LoginForm() {
     }
   }
 
-  async function onReset() {
-    const target = email.trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) {
-      setError("Enter your email address above first, then request the reset link.");
-      return;
-    }
-    setResetting(true);
-    setError(null);
-    // On the wrong host, show the same reassuring message without sending
-    // anything. Saying "not available here" would confirm a portal exists.
-    if (!hostAllowed) {
-      await new Promise((r) => setTimeout(r, 700));
-      toast.success("Check your email", `If ${target} is a staff account, a reset link is on its way.`);
-      setResetting(false);
-      return;
-    }
-    try {
-      await resetPassword(target);
-      // Deliberately the same message whether or not the account exists: telling
-      // an anonymous visitor which staff addresses are real would let them
-      // enumerate accounts.
-      toast.success("Check your email", `If ${target} is a staff account, a reset link is on its way.`);
-    } catch {
-      toast.success("Check your email", `If ${target} is a staff account, a reset link is on its way.`);
-    } finally {
-      setResetting(false);
-    }
-  }
+  // Public domain: /login is simply not a page here. Rendering the very same
+  // NotFoundScreen as any mistyped URL means there is nothing to distinguish a
+  // withheld route from one that never existed.
+  if (hostAllowed === false) return <NotFoundScreen />;
+  // Host not yet resolved — render nothing rather than risk flashing the form.
+  if (hostAllowed === null) return <PageLoader label="Loading…" />;
 
   return (
     <div className="animate-fade-up">
@@ -138,10 +112,7 @@ function LoginForm() {
         </div>
       )}
 
-      {/* No host notice by design. On the marketing domain this page must look
-          and behave exactly like a normal login that simply rejects the
-          credentials — revealing that a portal lives elsewhere, or linking to
-          it, would publish the address we are keeping private. */}
+      {/* Reached only on the portal host — see the hostAllowed guard above. */}
       <form onSubmit={onSubmit} className="mt-7 space-y-4" noValidate>
         <div>
           <Label htmlFor="email" required>
@@ -194,19 +165,11 @@ function LoginForm() {
         </Button>
       </form>
 
+      {/* No self-service password reset: this is a three-account staff portal,
+          so a forgotten password is handled by an admin issuing a temporary one
+          from Staff & Roles. A public reset form on a portal this small is just
+          another way in. */}
       <p className="mt-6 text-center text-sm text-ink-muted">
-        Forgot your password?{" "}
-        <button
-          type="button"
-          onClick={onReset}
-          disabled={resetting}
-          className="font-semibold text-gold-700 hover:underline focus-ring rounded disabled:opacity-60"
-        >
-          {resetting ? "Sending…" : "Email me a reset link"}
-        </button>
-      </p>
-
-      <p className="mt-3 text-center text-sm text-ink-muted">
         Are you a customer? Check your shipment with your Customer ID on the{" "}
         <Link href="/track" className="font-semibold text-gold-700 hover:underline">
           tracking page
