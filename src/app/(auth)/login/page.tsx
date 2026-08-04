@@ -6,10 +6,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input, Label, FieldError } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { login } from "@/lib/auth-service";
+import { login, resetPassword } from "@/lib/auth-service";
 import { getUser } from "@/lib/db";
 import { ROLE_HOME } from "@/components/providers/RequireRole";
-import { AlertCircle, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Clock } from "lucide-react";
 import { PageLoader } from "@/components/ui/misc";
 import { Logo } from "@/components/brand/Logo";
 
@@ -28,11 +28,12 @@ function LoginForm() {
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);
-  const [showDemoPw, setShowDemoPw] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
+  const [resetting, setResetting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const disabled = params.get("disabled") === "1";
+  const timedOut = params.get("timeout") === "1";
   const next = params.get("next");
 
   async function onSubmit(e: React.FormEvent) {
@@ -61,6 +62,27 @@ function LoginForm() {
     }
   }
 
+  async function onReset() {
+    const target = email.trim();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(target)) {
+      setError("Enter your email address above first, then request the reset link.");
+      return;
+    }
+    setResetting(true);
+    setError(null);
+    try {
+      await resetPassword(target);
+      // Deliberately the same message whether or not the account exists: telling
+      // an anonymous visitor which staff addresses are real would let them
+      // enumerate accounts.
+      toast.success("Check your email", `If ${target} is a staff account, a reset link is on its way.`);
+    } catch {
+      toast.success("Check your email", `If ${target} is a staff account, a reset link is on its way.`);
+    } finally {
+      setResetting(false);
+    }
+  }
+
   return (
     <div className="animate-fade-up">
       {/* Big centered brand mark */}
@@ -78,6 +100,15 @@ function LoginForm() {
       {disabled && (
         <div className="mt-5 flex items-center gap-2 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 ring-1 ring-amber-200">
           <AlertCircle className="h-4 w-4" /> Your account is currently disabled.
+        </div>
+      )}
+
+      {timedOut && (
+        <div className="mt-5 flex items-start gap-2 rounded-lg bg-secondary p-3 text-sm text-ink ring-1 ring-border">
+          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-ink-muted" />
+          <span>
+            You were signed out after 20 minutes of inactivity. Please sign in again to continue.
+          </span>
         </div>
       )}
 
@@ -127,52 +158,19 @@ function LoginForm() {
         </Button>
       </form>
 
-      {/* Demo access: full credentials per staff role (remove before launch) */}
-      <div className="mt-6 rounded-xl border border-dashed border-gold/40 bg-gold-50/50 p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gold-700">
-            Demo access
-          </p>
-          <button
-            type="button"
-            onClick={() => setShowDemoPw((v) => !v)}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-gold-700 hover:underline focus-ring rounded"
-          >
-            {showDemoPw ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-            {showDemoPw ? "Hide" : "Show"} passwords
-          </button>
-        </div>
-        <div className="mt-3 space-y-2">
-          {DEMO_STAFF.map((d) => (
-            <div
-              key={d.role}
-              className="rounded-lg border border-border bg-white p-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-navy">{d.label}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEmail(d.email);
-                    setPassword(d.password);
-                  }}
-                  className="cursor-pointer rounded-md bg-navy px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-navy-700 focus-ring"
-                >
-                  Use &amp; fill
-                </button>
-              </div>
-              <p className="mt-1.5 break-all font-mono text-[11px] text-ink-muted">
-                {d.email}
-              </p>
-              <p className="font-mono text-[11px] text-ink-muted">
-                {showDemoPw ? d.password : "•".repeat(d.password.length)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
       <p className="mt-6 text-center text-sm text-ink-muted">
+        Forgot your password?{" "}
+        <button
+          type="button"
+          onClick={onReset}
+          disabled={resetting}
+          className="font-semibold text-gold-700 hover:underline focus-ring rounded disabled:opacity-60"
+        >
+          {resetting ? "Sending…" : "Email me a reset link"}
+        </button>
+      </p>
+
+      <p className="mt-3 text-center text-sm text-ink-muted">
         Are you a customer? Check your shipment with your Customer ID on the{" "}
         <Link href="/track" className="font-semibold text-gold-700 hover:underline">
           tracking page
@@ -183,9 +181,3 @@ function LoginForm() {
   );
 }
 
-// Demo staff credentials (match scripts/seed-demo-users.mjs). Remove before launch.
-const DEMO_STAFF = [
-  { role: "admin", label: "Administrator", email: "admin@highclassshippinglogistics.com", password: "HCshipping@54321" },
-  { role: "nigeria_office", label: "Office", email: "nigeria.office@highclassshippinglogistics.com", password: "HCshipping@54321" },
-  { role: "dispatcher", label: "Dispatcher", email: "dispatcher@highclassshippinglogistics.com", password: "HCshipping@54321" },
-];

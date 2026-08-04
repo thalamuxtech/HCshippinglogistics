@@ -302,6 +302,21 @@ export async function updateStaffUser(payload: {
   return res.data as { ok: boolean };
 }
 
+/**
+ * Admin: issue a new temporary password for an existing staff account.
+ * Returns the plaintext once so the admin can hand it over directly — useful
+ * when the staff member cannot receive the reset email.
+ */
+export async function resetStaffPassword(payload: {
+  uid: string;
+  /** Omit to have the server generate a random one. */
+  password?: string;
+}): Promise<{ ok: boolean; tempPassword: string; emailed: boolean }> {
+  const fn = httpsCallable(functions, "resetStaffPassword");
+  const res = await fn(payload);
+  return res.data as { ok: boolean; tempPassword: string; emailed: boolean };
+}
+
 // ── Admin: demo customer records (Admin SDK; rules block client writes) ──
 export async function seedDemoCustomers(): Promise<{ ok: boolean; created: number }> {
   const fn = httpsCallable(functions, "seedDemoCustomers");

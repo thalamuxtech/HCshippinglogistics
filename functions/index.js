@@ -1515,8 +1515,10 @@ export const createStaffUser = onCall({ secrets: EMAIL_SECRETS }, async (req) =>
     throw new HttpsError("invalid-argument", "Invalid staff role.");
   }
 
-  const tempPassword =
-    password || `Hc${Math.abs(hashStr(email + fullName)).toString(36)}!${role.slice(0, 2).toUpperCase()}9`;
+  // Randomly generated, never derived. The previous version hashed
+  // email + fullName, so anyone who knew a colleague's name and address could
+  // reconstruct their temporary password before they first signed in.
+  const tempPassword = password || generateTempPassword();
 
   let userRecord;
   try {
@@ -1565,14 +1567,93 @@ export const createStaffUser = onCall({ secrets: EMAIL_SECRETS }, async (req) =>
   return { ok: true, uid: userRecord.uid, tempPassword };
 });
 
-// Small deterministic string hash for temp-password generation.
-function hashStr(s) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) {
-    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
-  }
-  return h;
+
+/**
+ * Cryptographically random temporary password.
+ *
+ * Alphabets deliberately exclude look-alike characters (O/0, I/l/1) because
+ * these get read aloud over the phone and typed by hand; a mistyped temp
+ * password is indistinguishable from a wrong one to the person receiving it.
+ * Shape is fixed at 4-4-4 with a digit and a symbol so it always satisfies
+ * Firebase's minimum strength requirements.
+ */
+function generateTempPassword() {
+  const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lower = "abcdefghijkmnpqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%&*";
+  const pick = (set, n) => {
+    const bytes = randomBytes(n);
+    let out = "";
+    for (let i = 0; i < n; i++) out += set[bytes[i] % set.length];
+    return out;
+  };
+  return `${pick(upper, 2)}${pick(lower, 3)}-${pick(digits, 3)}-${pick(lower, 3)}${pick(symbols, 1)}`;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Admin: issue a NEW temporary password for an existing staff account.
+// Needed when someone forgets their password and cannot receive the reset email
+// (wrong address on file, mailbox not set up yet), which is the common case for
+// warehouse and rider accounts.
+// ═══════════════════════════════════════════════════════════════
+export const resetStaffPassword = onCall({ secrets: EMAIL_SECRETS }, async (req) => {
+  await assertAdmin(req);
+  const { uid, password } = req.data || {};
+  if (!uid) throw new HttpsError("invalid-argument", "uid required.");
+
+  const snap = await db.collection("users").doc(uid).get();
+  if (!snap.exists) throw new HttpsError("not-found", "Staff account not found.");
+  const target = snap.data();
+  if (target.role === "customer") {
+    // Customers authenticate with an access code, not a password — issuing one
+    // here would create a login path that does not exist for them.
+    throw new HttpsError("failed-precondition", "Customers do not have passwords.");
+  }
+
+  const tempPassword = password || generateTempPassword();
+  if (String(tempPassword).length < 8) {
+    throw new HttpsError("invalid-argument", "Password must be at least 8 characters.");
+  }
+
+  try {
+    await getAuth().updateUser(uid, { password: String(tempPassword) });
+  } catch (e) {
+    throw new HttpsError("internal", e?.message || "Could not set the password.");
+  }
+
+  // Best-effort notification; the admin also sees the password on screen so a
+  // failed send never blocks handing it over in person.
+  let emailed = false;
+  try {
+    const res = await sendEmail({
+      to: target.email,
+      subject: "Your Highclass Shipping password has been reset",
+      html: emailShell({
+        heading: "Your password was reset",
+        body: `An administrator has issued a new temporary password for your staff account.<br/><br/>
+               <strong style="font-family:monospace;font-size:18px;letter-spacing:1px">${tempPassword}</strong><br/><br/>
+               Sign in with it, then change it immediately from your account settings.`,
+        ctaUrl: `${SITE}/login`,
+        ctaLabel: "Sign in",
+      }),
+    });
+    emailed = !!res?.ok;
+  } catch {
+    emailed = false;
+  }
+
+  await db.collection("activity_log").doc().set({
+    actor_id: req.auth.uid,
+    action: "staff_password_reset",
+    target: uid,
+    // Never log the password itself — activity_log is readable by every admin.
+    meta: { email: target.email || null, emailed },
+    created_at: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true, tempPassword, emailed };
+});
 
 // ═══════════════════════════════════════════════════════════════
 // Callable (admin): update a staff member's role / country / active

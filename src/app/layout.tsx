@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/providers/AuthProvider";
+import { IdleTimeout } from "@/components/providers/IdleTimeout";
 import { ToastProvider } from "@/components/ui/toast";
 import { COMPANY } from "@/lib/constants";
 
@@ -66,7 +67,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} ${jetbrains.variable}`} suppressHydrationWarning>
       <body className="min-h-screen font-sans">
         <ToastProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            {/* Renders nothing unless a staff session is active; inside
+                AuthProvider so it can read that session. */}
+            <IdleTimeout />
+          </AuthProvider>
         </ToastProvider>
       </body>
     </html>

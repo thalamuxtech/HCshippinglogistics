@@ -13,6 +13,7 @@ import {
   Check,
   Pencil,
   Tags,
+  KeyRound,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal, PageLoader, EmptyState } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { listUsers, setSiteContent } from "@/lib/db";
-import { createStaffUser, updateStaffUser } from "@/lib/notify";
+import { createStaffUser, updateStaffUser, resetStaffPassword } from "@/lib/notify";
 import { DESTINATION_COUNTRIES } from "@/lib/constants";
 import {
   useRoleLabels,
@@ -33,6 +34,7 @@ import {
   featuresForRole,
   defaultFeatureKeys,
   effectiveFeatureKeys,
+  type FeatureMeta,
   type FeatureKey,
 } from "@/lib/features";
 import { formatDate, initialsOf } from "@/lib/utils";
@@ -130,6 +132,36 @@ export default function AdminStaffPage() {
   });
   const [editErr, setEditErr] = React.useState<string | null>(null);
   const [savingEdit, setSavingEdit] = React.useState(false);
+  // Temp password issued for the account currently open in the edit modal.
+  // Shown once so the admin can read it out; never re-retrievable afterwards.
+  const [issuedPw, setIssuedPw] = React.useState<{ password: string; emailed: boolean } | null>(
+    null
+  );
+  const [resettingPw, setResettingPw] = React.useState(false);
+
+  async function issueTempPassword() {
+    if (!editUser) return;
+    if (
+      !window.confirm(
+        `Issue a new temporary password for ${editUser.full_name}? Their current password stops working immediately.`
+      )
+    )
+      return;
+    setResettingPw(true);
+    setEditErr(null);
+    try {
+      const res = await resetStaffPassword({ uid: editUser.id });
+      setIssuedPw({ password: res.tempPassword, emailed: res.emailed });
+      toast.success(
+        "Temporary password issued",
+        res.emailed ? `Emailed to ${editUser.email}.` : "Email not sent — share it directly."
+      );
+    } catch (err: unknown) {
+      setEditErr(err instanceof Error ? err.message : "Could not reset the password.");
+    } finally {
+      setResettingPw(false);
+    }
+  }
 
   function openEdit(u: AppUser) {
     setEditUser(u);
@@ -141,6 +173,8 @@ export default function AdminStaffPage() {
       assignedCountry: u.assigned_country || "Nigeria",
     });
     setEditErr(null);
+    // Never carry a previous user's password into this dialog.
+    setIssuedPw(null);
   }
 
   async function saveEdit() {
@@ -534,8 +568,9 @@ export default function AdminStaffPage() {
               </FieldHint>
               <div className="mt-2 space-y-1.5 rounded-lg border border-border p-3">
                 {featuresForRole(form.role).map((f) => {
-                  // Admins always have every menu; the checkboxes are locked on.
-                  const lockAll = form.role === "admin";
+                  // Admins always have every PAGE; those checkboxes are locked
+                  // on. Opt-in tools stay toggleable and default to off.
+                  const lockAll = form.role === "admin" && !f.optIn;
                   const locked = lockAll || f.required;
                   const checked = lockAll ? true : createFeatures.has(f.key);
                   return (
@@ -550,6 +585,11 @@ export default function AdminStaffPage() {
                         {(f.required || lockAll) && (
                           <span className="ml-1.5 text-[10px] uppercase tracking-wide text-ink-muted">
                             {lockAll ? "always on" : "core"}
+                          </span>
+                        )}
+                        {f.optIn && !checked && (
+                          <span className="ml-1.5 text-[10px] uppercase tracking-wide text-amber-600">
+                            off by default
                           </span>
                         )}
                       </span>
@@ -731,6 +771,58 @@ export default function AdminStaffPage() {
               </div>
             )}
 
+            {/* Temporary password — for staff who cannot use the reset email */}
+            <div className="rounded-lg border border-border bg-secondary/40 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-ink-muted">
+                    Password
+                  </p>
+                  <p className="mt-0.5 text-xs text-ink-muted">
+                    Issue a temporary password to hand over directly.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={issueTempPassword}
+                  loading={resettingPw}
+                  disabled={resettingPw || savingEdit}
+                >
+                  <KeyRound className="h-3.5 w-3.5" /> Reset password
+                </Button>
+              </div>
+
+              {issuedPw && (
+                <div className="mt-3 rounded-lg border-2 border-dashed border-gold/40 bg-gold-50/60 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gold-700">
+                    Temporary password — shown once
+                  </p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                    <code className="select-all rounded bg-white px-2.5 py-1.5 font-mono text-base font-bold tracking-wider text-navy">
+                      {issuedPw.password}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(issuedPw.password);
+                        toast.success("Copied");
+                      }}
+                      className="rounded-md p-2 text-ink-muted hover:bg-white focus-ring"
+                      aria-label="Copy temporary password"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-ink-muted">
+                    {issuedPw.emailed
+                      ? "Also emailed to them. They should change it after signing in."
+                      : "The email did not send — read this out or send it another way. It cannot be shown again."}
+                  </p>
+                </div>
+              )}
+            </div>
+
             {editErr && <FieldError>{editErr}</FieldError>}
 
             <div className="flex gap-2 pt-1">
@@ -779,8 +871,12 @@ function AccessModal({
   onSave: (u: AppUser, keys: FeatureKey[] | null) => Promise<void> | void;
 }) {
   const features = featuresForRole(user.role);
-  // Administrators always have full access; their menu access is not editable.
-  const lockAll = user.role === "admin";
+  // Administrators always have full access to every PAGE; their menus are not
+  // editable. Opt-in tools are the exception — they stay individually
+  // toggleable, because the point of an opt-in tool (e.g. demo data seeding)
+  // is that it is off until deliberately granted, even for an admin.
+  const lockPages = user.role === "admin";
+  const lockAllFor = (f: FeatureMeta) => lockPages && !f.optIn;
   const [selected, setSelected] = React.useState<Set<FeatureKey>>(
     () => effectiveFeatureKeys(user.role, user.allowed_features)
   );
@@ -792,8 +888,18 @@ function AccessModal({
 
   async function handleSave() {
     setSaving(true);
-    // Full default -> null (track role); otherwise the exact set.
-    await onSave(user, isFullDefault ? null : Array.from(selected));
+    // Locked page checkboxes are disabled, so `selected` may not contain them.
+    // Re-add every locked feature before saving, otherwise persisting the set
+    // would strip an administrator's access to the pages they must always have.
+    const toSave = new Set(selected);
+    for (const f of features) {
+      if (lockAllFor(f) || f.required) toSave.add(f.key);
+    }
+    const defaults = new Set(roleDefaults);
+    const matchesDefault =
+      toSave.size === defaults.size && Array.from(toSave).every((k) => defaults.has(k));
+    // Matches the role default -> null (keep tracking the role); else exact set.
+    await onSave(user, matchesDefault ? null : Array.from(toSave));
     setSaving(false);
   }
 
@@ -805,11 +911,12 @@ function AccessModal({
       description="Turn back-end menus on or off for this account. Core menus cannot be removed."
     >
       <div className="space-y-4">
-        {lockAll ? (
+        {lockPages ? (
           <div className="flex items-start gap-2.5 rounded-lg border border-navy/15 bg-navy/5 p-3 text-sm text-navy">
             <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-navy" />
             <p>
-              Administrators always have full access to every menu. This cannot be changed.
+              Administrators always have full access to every menu. Optional tools below can still
+              be switched on or off.
             </p>
           </div>
         ) : (
@@ -829,6 +936,7 @@ function AccessModal({
 
         <div className="max-h-[50vh] space-y-1.5 overflow-y-auto rounded-lg border border-border p-3">
           {features.map((f) => {
+            const lockAll = lockAllFor(f);
             const locked = lockAll || f.required;
             const checked = lockAll ? true : selected.has(f.key);
             return (
@@ -848,6 +956,11 @@ function AccessModal({
                   {(f.required || lockAll) && (
                     <span className="text-[10px] uppercase tracking-wide text-ink-muted">
                       {lockAll ? "always on" : "core"}
+                    </span>
+                  )}
+                  {f.optIn && !checked && (
+                    <span className="text-[10px] uppercase tracking-wide text-amber-600">
+                      off by default
                     </span>
                   )}
                 </span>

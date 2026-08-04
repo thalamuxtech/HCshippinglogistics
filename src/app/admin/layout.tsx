@@ -61,6 +61,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const eff = role ? effectiveFeatureKeys(role, user?.allowed_features) : new Set<FeatureKey>();
   const nav = NAV.filter((item) => eff.has(item.key));
 
+  // Opt-in tool: hidden unless this admin has been granted it under Staff &
+  // Roles, so test data cannot reach live records by accident.
+  const showDemoTool = eff.has("admin.demodata");
+
   return (
     <RequireRole roles={["admin"]}>
       <FeatureGuard>
@@ -68,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           nav={nav}
           title={titleFor(pathname)}
           roleLabel="Administrator"
-          headerActions={<DemoDataToolbar />}
+          headerActions={showDemoTool ? <DemoDataToolbar /> : undefined}
         >
           {children}
         </PortalShell>

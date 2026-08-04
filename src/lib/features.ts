@@ -26,6 +26,7 @@ export type FeatureKey =
   | "admin.containers"
   | "admin.inquiries"
   | "admin.content"
+  | "admin.demodata"
   // Destination office
   | "office.dashboard"
   | "office.containers"
@@ -44,6 +45,18 @@ export interface FeatureMeta {
   role: Exclude<Role, "customer">;
   /** Core features cannot be turned off (the portal home / primary screen). */
   required?: boolean;
+  /**
+   * A top-bar tool rather than a sidebar page. It still appears in the admin's
+   * per-user access editor, but has no route of its own — so canAccessRoute must
+   * not treat its href as a page prefix.
+   */
+  tool?: boolean;
+  /**
+   * OFF unless explicitly granted. Everything else is on by default for its
+   * role; an opt-in feature is excluded even from the "role default" set, so a
+   * production tool stays hidden until an admin deliberately enables it.
+   */
+  optIn?: boolean;
 }
 
 // Order here defines sidebar order.
@@ -58,6 +71,17 @@ export const FEATURES: FeatureMeta[] = [
   { key: "admin.containers", label: "Containers", href: "/admin/containers", role: "admin" },
   { key: "admin.inquiries", label: "Submissions", href: "/admin/inquiries", role: "admin" },
   { key: "admin.content", label: "Content", href: "/admin/content", role: "admin" },
+  // Top-bar tool, not a page: seeds/clears demo records (all tagged demo:true).
+  // optIn — hidden for every admin until deliberately enabled under Staff &
+  // Roles, so nobody can push test data into the live system by accident.
+  {
+    key: "admin.demodata",
+    label: "Demo data tool",
+    href: "/admin#demo-data",
+    role: "admin",
+    tool: true,
+    optIn: true,
+  },
   // ── Destination office ──
   { key: "office.dashboard", label: "Dashboard", href: "/office", role: "nigeria_office", required: true },
   // Order reflects the operating model: a Container holds Shipments, and those
@@ -88,9 +112,14 @@ export function featuresForRole(role: Role): FeatureMeta[] {
   return FEATURES.filter((f) => f.role === role);
 }
 
-/** The default (all role features) keys for a role. */
+/**
+ * The default keys for a role: everything the role may have EXCEPT opt-in
+ * features, which stay off until an admin grants them explicitly.
+ */
 export function defaultFeatureKeys(role: Role): FeatureKey[] {
-  return featuresForRole(role).map((f) => f.key);
+  return featuresForRole(role)
+    .filter((f) => !f.optIn)
+    .map((f) => f.key);
 }
 
 /** Keys that can never be removed for a role. */
@@ -109,15 +138,21 @@ export function effectiveFeatureKeys(
   role: Role,
   allowed?: string[] | null
 ): Set<FeatureKey> {
-  const roleKeys = new Set(defaultFeatureKeys(role));
+  // Two different sets, and the distinction matters:
+  //  - grantable = everything the ROLE may ever have (includes opt-in features),
+  //    used to bound an explicit override.
+  //  - defaults  = what the role gets with no override (excludes opt-in).
+  // Bounding the override by `defaults` would silently drop any opt-in key an
+  // admin granted, making it impossible to ever switch on.
+  const grantable = new Set(featuresForRole(role).map((f) => f.key));
   const required = requiredFeatureKeys(role);
   if (!allowed) {
-    // No override -> full role default set.
-    return new Set(roleKeys);
+    // No override -> role defaults (opt-in features stay off).
+    return new Set(defaultFeatureKeys(role));
   }
   const set = new Set<FeatureKey>(required);
   for (const k of allowed) {
-    if (roleKeys.has(k as FeatureKey)) set.add(k as FeatureKey);
+    if (grantable.has(k as FeatureKey)) set.add(k as FeatureKey);
   }
   return set;
 }
@@ -133,6 +168,9 @@ export function canAccessRoute(
   let best: FeatureMeta | null = null;
   for (const f of FEATURES) {
     if (f.role !== role) continue;
+    // Tools have no page of their own; matching their href would gate a real
+    // route on a toolbar toggle.
+    if (f.tool) continue;
     if (pathname === f.href || pathname.startsWith(f.href + "/")) {
       if (!best || f.href.length > best.href.length) best = f;
     }
