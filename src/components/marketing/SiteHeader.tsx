@@ -37,13 +37,24 @@ export function SiteHeader() {
       {/* Top utility bar (desktop) */}
       <div className="hidden bg-navy text-white lg:block">
         <div className="container-page flex h-9 items-center justify-between text-xs">
+          {/* Both USA numbers, then email. Mapped over COMPANY.usa.phones so
+              adding or changing a number needs no edit here. The two numbers sit
+              in their own tighter group (gap-3) so they read as one office's two
+              lines rather than as separate contact methods. */}
           <div className="flex items-center gap-5">
-            <a
-              href={`tel:${COMPANY.usa.phones[0].replace(/[^\d+]/g, "")}`}
-              className="inline-flex items-center gap-1.5 text-white transition-colors hover:text-gold-200"
-            >
-              <Phone className="h-3.5 w-3.5 text-gold-300" /> {COMPANY.usa.phones[0]}
-            </a>
+            <span className="flex items-center gap-3">
+              {COMPANY.usa.phones.map((phone, i) => (
+                <a
+                  key={phone}
+                  href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                  className="inline-flex items-center gap-1.5 text-white transition-colors hover:text-gold-200"
+                >
+                  {/* One icon for the group; the second number just follows. */}
+                  {i === 0 && <Phone className="h-3.5 w-3.5 text-gold-300" />}
+                  {phone}
+                </a>
+              ))}
+            </span>
             <a
               href={`mailto:${COMPANY.email}`}
               className="inline-flex items-center gap-1.5 text-white transition-colors hover:text-gold-200"
@@ -143,12 +154,26 @@ export function SiteHeader() {
                 <PackagePlus className="h-4 w-4" /> Start an order
               </ButtonLink>
             </div>
-            <a
-              href={`tel:${COMPANY.usa.phones[0].replace(/[^\d+]/g, "")}`}
-              className="mt-2 flex items-center gap-2 px-3 py-2 text-sm text-ink-muted"
-            >
-              <Phone className="h-4 w-4 text-gold" /> {COMPANY.usa.phones[0]}
-            </a>
+            {/* Both numbers on mobile too — a rider or customer on a phone is
+                the most likely person to tap-to-call, so hiding the second line
+                here is where it would be missed most. */}
+            <div className="mt-2 border-t border-border pt-2">
+              {COMPANY.usa.phones.map((phone) => (
+                <a
+                  key={phone}
+                  href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-ink-muted"
+                >
+                  <Phone className="h-4 w-4 shrink-0 text-gold" /> {phone}
+                </a>
+              ))}
+              <a
+                href={`mailto:${COMPANY.email}`}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-ink-muted"
+              >
+                <Mail className="h-4 w-4 shrink-0 text-gold" /> {COMPANY.email}
+              </a>
+            </div>
           </nav>
         </div>
       )}
