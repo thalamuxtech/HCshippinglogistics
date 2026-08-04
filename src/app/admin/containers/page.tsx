@@ -153,14 +153,23 @@ export default function AdminContainersPage() {
     return out;
   }, [selectedGroup, customers, activeCustomerIds]);
 
+  // Shipments to keep selected across the container switch that follows an
+  // assign. Switching containers normally clears the stage selection (it belongs
+  // to the container being left behind), but assigning then jumps to the new
+  // container — so without this the rows we just assigned would be deselected a
+  // tick later by the effect below.
+  const carrySelectionRef = React.useRef<string[] | null>(null);
+
   // Reset the recipient edits whenever the selected container changes.
   React.useEffect(() => {
     setRemovedEmails(new Set());
     setExtraEmails([]);
     setNewEmail("");
-    // Also drop any stage selection and close the rename editor — both belong to
-    // the container being left behind.
-    setStageSel(new Set());
+    // Drop any stage selection and close the rename editor — both belong to the
+    // container being left behind — unless an assign explicitly handed rows over.
+    const carried = carrySelectionRef.current;
+    carrySelectionRef.current = null;
+    setStageSel(carried ? new Set(carried) : new Set());
     setEditingCnt(false);
     setCntDraft(selected);
   }, [selected]);
@@ -459,11 +468,21 @@ export default function AdminContainersPage() {
         target: `CNT #${cnt}`,
         meta: { container_number: cnt, count: ok, failed: failed.length },
       });
+      // Carry the just-assigned shipments straight into the stage selection.
+      // Loading a container and then moving it through a stage is one continuous
+      // job, and re-ticking the same rows by hand is where an operator misses one
+      // and leaves it behind at the wrong stage. Set BEFORE setSelected so the
+      // container-change effect hands them over instead of clearing them.
+      if (failed.length === 0) carrySelectionRef.current = ids;
       await load();
       setSelected(cnt);
       if (failed.length === 0) {
         setAssignOpen(false);
-        toast.success("Shipments assigned", `${ok} shipment(s) added to CNT #${cnt}.`);
+        setStageSel(new Set(ids));
+        toast.success(
+          "Shipments assigned",
+          `${ok} shipment(s) added to CNT #${cnt}. They are selected below — use Advance stage to move the whole container.`
+        );
       } else if (ok === 0) {
         toast.error("Assign failed", "Could not assign any of the selected shipments.");
       } else {
