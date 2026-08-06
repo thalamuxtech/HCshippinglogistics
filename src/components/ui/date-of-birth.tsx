@@ -10,7 +10,8 @@
 // taps. Spelling the month out removes the ambiguity entirely.
 //
 // Optional by design: the value is only reported once all three columns are set,
-// and clearing any one of them clears the field.
+// and clearing any one of them clears the field. The picker states that it is
+// optional itself, so the field label does not need to repeat it.
 //
 // Implementation notes:
 //  - Native scroll + CSS snap does the work. A JS-driven wheel would need pointer
@@ -153,12 +154,6 @@ export function DateOfBirthPicker({
     }
   }, [value]);
 
-  // ── Typed entry (declared before `emit`, which writes to it) ──
-  const [typing, setTyping] = React.useState(false);
-  const [typed, setTyped] = React.useState(() =>
-    parsed ? `${parsed[3]}/${parsed[2]}/${parsed[1]}` : ""
-  );
-
   const thisYear = new Date().getFullYear();
   // 18–100 is the plausible range for someone shipping cargo; listing 1900
   // onwards would just add scrolling.
@@ -183,11 +178,6 @@ export function DateOfBirthPicker({
       }
       const clamped = Math.min(d, daysInMonth(mo, y));
       const iso = `${y}-${String(mo + 1).padStart(2, "0")}-${String(clamped).padStart(2, "0")}`;
-      // Keep the typed box showing whatever the rollers say, so switching between
-      // the two never shows a stale value.
-      setTyped(
-        `${String(clamped).padStart(2, "0")}/${String(mo + 1).padStart(2, "0")}/${y}`
-      );
       if (iso !== value) onChange(iso);
     },
     [onChange, value]
@@ -212,28 +202,6 @@ export function DateOfBirthPicker({
   }
 
   const complete = day !== null && month !== null && year !== null;
-
-  // Day-first, explicitly labelled, because DD/MM and MM/DD both look valid and
-  // guessing would silently record the wrong birthday.
-  function onTyped(raw: string) {
-    const digits = raw.replace(/\D/g, "").slice(0, 8);
-    // Re-insert separators as they type so the shape is self-evident.
-    const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)].filter(Boolean);
-    setTyped(parts.join("/"));
-
-    if (digits.length < 8) return;
-    const d = Number(digits.slice(0, 2));
-    const mo = Number(digits.slice(2, 4)) - 1;
-    const y = Number(digits.slice(4, 8));
-    // Reject impossible input rather than clamping it into a different date.
-    if (mo < 0 || mo > 11) return;
-    if (y < 1900 || y > thisYear) return;
-    if (d < 1 || d > daysInMonth(mo, y)) return;
-    setDay(d);
-    setMonth(mo);
-    setYear(y);
-    emit(d, mo, y);
-  }
 
   return (
     <div id={id}>
@@ -273,54 +241,21 @@ export function DateOfBirthPicker({
               "Scroll or tap to pick — optional."
             )}
           </p>
-          <div className="flex shrink-0 items-center gap-3">
-            {/* Typing is faster than scrolling for anyone who knows their date,
-                so both routes stay available rather than forcing the roller. */}
+          {(day !== null || month !== null || year !== null) && (
             <button
               type="button"
-              onClick={() => setTyping((v) => !v)}
-              className="rounded text-xs font-semibold text-gold-700 hover:underline focus-ring"
+              onClick={() => {
+                setDay(null);
+                setMonth(null);
+                setYear(null);
+                onChange("");
+              }}
+              className="shrink-0 rounded text-xs font-semibold text-gold-700 hover:underline focus-ring"
             >
-              {typing ? "Use the picker" : "Type it instead"}
+              Clear
             </button>
-            {(day !== null || month !== null || year !== null) && (
-              <button
-                type="button"
-                onClick={() => {
-                  setDay(null);
-                  setMonth(null);
-                  setYear(null);
-                  setTyped("");
-                  onChange("");
-                }}
-                className="rounded text-xs font-semibold text-ink-muted hover:text-navy hover:underline focus-ring"
-              >
-                Clear
-              </button>
-            )}
-          </div>
+          )}
         </div>
-
-        {typing && (
-          <div className="mt-2 border-t border-border pt-2">
-            <label htmlFor={`${id ?? "dob"}-typed`} className="sr-only">
-              Date of birth, day slash month slash year
-            </label>
-            <input
-              id={`${id ?? "dob"}-typed`}
-              inputMode="numeric"
-              autoComplete="bday"
-              placeholder="DD / MM / YYYY"
-              value={typed}
-              onChange={(e) => onTyped(e.target.value)}
-              className="h-11 w-full rounded-lg border border-border bg-white px-3 font-mono text-sm text-ink placeholder:text-ink-muted/60 focus-ring"
-            />
-            <p className="mt-1 text-xs text-ink-muted">
-              Day first, e.g. <span className="font-mono">04/09/1985</span>. The picker above
-              updates as you type.
-            </p>
-          </div>
-        )}
       </div>
     </div>
   );

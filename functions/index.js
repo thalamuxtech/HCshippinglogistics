@@ -881,6 +881,12 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   if (!["sea", "air", "roro"].includes(svc))
     throw new HttpsError("invalid-argument", "Invalid service type.");
   if (!d.full_name || !d.email) throw new HttpsError("invalid-argument", "Name and email required.");
+  // The sender's USA address is required: it appears on the invoice and is what
+  // a door-to-door pickup falls back to (see pickup_address below), so a blank
+  // one would leave the driver with nowhere to collect from.
+  if (!String(d.address || "").trim()) {
+    throw new HttpsError("invalid-argument", "Your USA address is required.");
+  }
   if (!d.destination_country) throw new HttpsError("invalid-argument", "Destination required.");
   if (!d.receiver?.full_name || !d.receiver?.phone)
     throw new HttpsError("invalid-argument", "Receiver name and phone required.");

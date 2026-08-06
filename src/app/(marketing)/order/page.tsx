@@ -286,6 +286,9 @@ function OrderFlow() {
     // Phone is as essential as email: it is how the destination office and the
     // rider reach the sender about a hold, a customs query, or a failed delivery.
     if (!senderPhone.trim()) return "Please enter your phone number.";
+    // The USA address is on the invoice and is what the warehouse matches a
+    // drop-off or pickup against, so it cannot be left blank.
+    if (!senderAddress.trim()) return "Please enter your USA address.";
     if (!destCountry) return "Please select a destination country.";
     if (!rcvName.trim()) return "Please enter the receiver's full name.";
     if (!rcvPhone.trim()) return "Please enter the receiver's phone number.";
@@ -320,7 +323,7 @@ function OrderFlow() {
         email: senderEmail.trim(),
         phone: senderPhone.trim(),
         dob: senderDob || undefined,
-        address: senderAddress.trim() || undefined,
+        address: senderAddress.trim(),
         destination_country: destCountry,
         destination_city: destCity.trim() || undefined,
         door_to_door: doorToDoor,
@@ -514,7 +517,9 @@ function OrderFlow() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="sender-dob">Date of birth (optional)</Label>
+                    {/* Still optional — the picker itself says so, and there is
+                        no `required` marker, so the label stays uncluttered. */}
+                    <Label htmlFor="sender-dob">Date of birth</Label>
                     <DateOfBirthPicker
                       id="sender-dob"
                       value={senderDob}
@@ -524,7 +529,9 @@ function OrderFlow() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="sender-address">Your address</Label>
+                  <Label htmlFor="sender-address" required>
+                    Your USA address
+                  </Label>
                   <Textarea
                     id="sender-address"
                     value={senderAddress}

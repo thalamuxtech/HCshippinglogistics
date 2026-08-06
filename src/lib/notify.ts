@@ -51,7 +51,8 @@ export interface PublicOrderInput {
   email: string;
   phone: string;
   dob?: string; // YYYY-MM-DD (age computed server-side)
-  address?: string; // sender full address
+  address: string; // sender's USA address — required (on the invoice, and the
+  // fallback collection point for a door-to-door pickup)
   fragile?: boolean;
   fragile_note?: string;
   destination_country: string;
