@@ -499,6 +499,14 @@ function AdminShipmentDetailPageInner() {
                           {it.category && (
                             <span className="ml-2 text-xs text-ink-muted">{it.category}</span>
                           )}
+                          {/* Off-list item the customer described — priced at 0
+                              until someone here quotes it, so it must be obvious
+                              rather than looking like a free line. */}
+                          {it.needs_quote && (
+                            <Badge variant="warning" className="ml-2">
+                              Needs quote
+                            </Badge>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs text-ink-muted">
                           {it.dimensions || "-"}

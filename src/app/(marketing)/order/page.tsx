@@ -46,6 +46,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Input, Textarea, Select, Label, FieldHint } from "@/components/ui/input";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { DateOfBirthPicker } from "@/components/ui/date-of-birth";
 import { PageLoader } from "@/components/ui/misc";
 import { Reveal } from "@/components/marketing/Reveal";
 
@@ -96,6 +97,13 @@ function OrderFlow() {
   const seaPriceList = useSeaPriceList();
   const [seaQty, setSeaQty] = React.useState<Record<number, number>>({});
   const [seaCategory, setSeaCategory] = React.useState<string>(ALL);
+  // Items the customer has that are not on the price list. They cannot be priced
+  // here — size and handling decide the rate — so they are carried as
+  // quote-on-request lines at $0 and the office confirms the price. Without this
+  // a customer with an unusual item had no way to order at all.
+  const [customItems, setCustomItems] = React.useState<
+    { description: string; quantity: number }[]
+  >([]);
 
   // ---- Air state ----
   const [airWeight, setAirWeight] = React.useState<string>("");
@@ -218,6 +226,13 @@ function OrderFlow() {
     [seaSelections, seaPriceList]
   );
 
+  // Only rows with a description count — an empty row the customer added and
+  // never filled in should neither block submission nor reach the office.
+  const validCustomItems = React.useMemo(
+    () => customItems.filter((c) => c.description.trim().length > 0),
+    [customItems]
+  );
+
   const airDims =
     airL && airW && airH
       ? { length: Number(airL), width: Number(airW), height: Number(airH) }
@@ -277,7 +292,9 @@ function OrderFlow() {
     if (!rcvAddress.trim()) return "Please enter the receiver's full delivery address.";
     if (doorToDoor && !pickupAddress.trim())
       return "Please enter the pickup address for your requested pickup.";
-    if (service === "sea" && seaSelections.length === 0)
+    // An order made up entirely of off-list items is legitimate — it just needs
+    // quoting — so either source satisfies this.
+    if (service === "sea" && seaSelections.length === 0 && validCustomItems.length === 0)
       return "Add at least one item to your sea cargo order.";
     if (service === "air" && (Number(airWeight) || 0) <= 0)
       return "Enter the shipment weight for air freight.";
@@ -320,12 +337,21 @@ function OrderFlow() {
       };
 
       if (service === "sea") {
-        payload.items = seaQuote.items.map((it, i) => ({
-          s_n: Number(it.price_list_id) || i + 1,
-          quantity: it.quantity,
-          description: it.description,
-          dimensions: it.dimensions,
-        }));
+        payload.items = [
+          ...seaQuote.items.map((it, i) => ({
+            s_n: Number(it.price_list_id) || i + 1,
+            quantity: it.quantity,
+            description: it.description,
+            dimensions: it.dimensions,
+          })),
+          // Off-list items ride along with s_n 0 so the office can tell them
+          // apart from priced lines and quote them before invoicing.
+          ...validCustomItems.map((ci) => ({
+            s_n: 0,
+            quantity: ci.quantity,
+            description: `${ci.description} (to be quoted)`,
+          })),
+        ];
       } else if (service === "air") {
         payload.weight = airQuote.actualWeight;
         if (airDims) {
@@ -455,7 +481,7 @@ function OrderFlow() {
                       id="sender-name"
                       value={senderName}
                       onChange={(e) => setSenderName(e.target.value)}
-                      placeholder="e.g. Aisha Bello"
+                      placeholder="e.g. Jane Doe"
                       autoComplete="name"
                     />
                   </div>
@@ -483,18 +509,16 @@ function OrderFlow() {
                       type="tel"
                       value={senderPhone}
                       onChange={(e) => setSenderPhone(e.target.value)}
-                      placeholder="e.g. +1 240 374 8394"
+                      placeholder="e.g. +1 555 000 1234"
                       autoComplete="tel"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="sender-dob">Date of birth</Label>
-                    <Input
+                    <Label htmlFor="sender-dob">Date of birth (optional)</Label>
+                    <DateOfBirthPicker
                       id="sender-dob"
-                      type="date"
                       value={senderDob}
-                      onChange={(e) => setSenderDob(e.target.value)}
-                      autoComplete="bday"
+                      onChange={setSenderDob}
                     />
                     <FieldHint>Used for your account record only.</FieldHint>
                   </div>
@@ -520,6 +544,18 @@ function OrderFlow() {
                 qty={seaQty}
                 setQty={setQty}
                 categories={categoriesOf(seaPriceList)}
+                customItems={customItems}
+                onAddCustom={() =>
+                  setCustomItems((prev) => [...prev, { description: "", quantity: 1 }])
+                }
+                onChangeCustom={(i, patch) =>
+                  setCustomItems((prev) =>
+                    prev.map((c, x) => (x === i ? { ...c, ...patch } : c))
+                  )
+                }
+                onRemoveCustom={(i) =>
+                  setCustomItems((prev) => prev.filter((_, x) => x !== i))
+                }
               />
             )}
 
@@ -603,7 +639,7 @@ function OrderFlow() {
                         id="rcv-name"
                         value={rcvName}
                         onChange={(e) => setRcvName(e.target.value)}
-                        placeholder="e.g. Hamida Umar"
+                        placeholder="e.g. John Doe"
                       />
                     </div>
                     <div>
@@ -615,7 +651,7 @@ function OrderFlow() {
                         type="tel"
                         value={rcvPhone}
                         onChange={(e) => setRcvPhone(e.target.value)}
-                        placeholder="e.g. 0706 645 0595"
+                        placeholder="e.g. 0800 000 0000"
                       />
                     </div>
                   </div>
@@ -790,7 +826,11 @@ function OrderFlow() {
               </div>
               <CardContent className="space-y-4 pt-5">
                 {service === "sea" && (
-                  <SeaSummary quote={seaQuote} onRemove={(sn) => setQty(sn, 0)} />
+                  <SeaSummary
+                    quote={seaQuote}
+                    onRemove={(sn) => setQty(sn, 0)}
+                    customItems={validCustomItems}
+                  />
                 )}
                 {service === "air" && <AirSummary quote={airQuote} />}
                 {service === "roro" && (
@@ -984,6 +1024,10 @@ function SeaBuilder({
   qty,
   setQty,
   categories,
+  customItems,
+  onAddCustom,
+  onChangeCustom,
+  onRemoveCustom,
 }: {
   category: string;
   setCategory: (c: string) => void;
@@ -992,6 +1036,11 @@ function SeaBuilder({
   setQty: (sn: number, next: number) => void;
   /** Categories from the live list, so admin-added ones are selectable. */
   categories: string[];
+  /** Off-list items, priced by the office after the order is placed. */
+  customItems: { description: string; quantity: number }[];
+  onAddCustom: () => void;
+  onChangeCustom: (i: number, patch: Partial<{ description: string; quantity: number }>) => void;
+  onRemoveCustom: (i: number) => void;
 }) {
   const chips = [ALL, ...categories];
   return (
@@ -1078,6 +1127,63 @@ function SeaBuilder({
             );
           })}
         </ul>
+
+        {/* Off-list items. Priced by the office rather than here, because the
+            rate depends on size and handling — so these are carried as
+            quote-on-request lines instead of being guessed at. */}
+        <div className="rounded-xl border border-dashed border-border bg-surface/60 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-navy">
+                Something not on the list?
+              </p>
+              <p className="mt-0.5 text-xs text-ink-muted">
+                Describe it and we will confirm the price before shipping. Nothing is charged
+                until you approve the quote.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onAddCustom}>
+              <Plus className="h-3.5 w-3.5" /> Add item
+            </Button>
+          </div>
+
+          {customItems.length > 0 && (
+            <ul className="mt-3 space-y-2">
+              {customItems.map((ci, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Input
+                      value={ci.description}
+                      onChange={(e) => onChangeCustom(i, { description: e.target.value })}
+                      placeholder="e.g. Bicycle, sewing machine, 2m rolled carpet"
+                      aria-label={`Item ${i + 1} description`}
+                    />
+                  </div>
+                  <div className="w-[84px] shrink-0">
+                    <Input
+                      type="number"
+                      min="1"
+                      value={ci.quantity}
+                      onChange={(e) =>
+                        onChangeCustom(i, { quantity: Math.max(1, Number(e.target.value) || 1) })
+                      }
+                      aria-label={`Item ${i + 1} quantity`}
+                      className="text-center"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveCustom(i)}
+                    aria-label={`Remove item ${i + 1}`}
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-red-50 hover:text-red-600 focus-ring"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
@@ -1086,11 +1192,14 @@ function SeaBuilder({
 function SeaSummary({
   quote,
   onRemove,
+  customItems = [],
 }: {
   quote: ReturnType<typeof buildSeaQuote>;
   onRemove: (sn: number) => void;
+  /** Off-list items — listed but not priced, since the office quotes them. */
+  customItems?: { description: string; quantity: number }[];
 }) {
-  if (quote.items.length === 0) {
+  if (quote.items.length === 0 && customItems.length === 0) {
     return (
       <p className="rounded-lg bg-surface px-4 py-6 text-center text-sm text-ink-muted">
         No items selected yet. Add items from the list to build your quote.
@@ -1133,6 +1242,22 @@ function SeaSummary({
           ))}
         </AnimatePresence>
       </ul>
+
+      {customItems.length > 0 && (
+        <div className="space-y-1.5 border-t border-border pt-2">
+          {customItems.map((ci, i) => (
+            <div key={i} className="flex items-center justify-between gap-2 text-sm">
+              <span className="min-w-0 truncate text-ink">
+                {ci.quantity}× {ci.description}
+              </span>
+              <span className="shrink-0 text-xs font-semibold text-gold-700">To be quoted</span>
+            </div>
+          ))}
+          <p className="pt-1 text-xs text-ink-muted">
+            These are not in the total below — we will confirm their price before shipping.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

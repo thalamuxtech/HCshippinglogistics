@@ -136,3 +136,15 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(11, 30, 58, 0.35);
 }
+
+/* Date-of-birth roller columns: hide the scrollbar so each column reads as a
+   physical wheel. The 10px bar above would otherwise sit inside a 64px-wide
+   column and swamp it. Scrolling still works — only the bar is hidden. */
+.hc-roller {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+}
+.hc-roller::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}

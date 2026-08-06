@@ -73,6 +73,11 @@ export interface ShipmentItem {
   unit_price: number;
   quantity: number;
   line_total: number;
+  /**
+   * Customer-described item that is not on the price list. Carried at 0 until the
+   * office sets a price, so it is visible on the order rather than dropped.
+   */
+  needs_quote?: boolean;
 }
 
 export interface Shipment {

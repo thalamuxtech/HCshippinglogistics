@@ -891,9 +891,31 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   if (svc === "sea") {
     const sel = Array.isArray(d.items) ? d.items : [];
     for (const it of sel) {
-      const price = SEA_PRICES[it.s_n];
       const qty = Math.max(0, Math.min(999, parseInt(it.quantity, 10) || 0));
-      if (!price || qty <= 0) continue;
+      if (qty <= 0) continue;
+
+      // s_n 0 marks an item the customer described that is not on the price
+      // list. It cannot be priced here — size and handling decide the rate — so
+      // it is recorded at 0 and the office quotes it before invoicing. Without
+      // this branch the item was silently dropped and the customer's order
+      // arrived missing exactly the thing they could not find in the list.
+      if (!it.s_n) {
+        const desc = String(it.description || "").trim().slice(0, 200);
+        if (!desc) continue;
+        items.push({
+          price_list_id: "custom",
+          description: desc,
+          dimensions: "",
+          unit_price: 0,
+          quantity: qty,
+          line_total: 0,
+          needs_quote: true,
+        });
+        continue;
+      }
+
+      const price = SEA_PRICES[it.s_n];
+      if (!price) continue;
       total += price * qty;
       items.push({
         price_list_id: String(it.s_n),
