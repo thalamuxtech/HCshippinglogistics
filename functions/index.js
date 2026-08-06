@@ -613,6 +613,106 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
 });
 
 // ═══════════════════════════════════════════════════════════════
+// Quote ready: tell the customer their off-list item has been priced.
+//
+// Off-list items arrive at 0 with needs_quote:true. Once staff set a price the
+// customer needs to know the total changed BEFORE they are asked to pay, which is
+// the whole point of the quote-on-request flow — otherwise the amount silently
+// grows between ordering and invoicing.
+// ═══════════════════════════════════════════════════════════════
+export const sendQuoteReadyEmail = onCall({ secrets: ALL_SECRETS }, async (req) => {
+  await assertStaff(req);
+  const { shipmentId, note } = req.data || {};
+  if (!shipmentId) throw new HttpsError("invalid-argument", "shipmentId required");
+
+  const shipSnap = await db.collection("shipments").doc(shipmentId).get();
+  if (!shipSnap.exists) throw new HttpsError("not-found", "Shipment not found");
+  const ship = shipSnap.data();
+
+  const custId = ship.customer_id;
+  const custSnap = custId ? await db.collection("users").doc(custId).get() : null;
+  const cust = custSnap && custSnap.exists ? custSnap.data() : {};
+  // Prefer the account address; fall back to the copy on the shipment so a
+  // customer whose user doc is missing still gets told.
+  const to = cust.email || ship.customer_email || "";
+  if (!to) throw new HttpsError("failed-precondition", "No email on file for this customer.");
+
+  const currency = ship.currency || "USD";
+  const fmt = (n) =>
+    `${currency === "USD" ? "$" : `${currency} `}${Number(n || 0).toFixed(2)}`;
+
+  const items = Array.isArray(ship.items) ? ship.items : [];
+  const rows = items
+    .map((it) => {
+      const priced = Number(it.line_total) || 0;
+      return `<tr>
+        <td style="padding:6px 0;color:#0B1E3A">${it.quantity || 1}× ${it.description || "Item"}</td>
+        <td style="padding:6px 0;text-align:right;font-family:monospace;color:#0B1E3A">${
+          it.needs_quote && priced === 0 ? "pending" : fmt(priced)
+        }</td>
+      </tr>`;
+    })
+    .join("");
+
+  const balance =
+    typeof ship.balance === "number" ? ship.balance : Number(ship.total_price) || 0;
+
+  const body = `
+    Good news — we have priced the item you asked us to quote on shipment
+    <strong>${ship.tracking_number || ""}</strong>.
+    ${note ? `<br/><br/>${String(note).slice(0, 800)}` : ""}
+    <br/><br/>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+           style="font-size:14px;border-top:1px solid #E9EEF4;border-bottom:1px solid #E9EEF4;margin:8px 0">
+      ${rows}
+    </table>
+    <p style="font-size:15px;color:#0B1E3A">
+      <strong>Order total: ${fmt(ship.total_price)}</strong><br/>
+      ${balance > 0 ? `Balance due: <strong>${fmt(balance)}</strong>` : "Fully paid — nothing further to pay."}
+    </p>
+    ${balance > 0 ? "You can now go ahead and pay for your shipment." : ""}
+  `;
+
+  const emailRes =
+    cust.notify_email !== false
+      ? await sendEmail({
+          to,
+          subject: `Your quote is ready — ${ship.tracking_number || "your shipment"}`,
+          html: emailShell({
+            heading: "Your quote is ready",
+            body,
+            trackingNumber: ship.tracking_number,
+            ctaUrl: `${SITE}/track`,
+            ctaLabel: "View your shipment",
+          }),
+        })
+      : { skipped: true };
+
+  if (!emailRes.skipped) {
+    await db.collection("notifications").doc().set({
+      customer_id: custId || null,
+      shipment_id: shipmentId,
+      channel: "email",
+      type: "quote_ready",
+      subject: `Quote ready — ${ship.tracking_number || ""}`,
+      status: emailRes.ok ? "sent" : "failed",
+      stub: !!emailRes.stub,
+      created_at: FieldValue.serverTimestamp(),
+    });
+  }
+
+  await db.collection("activity_log").doc().set({
+    actor_id: req.auth.uid,
+    action: "sent quote-ready email",
+    target: ship.tracking_number || shipmentId,
+    meta: { shipment_id: shipmentId, total: ship.total_price ?? null, emailed: !emailRes.skipped && !!emailRes.ok },
+    created_at: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: !!emailRes.ok, skipped: !!emailRes.skipped, to };
+});
+
+// ═══════════════════════════════════════════════════════════════
 // Callable (admin): send a branded TEST email to verify the provider
 // (Brevo) is configured and delivering. Returns the provider + status so
 // you can confirm setup from the admin UI before going live.

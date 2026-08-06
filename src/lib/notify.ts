@@ -31,6 +31,24 @@ export async function sendStageUpdateEmail(payload: StageEmailPayload): Promise<
   }
 }
 
+/**
+ * Tell the customer their off-list item has been priced, so they know the total
+ * changed before being asked to pay.
+ */
+export async function sendQuoteReadyEmail(payload: {
+  shipmentId: string;
+  note?: string;
+}): Promise<{ ok: boolean; skipped?: boolean; to?: string }> {
+  try {
+    const fn = httpsCallable(functions, "sendQuoteReadyEmail");
+    const res = await fn(payload);
+    return (res.data as { ok: boolean; skipped?: boolean; to?: string }) ?? { ok: true };
+  } catch (e) {
+    console.warn("sendQuoteReadyEmail failed", e);
+    return { ok: false };
+  }
+}
+
 export interface SailingBroadcastPayload {
   subject: string;
   body: string;

@@ -116,7 +116,17 @@ export function EditShipmentModal({
         const next = { ...it, ...patch };
         const qty = Number(next.quantity) || 0;
         const unit = Number(next.unit_price) || 0;
-        return { ...next, quantity: qty, unit_price: unit, line_total: round2(qty * unit) };
+        return {
+          ...next,
+          quantity: qty,
+          unit_price: unit,
+          line_total: round2(qty * unit),
+          // Giving an off-list item a price IS the quote, so the flag resolves to
+          // FALSE — not undefined. Leaving it true would badge the row forever;
+          // deleting the key would erase the fact that this line was ever quoted,
+          // and the "quote ready to send" prompt keys off exactly that history.
+          needs_quote: unit > 0 ? false : next.needs_quote,
+        };
       })
     );
   }
@@ -427,10 +437,24 @@ export function EditShipmentModal({
               {items.map((it, i) => (
                 <div
                   key={i}
-                  className="grid gap-2 rounded-lg border border-border p-2.5 sm:grid-cols-[1fr_110px_80px_90px_auto] sm:items-end"
+                  className={cn(
+                    "grid gap-2 rounded-lg border p-2.5 sm:grid-cols-[1fr_110px_80px_90px_auto] sm:items-end",
+                    // Highlight rows still awaiting a price so they are obvious
+                    // among priced lines.
+                    it.needs_quote && Number(it.unit_price) === 0
+                      ? "border-amber-300 bg-amber-50/60"
+                      : "border-border"
+                  )}
                 >
                   <div>
-                    <Label htmlFor={`it-desc-${i}`}>Description</Label>
+                    <Label htmlFor={`it-desc-${i}`}>
+                      Description
+                      {it.needs_quote && Number(it.unit_price) === 0 && (
+                        <span className="ml-1.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                          needs quote
+                        </span>
+                      )}
+                    </Label>
                     <Input
                       id={`it-desc-${i}`}
                       value={it.description}

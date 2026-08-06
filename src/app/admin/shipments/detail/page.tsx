@@ -21,6 +21,9 @@ import {
   Truck,
   Warehouse,
   UserCheck,
+  AlertTriangle,
+  Eye,
+  CheckCircle2,
 } from "lucide-react";
 import {
   getShipment,
@@ -34,11 +37,17 @@ import {
   planDeleteShipment,
   type DeleteShipmentPlan,
 } from "@/lib/db";
-import { sendStageUpdateEmail } from "@/lib/notify";
+import { sendStageUpdateEmail, sendQuoteReadyEmail } from "@/lib/notify";
 import type { Shipment, StatusLog, ShipmentStatus, AppUser } from "@/lib/types";
 import { STAGES, STAGE_MAP, SERVICES, stageOrder } from "@/lib/constants";
 import { useAuth } from "@/components/providers/AuthProvider";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea, Label } from "@/components/ui/input";
 import { StageBadge, Badge, FragileBadge } from "@/components/ui/badge";
@@ -84,6 +93,12 @@ function AdminShipmentDetailPageInner() {
   const [savingCnt, setSavingCnt] = React.useState(false);
   const [savingDnr, setSavingDnr] = React.useState(false);
 
+  // ── Off-list item quoting ──
+  const [quoteNote, setQuoteNote] = React.useState("");
+  const [quotePreview, setQuotePreview] = React.useState(false);
+  const [sendingQuote, setSendingQuote] = React.useState(false);
+  const [quoteSentAt, setQuoteSentAt] = React.useState<string | null>(null);
+
   // Edit / delete
   const [editOpen, setEditOpen] = React.useState(false);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
@@ -106,6 +121,58 @@ function AdminShipmentDetailPageInner() {
       setCntDate(s.container_shipped_on || "");
     }
   }, [id]);
+
+  // Items the customer described that still have no price.
+  const pendingQuote = React.useMemo(
+    () =>
+      (shipment?.items ?? []).filter(
+        (it) => it.needs_quote && Number(it.unit_price) === 0
+      ),
+    [shipment]
+  );
+  // The shipment HAD off-list items and they are all priced now — so there is a
+  // quote worth telling the customer about. Detected from the flag surviving on a
+  // priced row, or from every flagged row having been resolved.
+  const hadQuoteItems = React.useMemo(
+    () => (shipment?.items ?? []).some((it) => it.needs_quote !== undefined),
+    [shipment]
+  );
+  const quotedReady =
+    !!shipment && hadQuoteItems && pendingQuote.length === 0 && (shipment.total_price ?? 0) > 0;
+
+  async function handleSendQuote() {
+    if (!shipment || !user) return;
+    setSendingQuote(true);
+    try {
+      const res = await sendQuoteReadyEmail({
+        shipmentId: shipment.id,
+        note: quoteNote.trim() || undefined,
+      });
+      await logActivity({
+        actor_id: user.id,
+        actor_name: user.full_name,
+        actor_role: "admin",
+        action: "sent quote-ready email",
+        target: shipment.tracking_number,
+        meta: { shipment_id: shipment.id, total: shipment.total_price ?? null },
+      });
+      if (res.ok) {
+        setQuoteSentAt(new Date().toLocaleString());
+        toast.success("Quote sent", `${shipment.customer_email || "The customer"} has been told.`);
+      } else if (res.skipped) {
+        toast.info(
+          "Not sent",
+          "This customer has email notifications turned off. Contact them another way."
+        );
+      } else {
+        toast.error("Could not send", "The email provider rejected it. Please try again.");
+      }
+    } catch {
+      toast.error("Could not send", "Please try again.");
+    } finally {
+      setSendingQuote(false);
+    }
+  }
 
   async function handleSaveEdit(patch: Partial<Shipment>) {
     if (!shipment || !user) return;
@@ -473,6 +540,104 @@ function AdminShipmentDetailPageInner() {
               </CardContent>
             )}
           </Card>
+
+          {/* Off-list items awaiting a price. Sits above Items so it is the first
+              thing seen on a shipment that cannot be invoiced yet. */}
+          {pendingQuote.length > 0 && (
+            <Card className="border-amber-300">
+              <CardHeader className="flex-row items-start gap-2 space-y-0">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                <div>
+                  <CardTitle>Awaiting your quote</CardTitle>
+                  <CardDescription className="mt-1">
+                    The customer described {pendingQuote.length} item
+                    {pendingQuote.length === 1 ? "" : "s"} that are not on the price list. Set a
+                    price with <strong>Edit</strong>, then let them know so they can pay.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <ul className="space-y-1.5">
+                  {pendingQuote.map((it, i) => (
+                    <li key={i} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="min-w-0 truncate text-ink">
+                        {it.quantity}× {it.description}
+                      </span>
+                      <Badge variant="warning">Not priced</Badge>
+                    </li>
+                  ))}
+                </ul>
+                <Button variant="gold" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil className="h-3.5 w-3.5" /> Price these items
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Quote priced and ready to tell the customer about. */}
+          {quotedReady && (
+            <Card className="border-emerald-300">
+              <CardHeader className="flex-row items-start gap-2 space-y-0">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <div>
+                  <CardTitle>Quote ready to send</CardTitle>
+                  <CardDescription className="mt-1">
+                    Every item now has a price. Total{" "}
+                    <strong>{formatCurrency(s.total_price, s.currency)}</strong>
+                    {typeof s.balance === "number" && s.balance > 0 && (
+                      <> · balance {formatCurrency(s.balance, s.currency)}</>
+                    )}
+                    . Tell the customer so they can go ahead and pay.
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div>
+                  <Label htmlFor="quote-note">Note to the customer (optional)</Label>
+                  <Textarea
+                    id="quote-note"
+                    value={quoteNote}
+                    onChange={(e) => setQuoteNote(e.target.value)}
+                    placeholder="e.g. The bicycle is priced as an oversized item; it will be crated before loading."
+                    className="min-h-[70px]"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuotePreview((v) => !v)}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    {quotePreview ? "Hide preview" : "Preview email"}
+                  </Button>
+                  <Button
+                    variant="gold"
+                    size="sm"
+                    onClick={handleSendQuote}
+                    loading={sendingQuote}
+                    disabled={sendingQuote}
+                  >
+                    <Send className="h-3.5 w-3.5" /> Send quote to customer
+                  </Button>
+                </div>
+
+                {quotePreview && (
+                  <QuotePreview
+                    shipment={s}
+                    note={quoteNote}
+                    customerEmail={s.customer_email}
+                  />
+                )}
+
+                {quoteSentAt && (
+                  <p className="text-xs font-medium text-emerald-700">
+                    Sent {quoteSentAt}. You can send it again if the price changes.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Items */}
           <Card className="overflow-hidden">
@@ -961,6 +1126,83 @@ function AdminShipmentDetailPageInner() {
         }
         busy={deleting}
       />
+    </div>
+  );
+}
+
+/**
+ * Visual preview of the quote-ready email. Mirrors the server template in
+ * sendQuoteReadyEmail so staff can check the figures and wording before it goes
+ * out — the whole point of "optionally preview" is that nothing is sent blind.
+ */
+function QuotePreview({
+  shipment,
+  note,
+  customerEmail,
+}: {
+  shipment: Shipment;
+  note: string;
+  customerEmail?: string;
+}) {
+  const balance =
+    typeof shipment.balance === "number" ? shipment.balance : shipment.total_price ?? 0;
+  return (
+    <div className="overflow-hidden rounded-xl border border-border">
+      <div className="border-b border-border bg-secondary/50 px-4 py-2 text-xs text-ink-muted">
+        To: <span className="font-mono text-navy">{customerEmail || "(no email on file)"}</span>
+        <br />
+        Subject:{" "}
+        <span className="font-medium text-navy">
+          Your quote is ready — {shipment.tracking_number}
+        </span>
+      </div>
+      <div className="bg-navy-gradient px-5 py-4">
+        <p className="text-base font-extrabold text-white">
+          Highclass Shipping <span className="text-gold">&amp; Logistics</span>
+        </p>
+      </div>
+      <div className="h-1 bg-gold" />
+      <div className="space-y-3 bg-white px-5 py-5 text-sm">
+        <h3 className="text-base font-bold text-navy">Your quote is ready</h3>
+        <p className="text-ink">
+          Good news — we have priced the item you asked us to quote on shipment{" "}
+          <strong>{shipment.tracking_number}</strong>.
+        </p>
+        {note.trim() && <p className="whitespace-pre-line text-ink">{note.trim()}</p>}
+
+        <table className="w-full border-y border-border text-sm">
+          <tbody>
+            {(shipment.items ?? []).map((it, i) => (
+              <tr key={i}>
+                <td className="py-1.5 text-ink">
+                  {it.quantity}× {it.description}
+                </td>
+                <td className="py-1.5 text-right font-mono text-ink">
+                  {it.needs_quote && Number(it.line_total) === 0
+                    ? "pending"
+                    : formatCurrency(it.line_total, shipment.currency)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <p className="text-navy">
+          <strong>Order total: {formatCurrency(shipment.total_price, shipment.currency)}</strong>
+          <br />
+          {balance > 0 ? (
+            <>Balance due: <strong>{formatCurrency(balance, shipment.currency)}</strong></>
+          ) : (
+            "Fully paid — nothing further to pay."
+          )}
+        </p>
+        {balance > 0 && (
+          <p className="text-ink">You can now go ahead and pay for your shipment.</p>
+        )}
+        <span className="inline-block rounded-lg bg-gold-gradient px-4 py-2 text-xs font-bold text-white">
+          View your shipment
+        </span>
+      </div>
     </div>
   );
 }

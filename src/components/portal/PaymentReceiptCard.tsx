@@ -1,7 +1,14 @@
 "use client";
 
 import * as React from "react";
-import { Receipt, Download, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import {
+  Receipt,
+  Download,
+  CheckCircle2,
+  Loader2,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/input";
@@ -36,6 +43,13 @@ export function PaymentReceiptCard({
   const [deposit, setDeposit] = React.useState<string>(String(shipment.deposit ?? 0));
   const [saving, setSaving] = React.useState(false);
   const [generating, setGenerating] = React.useState(false);
+
+  // An off-list item still at 0 means this total is incomplete. Taking payment or
+  // issuing a receipt against it would understate what the customer owes and then
+  // need correcting after the fact, so both are blocked until it is priced.
+  const unpriced = (shipment.items ?? []).filter(
+    (it) => it.needs_quote && Number(it.unit_price) === 0
+  );
 
   const depositNum = Math.max(0, Math.min(Number(deposit) || 0, total));
   const balance = Math.round((total - depositNum) * 100) / 100;
@@ -150,6 +164,22 @@ export function PaymentReceiptCard({
         <Badge variant={badge.variant}>{badge.label}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
+        {unpriced.length > 0 && (
+          <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-amber-800">
+                {unpriced.length} item{unpriced.length === 1 ? "" : "s"} not priced yet
+              </p>
+              <p className="mt-0.5 text-xs text-amber-700">
+                This total is incomplete. Price {unpriced.length === 1 ? "it" : "them"} with{" "}
+                <strong>Edit</strong> first — otherwise the customer would be charged less than
+                they owe.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-surface p-2.5">
             <p className="text-[10px] uppercase tracking-wide text-ink-muted">Total</p>
@@ -184,7 +214,12 @@ export function PaymentReceiptCard({
                 onChange={(e) => setDeposit(e.target.value)}
               />
             </div>
-            <Button variant="outline" onClick={() => savePayment(false)} loading={saving}>
+            <Button
+              variant="outline"
+              onClick={() => savePayment(false)}
+              loading={saving}
+              disabled={saving || unpriced.length > 0}
+            >
               Save
             </Button>
           </div>
@@ -196,7 +231,7 @@ export function PaymentReceiptCard({
             className="w-full"
             onClick={() => savePayment(true)}
             loading={saving || generating}
-            disabled={saving || generating}
+            disabled={saving || generating || unpriced.length > 0}
           >
             {generating ? (
               <>

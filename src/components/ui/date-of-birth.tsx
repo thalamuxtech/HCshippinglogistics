@@ -238,7 +238,7 @@ export function DateOfBirthPicker({
                 {day} {MONTHS[month!]} {year}
               </span>
             ) : (
-              "Scroll or tap to pick — optional."
+              "Scroll or tap to pick."
             )}
           </p>
           {(day !== null || month !== null || year !== null) && (
