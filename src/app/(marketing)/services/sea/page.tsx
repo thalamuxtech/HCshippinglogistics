@@ -13,10 +13,14 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
+import { ServiceSchema, BreadcrumbSchema } from "@/components/marketing/StructuredData";
 import { SeaPriceTable } from "@/components/marketing/SeaPriceTable";
 import { SERVICES } from "@/lib/constants";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/services/sea" },
   title: "Sea Cargo: Containerized Ocean Freight to Africa",
   description:
     "Containerized ocean freight from the USA to Nigeria and across Africa. Door-to-door pickup, transparent per-item pricing on boxes, barrels, bags, and furniture.",
@@ -56,6 +60,21 @@ export default function SeaCargoPage() {
   const meta = SERVICES.sea;
   return (
     <>
+      {/* Service + breadcrumb schema: states exactly what is offered, where,
+          and how this page sits in the site. */}
+      <ServiceSchema
+        name="Sea Cargo Shipping USA to Africa"
+        description="Containerized ocean freight from the USA to Nigeria and across Africa. Per-item pricing on boxes, barrels, bags and furniture, with door-to-door pickup."
+        path="/services/sea"
+        serviceType="Ocean freight forwarding"
+      />
+      <BreadcrumbSchema
+        trail={[
+          { name: "Home", path: "/" },
+          { name: "Sea Cargo", path: "/services/sea" },
+        ]}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />

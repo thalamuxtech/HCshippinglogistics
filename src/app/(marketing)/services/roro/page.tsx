@@ -13,11 +13,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
+import { ServiceSchema, BreadcrumbSchema } from "@/components/marketing/StructuredData";
 import { RoroEstimator } from "@/components/marketing/RoroEstimator";
 import { RoroLineCards, VehicleClassCards } from "@/components/marketing/RoroRateCards";
 import type { ShippingLine, VehicleClass } from "@/lib/types";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/services/roro" },
   title: "RORO Vehicle Shipping: Cars & SUVs to Africa",
   description:
     "Roll-on, roll-off vehicle shipping from the USA to African ports via Grimaldi, Sallaum, and MSC. Class-based rates plus a live curb-weight estimator.",
@@ -44,6 +48,21 @@ const documents = [
 export default function RoroPage() {
   return (
     <>
+      {/* Service + breadcrumb schema: states exactly what is offered, where,
+          and how this page sits in the site. */}
+      <ServiceSchema
+        name="RORO Vehicle Shipping USA to Africa"
+        description="Roll-on/roll-off vehicle shipping from the USA to Nigeria and across Africa via Grimaldi, Sallaum and MSC, with title and consignee documentation handled."
+        path="/services/roro"
+        serviceType="Vehicle shipping"
+      />
+      <BreadcrumbSchema
+        trail={[
+          { name: "Home", path: "/" },
+          { name: "RORO", path: "/services/roro" },
+        ]}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />

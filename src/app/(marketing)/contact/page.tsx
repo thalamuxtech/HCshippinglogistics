@@ -8,6 +8,9 @@ import { OfficeCards } from "@/components/marketing/OfficeCards";
 import { COMPANY } from "@/lib/constants";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/contact" },
   title: "Contact Highclass Shipping: USA Warehouse & Nigeria Office",
   description:
     "Get in touch with Highclass Shipping and Logistics. Send an inquiry for quotes, enterprise programs, or support, or reach our USA warehouse and Lagos office directly.",

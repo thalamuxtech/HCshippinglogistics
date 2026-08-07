@@ -17,6 +17,9 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/enterprise" },
   title: "Enterprise & B2B Freight: Government, Hospitals & Embassies",
   description:
     "Tender-ready freight forwarding for government agencies, hospitals, and embassies. FMC-licensed since 2017, registered in Maryland, USA and in Nigeria (CAC). Medical equipment logistics and 60+ container project experience with full audit trails.",

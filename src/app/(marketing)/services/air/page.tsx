@@ -4,12 +4,16 @@ import { ButtonLink } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
+import { ServiceSchema, BreadcrumbSchema } from "@/components/marketing/StructuredData";
 import { AirCalculator } from "@/components/marketing/AirCalculator";
 import { SERVICES } from "@/lib/constants";
 import { AirRate } from "@/components/marketing/LiveRate";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/services/air" },
   title: "Air Freight: Expedited Shipping to Africa at $5.50/lb",
   description:
     "Fast air freight from the USA to Nigeria and Africa in 7-10 business days at $5.50/lb. Instant online calculator with dimensional-weight pricing for time-sensitive cargo.",
@@ -42,6 +46,21 @@ export default function AirFreightPage() {
   const meta = SERVICES.air;
   return (
     <>
+      {/* Service + breadcrumb schema: states exactly what is offered, where,
+          and how this page sits in the site. */}
+      <ServiceSchema
+        name="Air Freight USA to Africa"
+        description="Fast air freight from the USA to Nigeria and across Africa, charged per pound on actual or dimensional weight, with delivery in roughly one to two weeks."
+        path="/services/air"
+        serviceType="Air freight forwarding"
+      />
+      <BreadcrumbSchema
+        trail={[
+          { name: "Home", path: "/" },
+          { name: "Air Freight", path: "/services/air" },
+        ]}
+      />
+
       {/* Hero */}
       <section className="relative overflow-hidden bg-navy-gradient text-white">
         <div className="pointer-events-none absolute inset-0 bg-hero-radial" />

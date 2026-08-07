@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button";
 import { Reveal } from "@/components/marketing/Reveal";
+import { FaqSection } from "@/components/marketing/FaqSection";
 import { HeroStart } from "@/components/marketing/HeroStart";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { ProcessJourney } from "@/components/marketing/ProcessJourney";
@@ -28,6 +29,9 @@ import { ManagedText } from "@/components/marketing/ManagedText";
 import { COMPANY, SERVICES } from "@/lib/constants";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/" },
   title: "Shipping from the USA to Nigeria & across Africa",
   description:
     "FMC-licensed freight forwarder connecting the USA to Nigeria and Africa. Sea Cargo, Air Freight, and RORO vehicle shipping with real-time tracking and digital receipts.",
@@ -372,6 +376,9 @@ export default function HomePage() {
           </div>
         </Reveal>
       </section>
+      {/* FAQ + FAQPage schema. Placed last so it does not interrupt the
+          conversion path, but still on the highest-authority page. */}
+      <FaqSection />
     </>
   );
 }

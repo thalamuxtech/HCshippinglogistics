@@ -3,6 +3,9 @@ import { Reveal } from "@/components/marketing/Reveal";
 import { COMPANY } from "@/lib/constants";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/privacy" },
   title: "Privacy Policy",
   description:
     "How Highclass Shipping and Logistics Inc. collects, uses, and protects your information.",

@@ -17,6 +17,9 @@ import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { COMPANY, DESTINATION_COUNTRIES } from "@/lib/constants";
 
 export const metadata: Metadata = {
+  // Canonical: the site is reachable on two hosts, so tell search engines
+  // which one to index and consolidate ranking signals onto.
+  alternates: { canonical: "/about" },
   title: "About Highclass Shipping: FMC-Licensed Since 2017",
   description:
     "Highclass Shipping and Logistics Inc. is an FMC-licensed freight forwarder registered in Maryland, USA and in Nigeria (CAC), shipping the USA-to-Nigeria corridor and across Africa for government, hospital, and embassy clients since 2017.",
