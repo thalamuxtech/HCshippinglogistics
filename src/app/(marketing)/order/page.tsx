@@ -948,15 +948,18 @@ function OrderFlow() {
                   </span>
                 </div>
 
-                {/* State plainly what is still to be added, so the estimate is
-                    never mistaken for the final bill. */}
+                {/* Name what is still to be priced, so the estimate is never
+                    mistaken for the final bill, and point them at where they can
+                    check it. Customers have no login: their Customer ID is the
+                    credential, so the wording must not send them hunting for a
+                    sign-in page that does not exist for them. */}
                 {pendingExtras.length > 0 && (
                   <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
                     <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
                     <p className="text-xs text-amber-800">
-                      <strong>Your final price will be higher.</strong> We still need to price{" "}
-                      {pendingExtras.join(" and ")}. We confirm the full amount by email before you
-                      pay. Nothing is charged until you approve it.
+                      <strong>Your final price may be higher.</strong> We still need to price{" "}
+                      {pendingExtras.join(" and ")}. You can check your profile with your Customer
+                      ID any time to see the full amount before you pay.
                     </p>
                   </div>
                 )}
