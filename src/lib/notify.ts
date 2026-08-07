@@ -336,6 +336,51 @@ export async function resetStaffPassword(payload: {
   return res.data as { ok: boolean; tempPassword: string; emailed: boolean };
 }
 
+// ── Admin: system backup / restore ──
+
+export interface BackupFile {
+  ok?: boolean;
+  format: number;
+  project?: string;
+  exported_at: string;
+  counts: Record<string, number>;
+  total: number;
+  data: Record<string, { id: string; data: Record<string, unknown> }[]>;
+}
+
+/** Full database export. Runs on the Admin SDK so nothing is missed. */
+export async function exportBackup(): Promise<BackupFile> {
+  const fn = httpsCallable(functions, "exportBackup");
+  const res = await fn({});
+  return res.data as BackupFile;
+}
+
+/**
+ * Restore from a previously exported file.
+ * - "merge" writes the backup over current data, leaving unrelated docs alone.
+ * - "replace" also deletes documents absent from the backup.
+ */
+export async function restoreBackup(payload: {
+  backup: BackupFile;
+  mode: "merge" | "replace";
+}): Promise<{
+  ok: boolean;
+  restored: Record<string, number>;
+  writes: number;
+  skipped: string[];
+  mode: string;
+}> {
+  const fn = httpsCallable(functions, "restoreBackup");
+  const res = await fn(payload);
+  return res.data as {
+    ok: boolean;
+    restored: Record<string, number>;
+    writes: number;
+    skipped: string[];
+    mode: string;
+  };
+}
+
 // ── Admin: demo customer records (Admin SDK; rules block client writes) ──
 export async function seedDemoCustomers(): Promise<{ ok: boolean; created: number }> {
   const fn = httpsCallable(functions, "seedDemoCustomers");

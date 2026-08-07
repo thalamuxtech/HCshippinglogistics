@@ -8,6 +8,7 @@ import { Logo } from "@/components/brand/Logo";
 import { ButtonLink } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { COMPANY } from "@/lib/constants";
+import { useCompanyInfo } from "@/lib/company-info";
 
 const NAV = [
   { href: "/services/sea", label: "Sea Cargo" },
@@ -20,6 +21,9 @@ const NAV = [
 
 export function SiteHeader() {
   const pathname = usePathname();
+  // Live company details so an address or number changed in Settings shows here
+  // without a deploy; falls back to the built-in constants until it resolves.
+  const company = useCompanyInfo();
   const [open, setOpen] = React.useState(false);
   const [scrolled, setScrolled] = React.useState(false);
 
@@ -43,7 +47,7 @@ export function SiteHeader() {
               lines rather than as separate contact methods. */}
           <div className="flex items-center gap-5">
             <span className="flex items-center gap-3">
-              {COMPANY.usa.phones.map((phone, i) => (
+              {company.usaPhones.map((phone, i) => (
                 <a
                   key={phone}
                   href={`tel:${phone.replace(/[^\d+]/g, "")}`}
@@ -56,10 +60,10 @@ export function SiteHeader() {
               ))}
             </span>
             <a
-              href={`mailto:${COMPANY.email}`}
+              href={`mailto:${company.email}`}
               className="inline-flex items-center gap-1.5 text-white transition-colors hover:text-gold-200"
             >
-              <Mail className="h-3.5 w-3.5 text-gold-300" /> {COMPANY.email}
+              <Mail className="h-3.5 w-3.5 text-gold-300" /> {company.email}
             </a>
           </div>
           <div className="flex items-center gap-2 font-medium text-white">
@@ -158,7 +162,7 @@ export function SiteHeader() {
                 the most likely person to tap-to-call, so hiding the second line
                 here is where it would be missed most. */}
             <div className="mt-2 border-t border-border pt-2">
-              {COMPANY.usa.phones.map((phone) => (
+              {company.usaPhones.map((phone) => (
                 <a
                   key={phone}
                   href={`tel:${phone.replace(/[^\d+]/g, "")}`}
@@ -168,10 +172,10 @@ export function SiteHeader() {
                 </a>
               ))}
               <a
-                href={`mailto:${COMPANY.email}`}
+                href={`mailto:${company.email}`}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-ink-muted"
               >
-                <Mail className="h-4 w-4 shrink-0 text-gold" /> {COMPANY.email}
+                <Mail className="h-4 w-4 shrink-0 text-gold" /> {company.email}
               </a>
             </div>
           </nav>

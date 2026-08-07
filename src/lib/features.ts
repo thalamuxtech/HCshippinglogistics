@@ -26,6 +26,7 @@ export type FeatureKey =
   | "admin.containers"
   | "admin.inquiries"
   | "admin.content"
+  | "admin.settings"
   | "admin.demodata"
   // Destination office
   | "office.dashboard"
@@ -71,6 +72,9 @@ export const FEATURES: FeatureMeta[] = [
   { key: "admin.containers", label: "Containers", href: "/admin/containers", role: "admin" },
   { key: "admin.inquiries", label: "Submissions", href: "/admin/inquiries", role: "admin" },
   { key: "admin.content", label: "Content", href: "/admin/content", role: "admin" },
+  // Settings is `required`: it holds backup/restore, so an admin locked out of it
+  // could not recover the system.
+  { key: "admin.settings", label: "Settings", href: "/admin/settings", role: "admin", required: true },
   // Top-bar tool, not a page: seeds/clears demo records (all tagged demo:true).
   // optIn — hidden for every admin until deliberately enabled under Staff &
   // Roles, so nobody can push test data into the live system by accident.

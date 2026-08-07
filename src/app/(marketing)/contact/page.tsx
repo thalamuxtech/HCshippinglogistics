@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Reveal } from "@/components/marketing/Reveal";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 import { ContactForm } from "@/components/marketing/ContactForm";
+import { OfficeCards } from "@/components/marketing/OfficeCards";
 import { COMPANY } from "@/lib/constants";
 
 export const metadata: Metadata = {
@@ -12,24 +13,7 @@ export const metadata: Metadata = {
     "Get in touch with Highclass Shipping and Logistics. Send an inquiry for quotes, enterprise programs, or support, or reach our USA warehouse and Lagos office directly.",
 };
 
-const offices = [
-  {
-    icon: Warehouse,
-    label: COMPANY.usa.label,
-    subtitle: "Collection, inspection & receipting hub",
-    lines: COMPANY.usa.lines,
-    phones: COMPANY.usa.phones,
-    hours: "Mon–Fri, 9:00 AM – 6:00 PM ET",
-  },
-  {
-    icon: Building2,
-    label: COMPANY.nigeria.label,
-    subtitle: "Destination clearance & delivery",
-    lines: COMPANY.nigeria.lines,
-    phones: COMPANY.nigeria.phones,
-    hours: "Mon–Sat, 9:00 AM – 5:00 PM WAT",
-  },
-];
+
 
 export default function ContactPage() {
   return (
@@ -123,42 +107,8 @@ export default function ContactPage() {
               </Card>
             </Reveal>
 
-            {offices.map((o, i) => {
-              const Icon = o.icon;
-              return (
-                <Reveal key={o.label} delay={0.12 + i * 0.06}>
-                  <Card className="p-6">
-                    <div className="flex items-center gap-3">
-                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-navy text-gold-300">
-                        <Icon className="h-5 w-5" />
-                      </span>
-                      <div>
-                        <h3 className="font-bold text-navy">{o.label}</h3>
-                        <p className="text-xs text-ink-muted">{o.subtitle}</p>
-                      </div>
-                    </div>
-                    <ul className="mt-4 space-y-2 text-sm text-ink-muted">
-                      <li className="flex items-start gap-2">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
-                        <span>{o.lines.join(", ")}</span>
-                      </li>
-                      {o.phones.map((p) => (
-                        <li key={p} className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 shrink-0 text-gold" />
-                          <a href={`tel:${p.replace(/[^\d+]/g, "")}`} className="hover:text-navy">
-                            {p}
-                          </a>
-                        </li>
-                      ))}
-                      <li className="flex items-center gap-2">
-                        <Clock className="h-4 w-4 shrink-0 text-gold" />
-                        {o.hours}
-                      </li>
-                    </ul>
-                  </Card>
-                </Reveal>
-              );
-            })}
+            {/* Live company details — see OfficeCards. */}
+            <OfficeCards />
           </div>
         </div>
       </section>

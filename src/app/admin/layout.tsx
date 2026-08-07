@@ -10,6 +10,7 @@ import {
   FileText,
   Boxes,
   Container,
+  Settings,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { RequireRole } from "@/components/providers/RequireRole";
@@ -30,6 +31,7 @@ const NAV: (PortalNavItem & { key: FeatureKey })[] = [
   { key: "admin.containers", href: "/admin/containers", label: "Containers", icon: Container },
   { key: "admin.inquiries", href: "/admin/inquiries", label: "Submissions", icon: Inbox },
   { key: "admin.content", href: "/admin/content", label: "Content", icon: FileText },
+  { key: "admin.settings", href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
 const TITLES: Record<string, string> = {
@@ -42,6 +44,7 @@ const TITLES: Record<string, string> = {
   "/admin/containers": "Container Broadcasts",
   "/admin/inquiries": "Submissions",
   "/admin/content": "Site Content",
+  "/admin/settings": "Settings",
 };
 
 function titleFor(pathname: string): string {

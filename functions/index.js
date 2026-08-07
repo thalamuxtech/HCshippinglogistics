@@ -16,7 +16,7 @@ import { setGlobalOptions } from "firebase-functions/v2";
 import * as logger from "firebase-functions/logger";
 import { defineSecret } from "firebase-functions/params";
 import { initializeApp } from "firebase-admin/app";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import { randomBytes, createHash } from "node:crypto";
@@ -610,6 +610,168 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
   await batch.commit();
 
   return { ok: true, email: emailRes, sms: smsRes };
+});
+
+// ═══════════════════════════════════════════════════════════════
+// System backup / restore (admin only).
+//
+// Runs server-side on the Admin SDK deliberately: Firestore rules stop a client
+// reading users/counters wholesale, and a browser-side export would silently
+// return partial data — the worst possible failure for a backup.
+//
+// Format is JSON, not CSV. CSV cannot represent the nested objects (receiver,
+// items[], dimensions) or distinguish a Timestamp from a string that looks like a
+// date, so a CSV round-trip would quietly corrupt exactly the fields that matter.
+// Timestamps are encoded as {__ts__: millis} so they restore as real Timestamps
+// rather than strings, and document IDs are preserved so relationships between
+// collections (shipment_id, customer_id) survive intact.
+// ═══════════════════════════════════════════════════════════════
+const BACKUP_COLLECTIONS = [
+  "users",
+  "shipments",
+  "shipment_status_logs",
+  "price_list",
+  "digital_receipts",
+  "roro_documents",
+  "sailing_notices",
+  "notifications",
+  "usa_inventory",
+  "destination_inventory",
+  "contact_inquiries",
+  "activity_log",
+  "site_content",
+  "counters",
+];
+
+const BACKUP_FORMAT = 2;
+
+/** Encode Firestore values into JSON that can be decoded back to the same types. */
+function encodeValue(v) {
+  if (v === null || v === undefined) return null;
+  if (v instanceof Timestamp) return { __ts__: v.toMillis() };
+  if (Array.isArray(v)) return v.map(encodeValue);
+  if (typeof v === "object") {
+    // GeoPoint / DocumentReference are not used in this schema; a plain object
+    // walk is therefore sufficient and keeps the format readable.
+    const out = {};
+    for (const [k, val] of Object.entries(v)) out[k] = encodeValue(val);
+    return out;
+  }
+  return v;
+}
+
+function decodeValue(v) {
+  if (v === null || v === undefined) return null;
+  if (Array.isArray(v)) return v.map(decodeValue);
+  if (typeof v === "object") {
+    if (typeof v.__ts__ === "number") return Timestamp.fromMillis(v.__ts__);
+    const out = {};
+    for (const [k, val] of Object.entries(v)) out[k] = decodeValue(val);
+    return out;
+  }
+  return v;
+}
+
+export const exportBackup = onCall({ timeoutSeconds: 540, memory: "1GiB" }, async (req) => {
+  await assertAdmin(req);
+  const data = {};
+  const counts = {};
+  for (const name of BACKUP_COLLECTIONS) {
+    const snap = await db.collection(name).get();
+    data[name] = snap.docs.map((d) => ({ id: d.id, data: encodeValue(d.data()) }));
+    counts[name] = snap.size;
+  }
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  await db.collection("activity_log").doc().set({
+    actor_id: req.auth.uid,
+    action: "exported system backup",
+    meta: { documents: total, collections: Object.keys(counts).length },
+    created_at: FieldValue.serverTimestamp(),
+  });
+
+  return {
+    ok: true,
+    format: BACKUP_FORMAT,
+    project: "highclassshippinglogistics",
+    exported_at: new Date().toISOString(),
+    counts,
+    total,
+    data,
+  };
+});
+
+export const restoreBackup = onCall({ timeoutSeconds: 540, memory: "1GiB" }, async (req) => {
+  await assertAdmin(req);
+  const { backup, mode } = req.data || {};
+  if (!backup || typeof backup !== "object" || !backup.data) {
+    throw new HttpsError("invalid-argument", "That file is not a Highclass backup.");
+  }
+  if (Number(backup.format) !== BACKUP_FORMAT) {
+    throw new HttpsError(
+      "invalid-argument",
+      `Unsupported backup format (${backup.format}). This app writes and reads format ${BACKUP_FORMAT}.`
+    );
+  }
+  // "merge" writes the backup over what is there, leaving newer unrelated docs
+  // alone. "replace" additionally deletes documents absent from the backup, so
+  // the database ends up exactly as the file describes.
+  const replace = mode === "replace";
+
+  const restored = {};
+  const skipped = [];
+  let writes = 0;
+
+  for (const name of BACKUP_COLLECTIONS) {
+    const rows = Array.isArray(backup.data[name]) ? backup.data[name] : null;
+    if (!rows) {
+      // A collection missing from the file is left untouched rather than wiped —
+      // an older backup should not destroy data it never knew about.
+      skipped.push(name);
+      continue;
+    }
+
+    const keep = new Set(rows.map((r) => r.id));
+    if (replace) {
+      const existing = await db.collection(name).get();
+      let delBatch = db.batch();
+      let n = 0;
+      for (const doc of existing.docs) {
+        if (keep.has(doc.id)) continue;
+        delBatch.delete(doc.ref);
+        if (++n >= 400) {
+          await delBatch.commit();
+          delBatch = db.batch();
+          n = 0;
+        }
+      }
+      if (n > 0) await delBatch.commit();
+    }
+
+    let batch = db.batch();
+    let n = 0;
+    for (const row of rows) {
+      if (!row?.id) continue;
+      batch.set(db.collection(name).doc(row.id), decodeValue(row.data || {}));
+      writes += 1;
+      if (++n >= 400) {
+        await batch.commit();
+        batch = db.batch();
+        n = 0;
+      }
+    }
+    if (n > 0) await batch.commit();
+    restored[name] = rows.length;
+  }
+
+  await db.collection("activity_log").doc().set({
+    actor_id: req.auth.uid,
+    action: `restored system backup (${replace ? "replace" : "merge"})`,
+    meta: { documents: writes, exported_at: backup.exported_at || null, skipped },
+    created_at: FieldValue.serverTimestamp(),
+  });
+
+  return { ok: true, restored, writes, skipped, mode: replace ? "replace" : "merge" };
 });
 
 // ═══════════════════════════════════════════════════════════════

@@ -10,7 +10,6 @@ import { Input, Textarea, Label, FieldHint } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
-import { EmailTestCard } from "@/components/portal/EmailTestCard";
 
 interface HomeContent {
   hero_title: string;
@@ -163,7 +162,8 @@ export default function AdminContentPage() {
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-ink-muted">
           Operations
         </h2>
-        <EmailTestCard />
+        {/* Email delivery testing now lives in Settings, alongside the other
+            system-level controls. */}
       </div>
     </div>
   );
