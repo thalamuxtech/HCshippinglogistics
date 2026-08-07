@@ -5,7 +5,7 @@
 // Split out of the (server) contact page so that page keeps its exported
 // Metadata for SEO while these cards can use the client-side hook. The hook
 // returns the built-in constants synchronously, so first paint is identical to
-// the old static render — no flash — and edits made in Settings appear without a
+// the old static render, no flash, and edits made in Settings appear without a
 // deploy.
 
 import * as React from "react";
@@ -25,7 +25,7 @@ export function OfficeCards() {
       subtitle: "Collection, inspection & receipting hub",
       lines: company.usaLines,
       phones: company.usaPhones,
-      hours: "Mon–Fri, 9:00 AM – 6:00 PM ET",
+      hours: "Mon-Fri, 9:00 AM, 6:00 PM ET",
     },
     {
       icon: Building2,
@@ -33,7 +33,7 @@ export function OfficeCards() {
       subtitle: "Destination clearance & delivery",
       lines: company.nigeriaLines,
       phones: company.nigeriaPhones,
-      hours: "Mon–Sat, 9:00 AM – 5:00 PM WAT",
+      hours: "Mon-Sat, 9:00 AM, 5:00 PM WAT",
     },
   ];
 

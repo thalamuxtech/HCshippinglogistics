@@ -466,7 +466,7 @@ function ShipmentCard({
               </span>
             </div>
 
-            {/* Breakdown — shown only when there is something to explain, so a
+            {/* Breakdown, shown only when there is something to explain, so a
                 straightforward order stays uncluttered. A discount the customer
                 cannot see is a discount they will not thank you for. */}
             {((s.pickup_fee ?? 0) > 0 ||
@@ -505,10 +505,10 @@ function ShipmentCard({
                       {s.discount_type === "percent" && s.discount_value
                         ? ` (${s.discount_value}%)`
                         : ""}
-                      {s.discount_reason ? ` — ${s.discount_reason}` : ""}
+                      {s.discount_reason ? `, ${s.discount_reason}` : ""}
                     </span>
                     <span className="font-mono font-semibold text-emerald-700">
-                      − {formatCurrency(s.discount_amount ?? 0, s.currency)}
+                      - {formatCurrency(s.discount_amount ?? 0, s.currency)}
                     </span>
                   </div>
                 )}
@@ -542,7 +542,7 @@ function ShipmentCard({
             )}
           </div>
 
-          {/* Proof of delivery — the customer is entitled to see the evidence
+          {/* Proof of delivery, the customer is entitled to see the evidence
               their goods were handed over, and to whom. */}
           {((s.proof_photos?.length ?? 0) > 0 || s.delivered_by_name) && (
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
@@ -589,7 +589,7 @@ function ShipmentCard({
             </div>
           )}
 
-          {/* Invoice — available to the customer once the shipment is fully paid */}
+          {/* Invoice, available to the customer once the shipment is fully paid */}
           {payment === "paid" && s.receipt_pdf_url && (
             <a
               href={s.receipt_pdf_url}

@@ -12,13 +12,13 @@ import { formatCurrency } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "Air Freight: Expedited Shipping to Africa at $5.50/lb",
   description:
-    "Fast air freight from the USA to Nigeria and Africa in 7–10 business days at $5.50/lb. Instant online calculator with dimensional-weight pricing for time-sensitive cargo.",
+    "Fast air freight from the USA to Nigeria and Africa in 7-10 business days at $5.50/lb. Instant online calculator with dimensional-weight pricing for time-sensitive cargo.",
 };
 
 const highlights = [
   {
     icon: Zap,
-    title: "7–10 business days",
+    title: "7-10 business days",
     desc: "The fastest way to move time-sensitive cargo. Documents, samples, electronics, and medical supplies arrive in days, not weeks.",
   },
   {

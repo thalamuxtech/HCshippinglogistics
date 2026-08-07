@@ -3,7 +3,7 @@
 // Every seeded document is tagged { demo: true } so "Clear demo data"
 // removes ONLY seeded records and never touches real data.
 //
-// Coverage goal: exercise the whole app, for EVERY backend role — not just the
+// Coverage goal: exercise the whole app, for EVERY backend role, not just the
 // admin dashboard. Shipments span all 8 stages, all three services, every
 // payment state, both DNR variants (auto + manual) and a pending release
 // request, backdated across ~10 months so the revenue trend, date-range
@@ -16,7 +16,7 @@
 //                 Ghana, Kenya), receipts, RORO consignee documents
 //  - dispatcher : arrived/delivery jobs incl. a DNR hold + a pending release
 //
-// DELIBERATELY NOT SEEDED — firestore.rules makes these append-only
+// DELIBERATELY NOT SEEDED, firestore.rules makes these append-only
 // (`allow update, delete: if false`), so seeded rows could never be cleared and
 // would permanently pollute the database:
 //   shipment_status_logs, notifications, activity_log
@@ -71,7 +71,7 @@ const box = (description: string, quantity: number, unit_price: number) => ({
 // One shipment per stage (8), plus extras for services/date spread. Backdated so
 // the dashboard shows history across the year.
 const DEMO_SHIPMENTS: DemoShipment[] = [
-  // Stage 1 — Collection
+  // Stage 1, Collection
   {
     customer_name: "Samuel Adeyemi",
     customer_email: "samuel.demo@example.com",
@@ -86,7 +86,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Grace Adeyemi", phone: "+234 807 121 3434", address: "3 Ring Rd, Ibadan" },
     monthsAgo: 0,
   },
-  // Stage 2 — Inspection
+  // Stage 2, Inspection
   {
     customer_name: "Chinelo Obi",
     customer_email: "chinelo.demo@example.com",
@@ -102,7 +102,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Uche Obi", phone: "+234 811 222 3333", address: "10 Zik Ave, Enugu" },
     monthsAgo: 0,
   },
-  // Stage 3 — Loading (RORO)
+  // Stage 3, Loading (RORO)
   {
     customer_name: "Fatou Diallo",
     customer_email: "fatou.demo@example.com",
@@ -118,7 +118,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Moussa Diallo", phone: "+221 78 987 6543", address: "Route de Ngor, Dakar" },
     monthsAgo: 1,
   },
-  // Stage 4 — Transit (Air)
+  // Stage 4, Transit (Air)
   {
     customer_name: "Ngozi Eze",
     customer_email: "ngozi.demo@example.com",
@@ -134,7 +134,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Emeka Eze", phone: "+234 813 777 6655", address: "22 Admiralty Way, Lekki, Lagos" },
     monthsAgo: 1,
   },
-  // Stage 5 — Clearance
+  // Stage 5, Clearance
   {
     customer_name: "Yaw Boateng",
     customer_email: "yaw.demo@example.com",
@@ -150,7 +150,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Akosua Boateng", phone: "+233 20 444 5555", address: "5 Prempeh Rd, Kumasi" },
     monthsAgo: 2,
   },
-  // Stage 6 — Offloading (arrived) · paid · shows in inventory + dispatch
+  // Stage 6, Offloading (arrived) · paid · shows in inventory + dispatch
   {
     customer_name: "Adaeze Okafor",
     customer_email: "adaeze.demo@example.com",
@@ -166,7 +166,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Chidi Okafor", phone: "+234 808 000 1111", address: "5 Awolowo Rd, Ikeja, Lagos" },
     monthsAgo: 2,
   },
-  // Stage 6 — Offloading · UNPAID → DNR (auto) with a pending release request
+  // Stage 6, Offloading · UNPAID → DNR (auto) with a pending release request
   {
     customer_name: "Tunde Balogun",
     customer_email: "tunde.demo@example.com",
@@ -183,7 +183,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     dnr_release_requested: true,
     monthsAgo: 3,
   },
-  // Stage 7 — Delivery (ready to hand out) · paid
+  // Stage 7, Delivery (ready to hand out) · paid
   {
     customer_name: "Kwame Mensah",
     customer_email: "kwame.demo@example.com",
@@ -199,7 +199,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     receiver: { full_name: "Ama Mensah", phone: "+233 20 333 4455", address: "12 Oxford St, Osu, Accra" },
     monthsAgo: 3,
   },
-  // Stage 7 — Delivery · MANUAL hold (paid but admin-held) to test override
+  // Stage 7, Delivery · MANUAL hold (paid but admin-held) to test override
   {
     customer_name: "Zainab Bello",
     customer_email: "zainab.demo@example.com",
@@ -216,7 +216,7 @@ const DEMO_SHIPMENTS: DemoShipment[] = [
     dnr_override: true,
     monthsAgo: 4,
   },
-  // Stage 8 — Completed (delivered) · paid — a few, spread across months
+  // Stage 8, Completed (delivered) · paid, a few, spread across months
   {
     customer_name: "Grace Mwangi",
     customer_email: "grace.demo@example.com",
@@ -271,9 +271,9 @@ const DEMO_USA_INVENTORY: {
   location_notes: string;
   monthsAgo: number;
 }[] = [
-  { item_description: "2x Barrel (Tall) — awaiting consolidation", location_notes: "Bay A, rack 3", monthsAgo: 0 },
-  { item_description: "Toyota Corolla 2014 — awaiting RORO booking", location_notes: "Outside lot, slot 7", monthsAgo: 0 },
-  { item_description: "1x Wardrobe Box — customer dropping second box", location_notes: "Bay B, floor", monthsAgo: 1 },
+  { item_description: "2x Barrel (Tall), awaiting consolidation", location_notes: "Bay A, rack 3", monthsAgo: 0 },
+  { item_description: "Toyota Corolla 2014, awaiting RORO booking", location_notes: "Outside lot, slot 7", monthsAgo: 0 },
+  { item_description: "1x Wardrobe Box, customer dropping second box", location_notes: "Bay B, floor", monthsAgo: 1 },
   { item_description: "4x Ghana Must Go (Large)", location_notes: "Bay C, pallet 12", monthsAgo: 1 },
 ];
 
@@ -292,7 +292,7 @@ const DEMO_SAILINGS: {
   monthsAgo: number;
 }[] = [
   {
-    subject: "Vessel departing Baltimore 12th — Lagos",
+    subject: "Vessel departing Baltimore 12th, Lagos",
     body: "Our next sea cargo vessel departs Baltimore on the 12th with an ETA of 4-6 weeks to Lagos. Drop off items at the Upper Marlboro warehouse before the 10th.",
     filters: { service_type: "sea", destination: "Nigeria" },
     recipient_count: 6,
@@ -306,7 +306,7 @@ const DEMO_SAILINGS: {
     monthsAgo: 2,
   },
   {
-    subject: "RORO booking window — Tema, Ghana",
+    subject: "RORO booking window, Tema, Ghana",
     body: "We have space on the next RORO sailing to Tema. Contact us to book your vehicle before the cut-off.",
     filters: { service_type: "roro", destination: "Ghana" },
     recipient_count: 2,
@@ -557,7 +557,7 @@ export async function seedDemoData(actor: { id: string }): Promise<{
   // ── Customer account records (admin Customers page) ──
   // Must go through a Cloud Function: firestore.rules only lets a signed-in user
   // create their OWN users/{uid} doc, so an admin cannot write customer docs
-  // from the client. Non-fatal — the rest of the demo data is still useful.
+  // from the client. Non-fatal, the rest of the demo data is still useful.
   try {
     const res = await seedDemoCustomers();
     customers = res.created;
@@ -621,7 +621,7 @@ export async function clearDemoData(): Promise<number> {
   }
 
   // Demo customer docs live in `users`, which the client may not delete for
-  // other users — removed server-side. Non-fatal if the callable is unavailable.
+  // other users, removed server-side. Non-fatal if the callable is unavailable.
   try {
     const res = await clearDemoCustomers();
     removed += res.deleted;

@@ -8,7 +8,7 @@
 // naming, email deliverability, and full backup / restore.
 //
 // Company details live in site_content/company and are read through
-// useCompanyInfo, which falls back to the built-in COMPANY constant — so the site
+// useCompanyInfo, which falls back to the built-in COMPANY constant, so the site
 // renders correct values before Firestore resolves and keeps working if the doc
 // is absent.
 // ─────────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export default function AdminSettingsPage() {
     setExporting(true);
     try {
       const backup = await exportBackup();
-      // Download entirely client-side — the file never touches a third party.
+      // Download entirely client-side, the file never touches a third party.
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -376,7 +376,7 @@ export default function AdminSettingsPage() {
             <CardDescription className="mt-1">
               Download every record as a single JSON file, and restore it later. JSON is used
               rather than CSV because it preserves nested data (items, receiver details) and real
-              dates exactly — a CSV round-trip would corrupt them.
+              dates exactly. A CSV round-trip would corrupt them.
             </CardDescription>
           </div>
         </CardHeader>
@@ -411,7 +411,7 @@ export default function AdminSettingsPage() {
             <div className="text-xs text-ink-muted">
               <p>
                 The file contains customer names, addresses, phone numbers and order history.
-                Store it somewhere private — treat it like the database itself.
+                Store it somewhere private and treat it like the database itself.
               </p>
               <p className="mt-1.5">
                 Uploaded files stay in your browser until you confirm the restore. Invoice PDFs and
@@ -519,7 +519,7 @@ export default function AdminSettingsPage() {
               <div className="space-y-2 rounded-lg border border-red-200 bg-red-50 p-3">
                 <p className="flex items-start gap-2 text-sm font-semibold text-red-800">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                  This deletes anything not in the backup — including orders placed since it was
+                  This deletes anything not in the backup, including orders placed since it was
                   taken.
                 </p>
                 <div>

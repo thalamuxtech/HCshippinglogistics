@@ -10,7 +10,7 @@
 // Design notes:
 //  - The timer is driven by a DEADLINE TIMESTAMP, not a countdown that decrements.
 //    A setInterval-based counter drifts and, more importantly, stops running when
-//    a phone backgrounds the tab — the session would then outlive the timeout.
+//    a phone backgrounds the tab, the session would then outlive the timeout.
 //    Comparing against a stored deadline is correct even after the tab is frozen,
 //    suspended, or the machine sleeps ("restart if there is interruption").
 //  - The deadline lives in localStorage, so ACTIVITY IN ANY TAB counts for all of
@@ -59,7 +59,7 @@ function writeDeadline(at: number) {
   try {
     localStorage.setItem(DEADLINE_KEY, String(at));
   } catch {
-    /* private mode / quota — the in-memory ref still drives this tab */
+    /* private mode / quota, the in-memory ref still drives this tab */
   }
 }
 
@@ -117,7 +117,7 @@ export function IdleTimeout() {
   React.useEffect(() => {
     if (!signedIn) return;
     const onActivity = () => {
-      // While the warning is up, only an explicit button press should count —
+      // While the warning is up, only an explicit button press should count -
       // otherwise an accidental scroll silently cancels a logout the user never
       // saw. Everything else resets normally.
       if (warningRef.current) return;
@@ -153,7 +153,7 @@ export function IdleTimeout() {
     const tick = async () => {
       // Re-read the shared deadline each tick and take the EARLIER of the two.
       // localStorage is the cross-tab source of truth, and the `storage` event
-      // never fires in the tab that wrote it — so polling here is what makes a
+      // never fires in the tab that wrote it, so polling here is what makes a
       // deadline set elsewhere (or cleared by a sign-out) take effect. Taking
       // the earlier value means a session can never be silently extended.
       const shared = readDeadline();
@@ -214,7 +214,7 @@ export function IdleTimeout() {
           {secondsLeft}
         </p>
         <p className="mt-1 text-xs text-ink-muted">
-          second{secondsLeft === 1 ? "" : "s"} — for your security after 20 minutes of inactivity
+          second{secondsLeft === 1 ? "" : "s"}, for your security after 20 minutes of inactivity
         </p>
 
         <div className="mt-6 flex flex-col gap-2">

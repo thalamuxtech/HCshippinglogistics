@@ -150,8 +150,8 @@ export function PublicTracker({ variant = "page" }: { variant?: "hero" | "page" 
               </span>
             )}
           </div>
-          {/* Was a "Log in to view full details" link. Customers have no login —
-              they authenticate with their Customer ID here — so it pointed staff
+          {/* Was a "Log in to view full details" link. Customers have no login -
+              they authenticate with their Customer ID here, so it pointed staff
               -only, and on the public domain it now leads to a 404. */}
           <p
             className={cn(

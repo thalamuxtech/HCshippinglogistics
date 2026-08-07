@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// BrandPattern — animated, premium decorative backdrop for navy/blue
+// BrandPattern, animated, premium decorative backdrop for navy/blue
 // surfaces (marketing heroes, subpage bands, auth panel, footer).
 //
 // Layers: a slowly panning blueprint grid, brighter parallax accent dots,

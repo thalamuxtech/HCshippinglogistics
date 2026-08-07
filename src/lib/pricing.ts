@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Quote / price-build engine — used by signup price builder,
+// Quote / price-build engine, used by signup price builder,
 // order forms, and public calculators. Pure functions, no I/O.
 // ─────────────────────────────────────────────────────────────
 

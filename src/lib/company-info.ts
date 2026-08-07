@@ -4,7 +4,7 @@
 // Admin-editable company details.
 //
 // Addresses, phone numbers and the storage policy were baked into the COMPANY
-// constant, so changing an office address meant a code change and a deploy — and
+// constant, so changing an office address meant a code change and a deploy, and
 // the USA address had already drifted out of date in three separate places.
 //
 // Stored at site_content/company and read with COMPANY as the fallback, so pages

@@ -154,7 +154,7 @@ export default function AdminStaffPage() {
       setIssuedPw({ password: res.tempPassword, emailed: res.emailed });
       toast.success(
         "Temporary password issued",
-        res.emailed ? `Emailed to ${editUser.email}.` : "Email not sent — share it directly."
+        res.emailed ? `Emailed to ${editUser.email}.` : "Email not sent. Share it directly."
       );
     } catch (err: unknown) {
       setEditErr(err instanceof Error ? err.message : "Could not reset the password.");
@@ -191,7 +191,7 @@ export default function AdminStaffPage() {
     }
     const roleChanged = editForm.role !== editUser.role;
     // Changing role changes which menus exist, so a stale per-user override would
-    // no longer make sense — reset to the new role's defaults and let the admin
+    // no longer make sense, reset to the new role's defaults and let the admin
     // re-customise via Manage access.
     if (
       roleChanged &&
@@ -620,7 +620,7 @@ export default function AdminStaffPage() {
         )}
       </Modal>
 
-      {/* Rename roles — labels only; the underlying keys never change */}
+      {/* Rename roles, labels only; the underlying keys never change */}
       <Modal
         open={renameOpen}
         onClose={() => !savingNames && setRenameOpen(false)}
@@ -673,7 +673,7 @@ export default function AdminStaffPage() {
         </div>
       </Modal>
 
-      {/* Edit staff member — name, sign-in email, phone, role */}
+      {/* Edit staff member, name, sign-in email, phone, role */}
       <Modal
         open={editUser !== null}
         onClose={() => !savingEdit && setEditUser(null)}
@@ -707,7 +707,7 @@ export default function AdminStaffPage() {
               />
               {editForm.email.trim().toLowerCase() !== (editUser.email ?? "").toLowerCase() && (
                 <FieldHint>
-                  This is their login. They must use the new address next time they sign in — their
+                  This is their login. They must use the new address next time they sign in. Their
                   password does not change.
                 </FieldHint>
               )}
@@ -771,7 +771,7 @@ export default function AdminStaffPage() {
               </div>
             )}
 
-            {/* Temporary password — for staff who cannot use the reset email */}
+            {/* Temporary password, for staff who cannot use the reset email */}
             <div className="rounded-lg border border-border bg-secondary/40 p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -796,7 +796,7 @@ export default function AdminStaffPage() {
               {issuedPw && (
                 <div className="mt-3 rounded-lg border-2 border-dashed border-gold/40 bg-gold-50/60 p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-widest text-gold-700">
-                    Temporary password — shown once
+                    Temporary password (shown once)
                   </p>
                   <div className="mt-1.5 flex flex-wrap items-center gap-2">
                     <code className="select-all rounded bg-white px-2.5 py-1.5 font-mono text-base font-bold tracking-wider text-navy">
@@ -817,7 +817,7 @@ export default function AdminStaffPage() {
                   <p className="mt-2 text-xs text-ink-muted">
                     {issuedPw.emailed
                       ? "Also emailed to them. They should change it after signing in."
-                      : "The email did not send — read this out or send it another way. It cannot be shown again."}
+                      : "The email did not send. Read this out or send it another way. It cannot be shown again."}
                   </p>
                 </div>
               )}
@@ -872,7 +872,7 @@ function AccessModal({
 }) {
   const features = featuresForRole(user.role);
   // Administrators always have full access to every PAGE; their menus are not
-  // editable. Opt-in tools are the exception — they stay individually
+  // editable. Opt-in tools are the exception, they stay individually
   // toggleable, because the point of an opt-in tool (e.g. demo data seeding)
   // is that it is off until deliberately granted, even for an admin.
   const lockPages = user.role === "admin";

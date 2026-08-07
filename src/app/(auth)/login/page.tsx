@@ -40,7 +40,7 @@ function LoginForm() {
   // The host is only knowable on the client (this page is prerendered by the
   // static export), so start as "unknown" and show nothing until it resolves.
   // Defaulting to allowed would flash the sign-in form on the public domain
-  // before the 404 replaced it — a glimpse is all it takes to reveal the portal.
+  // before the 404 replaced it, a glimpse is all it takes to reveal the portal.
   const [hostAllowed, setHostAllowed] = React.useState<boolean | null>(null);
   React.useEffect(() => {
     setHostAllowed(isPortalHostAllowed());
@@ -49,7 +49,7 @@ function LoginForm() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     // Belt and braces: on the public domain the form is never rendered, so this
-    // cannot normally be reached — but a submit must never fall through to
+    // cannot normally be reached, but a submit must never fall through to
     // Firebase from there.
     if (hostAllowed !== true) return;
     setError(null);
@@ -80,7 +80,7 @@ function LoginForm() {
   // NotFoundScreen as any mistyped URL means there is nothing to distinguish a
   // withheld route from one that never existed.
   if (hostAllowed === false) return <NotFoundScreen />;
-  // Host not yet resolved — render nothing rather than risk flashing the form.
+  // Host not yet resolved, render nothing rather than risk flashing the form.
   if (hostAllowed === null) return <PageLoader label="Loading…" />;
 
   return (
@@ -112,7 +112,7 @@ function LoginForm() {
         </div>
       )}
 
-      {/* Reached only on the portal host — see the hostAllowed guard above. */}
+      {/* Reached only on the portal host, see the hostAllowed guard above. */}
       <form onSubmit={onSubmit} className="mt-7 space-y-4" noValidate>
         <div>
           <Label htmlFor="email" required>

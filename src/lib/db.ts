@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Firestore data-access layer — typed collection helpers.
+// Firestore data-access layer, typed collection helpers.
 // All reads/writes go through here so RBAC + shapes stay consistent.
 // ─────────────────────────────────────────────────────────────
 
@@ -119,7 +119,7 @@ export async function updateShipment(id: string, data: Partial<Shipment>): Promi
 /**
  * Everything that hangs off a single shipment. Status logs are immutable to
  * clients (`allow update, delete: if false`), so they are deliberately NOT
- * deleted here — the audit trail outlives the record it describes, which is the
+ * deleted here, the audit trail outlives the record it describes, which is the
  * point of an append-only log. Callers surface the count so the operator knows.
  */
 async function childRefsOfShipment(shipmentId: string) {
@@ -199,7 +199,7 @@ export async function planDeleteCustomer(customerId: string): Promise<DeleteCust
  *
  * Order matters: shipments (and their children) go first, and the user doc is
  * deleted LAST. If the run dies partway, the customer still exists and the
- * operation is safely repeatable — deleting the user first would strand any
+ * operation is safely repeatable, deleting the user first would strand any
  * remaining shipments with a customer_id that resolves to nothing.
  *
  * Batched in chunks because a Firestore batch is capped at 500 writes.
@@ -240,7 +240,7 @@ export async function deleteCustomerCascade(
   }
   await flush();
 
-  // User doc last — see the ordering note above.
+  // User doc last, see the ordering note above.
   await deleteDoc(doc(db, COL.users, customerId));
   return { shipmentsDeleted: total };
 }
@@ -375,7 +375,7 @@ export async function advanceStage(params: {
  *
  * Powers the dispatcher "Completed today" screen. Querying the log directly
  * replaces an N+1 that read every completed shipment and then one log query per
- * shipment — that grew without bound as deliveries accumulated. Two equality
+ * shipment, that grew without bound as deliveries accumulated. Two equality
  * filters plus a range on the same field need a composite index
  * (status + created_at), declared in firestore.indexes.json.
  */

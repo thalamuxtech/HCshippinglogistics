@@ -34,7 +34,7 @@ export function EmailTestCard() {
   const [preview, setPreview] = React.useState(false);
   // Seed the field with the signed-in admin's address ONCE, and only before the
   // user has touched it. Re-seeding whenever the field went empty made it
-  // impossible to clear and type a different address — every deletion refilled it.
+  // impossible to clear and type a different address, every deletion refilled it.
   const seeded = React.useRef(false);
 
   React.useEffect(() => {
@@ -113,7 +113,7 @@ export function EmailTestCard() {
               ) : (
                 <>
                   <p className="font-medium">Could not send the test email.</p>
-                  {/* Show the provider's own words — it usually names the fix
+                  {/* Show the provider's own words, it usually names the fix
                       (unverified sender, IP allowlist, quota exhausted). */}
                   {res.error && (
                     <p className="mt-1 break-words text-xs leading-relaxed">{res.error}</p>

@@ -114,7 +114,7 @@ function rangeStart(key: RangeKey, now: Date): Date | null {
   return new Date(now.getFullYear(), now.getMonth() - 5, 1); // safe fallback: 6 months
 }
 
-// Exclusive end of the selected range — only a single-year selection is bounded;
+// Exclusive end of the selected range, only a single-year selection is bounded;
 // every other range runs to "now".
 function rangeEnd(key: RangeKey): Date | null {
   const year = /^y(\d{4})$/.exec(key);
@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
   const now = React.useMemo(() => new Date(), []);
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Earliest record — drives both the derived range options and "all time".
+  // Earliest record, drives both the derived range options and "all time".
   const earliest = React.useMemo(() => {
     let e: Date | null = null;
     for (const s of shipments) {
@@ -167,7 +167,7 @@ export default function AdminDashboardPage() {
   }, [shipments]);
 
   const rangeOptions = React.useMemo(() => buildRangeOptions(earliest, now), [earliest, now]);
-  // The selected key may not exist in the derived list — the default "6m" is
+  // The selected key may not exist in the derived list, the default "6m" is
   // absent until there are six months of history, and year options come and go.
   //
   // The fallback must be the WIDEST option, not rangeOptions[0]. Options are
@@ -189,7 +189,7 @@ export default function AdminDashboardPage() {
     if (!start && !end) return shipments;
     return shipments.filter((s) => {
       // A shipment whose created_at has not yet resolved (serverTimestamp is
-      // null for a moment after creation) must not vanish from revenue — that
+      // null for a moment after creation) must not vanish from revenue, that
       // made freshly created, already-paid shipments invisible. Fall back to
       // updated_at, and keep the record when neither timestamp exists rather
       // than silently dropping money from the totals.

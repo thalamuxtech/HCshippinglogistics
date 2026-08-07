@@ -5,7 +5,7 @@
 // The air and RORO service pages are server components (they export Metadata),
 // so they cannot call usePricingSettings themselves. These tiny client wrappers
 // let a quoted figure inside otherwise-static copy track what the admin sets in
-// site_content/pricing — previously the pages hardcoded the constant, so an
+// site_content/pricing, previously the pages hardcoded the constant, so an
 // admin rate change left the marketing copy advertising the old price while the
 // calculator on the same page quoted the new one.
 //

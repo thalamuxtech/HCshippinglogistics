@@ -5,7 +5,7 @@
 // Split out of the (server) sea service page so that page keeps its exported
 // Metadata for SEO while the table itself can use the client-side hook. The hook
 // returns the built-in constants synchronously, so the first paint is identical
-// to the old hardcoded render — no flash, no layout shift — and live prices
+// to the old hardcoded render, no flash, no layout shift, and live prices
 // replace them once Firestore resolves.
 
 import * as React from "react";

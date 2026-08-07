@@ -178,7 +178,7 @@ export function PaymentReceiptCard({
                   : "Pickup fee not quoted yet"}
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                This total is incomplete — set the missing{" "}
+                This total is incomplete, set the missing{" "}
                 {unpriced.length > 0 ? "item prices" : "pickup fee"} first, otherwise the customer
                 would be charged less than they owe.
               </p>

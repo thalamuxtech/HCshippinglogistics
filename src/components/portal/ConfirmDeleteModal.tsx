@@ -6,8 +6,8 @@
 // Permanent deletes are irreversible and cascade (a customer takes their
 // shipments, a shipment takes its receipts), so a one-click window.confirm is
 // too weak: it gives no inventory of what is about to be destroyed and is
-// dismissed by reflex. This modal states the exact counts and — when the delete
-// cascades — requires the operator to type the record's name.
+// dismissed by reflex. This modal states the exact counts and, when the delete
+// cascades, requires the operator to type the record's name.
 // ─────────────────────────────────────────────────────────────
 
 import * as React from "react";

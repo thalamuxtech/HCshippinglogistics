@@ -69,7 +69,7 @@ export interface PublicOrderInput {
   email: string;
   phone: string;
   dob?: string; // YYYY-MM-DD (age computed server-side)
-  address: string; // sender's USA address — required (on the invoice, and the
+  address: string; // sender's USA address, required (on the invoice, and the
   // fallback collection point for a door-to-door pickup)
   /** Returning customer: their existing Customer ID, so orders stay on one account. */
   customer_id?: string;
@@ -347,7 +347,7 @@ export async function updateStaffUser(payload: {
 
 /**
  * Admin: issue a new temporary password for an existing staff account.
- * Returns the plaintext once so the admin can hand it over directly — useful
+ * Returns the plaintext once so the admin can hand it over directly, useful
  * when the staff member cannot receive the reset email.
  */
 export async function resetStaffPassword(payload: {

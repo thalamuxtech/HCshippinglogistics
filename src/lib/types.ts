@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Highclass Shipping — Domain Types
+// Highclass Shipping, Domain Types
 // ─────────────────────────────────────────────────────────────
 
 import type { Timestamp } from "firebase/firestore";
@@ -33,7 +33,7 @@ export type ShipmentStatus =
   | "completed";
 
 export interface AppUser {
-  id: string; // durable customer_id / uid — never reassigned
+  id: string; // durable customer_id / uid, never reassigned
   email: string;
   phone?: string;
   full_name: string;
@@ -136,7 +136,7 @@ export interface Shipment {
   discount_reason?: string;
   /** Money actually taken off, stored so the invoice and portal agree exactly. */
   discount_amount?: number;
-  /** Subtotal before discount — items + pickup. Kept for a clear breakdown. */
+  /** Subtotal before discount, items + pickup. Kept for a clear breakdown. */
   subtotal?: number;
   // Payment
   payment_status?: PaymentStatus;
@@ -153,7 +153,7 @@ export interface Shipment {
   delivered_by?: string | null; // uid of the rider / office staff who released it
   delivered_by_name?: string | null;
   delivered_at?: Timestamp | null;
-  /** Who physically took the goods — signed for at the door or at the counter. */
+  /** Who physically took the goods, signed for at the door or at the counter. */
   received_by_name?: string | null;
   proof_photos?: string[];
   // Latest generated receipt (for quick access)

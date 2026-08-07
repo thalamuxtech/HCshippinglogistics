@@ -34,7 +34,7 @@ export type FeatureKey =
   | "office.shipments"
   | "office.inventory"
   | "office.operations"
-  // Logistics (formerly "Dispatch" — the team handles pickup and delivery)
+  // Logistics (formerly "Dispatch", the team handles pickup and delivery)
   | "dispatch.jobs"
   | "dispatch.containers"
   | "dispatch.completed";
@@ -48,7 +48,7 @@ export interface FeatureMeta {
   required?: boolean;
   /**
    * A top-bar tool rather than a sidebar page. It still appears in the admin's
-   * per-user access editor, but has no route of its own — so canAccessRoute must
+   * per-user access editor, but has no route of its own, so canAccessRoute must
    * not treat its href as a page prefix.
    */
   tool?: boolean;
@@ -76,7 +76,7 @@ export const FEATURES: FeatureMeta[] = [
   // could not recover the system.
   { key: "admin.settings", label: "Settings", href: "/admin/settings", role: "admin", required: true },
   // Top-bar tool, not a page: seeds/clears demo records (all tagged demo:true).
-  // optIn — hidden for every admin until deliberately enabled under Staff &
+  // optIn, hidden for every admin until deliberately enabled under Staff &
   // Roles, so nobody can push test data into the live system by accident.
   {
     key: "admin.demodata",
@@ -89,13 +89,13 @@ export const FEATURES: FeatureMeta[] = [
   // ── Destination office ──
   { key: "office.dashboard", label: "Dashboard", href: "/office", role: "nigeria_office", required: true },
   // Order reflects the operating model: a Container holds Shipments, and those
-  // shipments are what the Warehouse view lists. Warehouse is read-only —
+  // shipments are what the Warehouse view lists. Warehouse is read-only -
   // stock appears automatically when a container reaches a destination stage.
   { key: "office.containers", label: "Containers", href: "/office/containers", role: "nigeria_office" },
   { key: "office.shipments", label: "Shipments", href: "/office/shipments", role: "nigeria_office" },
   { key: "office.inventory", label: "Warehouse", href: "/office/inventory", role: "nigeria_office" },
   // Vehicles (RORO) route straight to Operations rather than through general
-  // warehouse stock — a car is not shelved cargo and is monitored separately.
+  // warehouse stock, a car is not shelved cargo and is monitored separately.
   { key: "office.operations", label: "Operations", href: "/office/operations", role: "nigeria_office" },
   // ── Logistics (pickup & delivery) ──
   { key: "dispatch.jobs", label: "My Jobs", href: "/dispatch", role: "dispatcher", required: true },

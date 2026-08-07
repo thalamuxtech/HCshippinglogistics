@@ -4,7 +4,7 @@
 // Live sea-cargo price list.
 //
 // The admin Pricing screen writes every row to Firestore `price_list`, but the
-// public pricing page, the sea service page and — most importantly — the
+// public pricing page, the sea service page and, most importantly, the
 // customer order form all imported the hardcoded SEA_PRICE_LIST from
 // constants.ts. Admin price edits therefore never reached customers, who were
 // quoted stale figures at checkout.

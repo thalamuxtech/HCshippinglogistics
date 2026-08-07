@@ -358,7 +358,7 @@ function AdminCustomerDetailPageInner() {
     if (!customer || !user) return;
     if (
       !window.confirm(
-        "Regenerate this customer's access code? The old code stops working immediately. The new code is shown to you here — nothing is emailed until you choose to send it."
+        "Regenerate this customer's access code? The old code stops working immediately. The new code is shown to you here. Nothing is emailed until you choose to send it."
       )
     )
       return;
@@ -576,7 +576,7 @@ function AdminCustomerDetailPageInner() {
           {regenerated && (
             <div className="mt-4 w-full rounded-xl border-2 border-dashed border-gold/40 bg-gold-50/60 p-4">
               <p className="text-xs font-semibold uppercase tracking-widest text-gold-700">
-                New access code — shown once
+                New access code (shown once)
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <code className="select-all rounded bg-white px-3 py-1.5 font-mono text-lg font-bold tracking-[0.15em] text-navy">
@@ -722,7 +722,7 @@ function AdminCustomerDetailPageInner() {
         )}
       </Card>
 
-      {/* Edit contact details — the fix for a signup typo. */}
+      {/* Edit contact details, the fix for a signup typo. */}
       <Modal
         open={editOpen}
         onClose={() => !savingContact && setEditOpen(false)}
@@ -778,7 +778,7 @@ function AdminCustomerDetailPageInner() {
               <p className="mt-1.5 text-xs text-ink-muted">
                 {fDob
                   ? ageFromDob(fDob) !== null
-                    ? `Age ${ageFromDob(fDob)} — recalculated automatically.`
+                    ? `Age ${ageFromDob(fDob)}, recalculated automatically.`
                     : "That date is not valid."
                   : "Age is calculated from this date."}
               </p>
@@ -814,7 +814,7 @@ function AdminCustomerDetailPageInner() {
             {!fNotifyEmail && (
               <p className="mt-2 text-xs font-medium text-amber-600">
                 With email off they will not receive stage updates, container pickup notices, or
-                their access code — including from bulk sends.
+                their access code, including from bulk sends.
               </p>
             )}
           </div>
@@ -832,7 +832,7 @@ function AdminCustomerDetailPageInner() {
             <p className="rounded-lg border border-border bg-secondary/40 p-3 text-xs text-ink-muted">
               {shipments.length} shipment record(s) carry a copy of the name, email and phone for
               invoices and Logistics job cards. They are updated too, so nothing is left showing
-              the old value. Invoice PDFs already generated are fixed files — re-generate one from
+              the old value. Invoice PDFs already generated are fixed files. Re-generate one from
               its shipment if it needs the new details.
             </p>
           )}

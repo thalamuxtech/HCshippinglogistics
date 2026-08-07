@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Highclass Shipping — Cloud Functions (Gen 2)
+// Highclass Shipping, Cloud Functions (Gen 2)
 //
 // Notifications (email/SMS), digital-receipt PDF, and the admin
 // sailing broadcast. Runs in STUB MODE until Resend/Twilio secrets
@@ -87,7 +87,7 @@ function sendErrorSummary(results) {
         const parsed = JSON.parse(v.error);
         if (parsed?.message) msg = parsed.message;
       } catch {
-        /* error body was not JSON — use it as-is */
+        /* error body was not JSON, use it as-is */
       }
       return String(msg).slice(0, 300);
     }
@@ -617,7 +617,7 @@ export const sendStageUpdateEmail = onCall({ secrets: ALL_SECRETS }, async (req)
 //
 // Runs server-side on the Admin SDK deliberately: Firestore rules stop a client
 // reading users/counters wholesale, and a browser-side export would silently
-// return partial data — the worst possible failure for a backup.
+// return partial data, the worst possible failure for a backup.
 //
 // Format is JSON, not CSV. CSV cannot represent the nested objects (receiver,
 // items[], dimensions) or distinguish a Timestamp from a string that looks like a
@@ -725,7 +725,7 @@ export const restoreBackup = onCall({ timeoutSeconds: 540, memory: "1GiB" }, asy
   for (const name of BACKUP_COLLECTIONS) {
     const rows = Array.isArray(backup.data[name]) ? backup.data[name] : null;
     if (!rows) {
-      // A collection missing from the file is left untouched rather than wiped —
+      // A collection missing from the file is left untouched rather than wiped -
       // an older backup should not destroy data it never knew about.
       skipped.push(name);
       continue;
@@ -779,7 +779,7 @@ export const restoreBackup = onCall({ timeoutSeconds: 540, memory: "1GiB" }, asy
 //
 // Off-list items arrive at 0 with needs_quote:true. Once staff set a price the
 // customer needs to know the total changed BEFORE they are asked to pay, which is
-// the whole point of the quote-on-request flow — otherwise the amount silently
+// the whole point of the quote-on-request flow, otherwise the amount silently
 // grows between ordering and invoicing.
 // ═══════════════════════════════════════════════════════════════
 export const sendQuoteReadyEmail = onCall({ secrets: ALL_SECRETS }, async (req) => {
@@ -820,7 +820,7 @@ export const sendQuoteReadyEmail = onCall({ secrets: ALL_SECRETS }, async (req) 
     typeof ship.balance === "number" ? ship.balance : Number(ship.total_price) || 0;
 
   const body = `
-    Good news — we have priced the item you asked us to quote on shipment
+    Good news: we have priced the item you asked us to quote on shipment
     <strong>${ship.tracking_number || ""}</strong>.
     ${note ? `<br/><br/>${String(note).slice(0, 800)}` : ""}
     <br/><br/>
@@ -830,7 +830,7 @@ export const sendQuoteReadyEmail = onCall({ secrets: ALL_SECRETS }, async (req) 
     </table>
     <p style="font-size:15px;color:#0B1E3A">
       <strong>Order total: ${fmt(ship.total_price)}</strong><br/>
-      ${balance > 0 ? `Balance due: <strong>${fmt(balance)}</strong>` : "Fully paid — nothing further to pay."}
+      ${balance > 0 ? `Balance due: <strong>${fmt(balance)}</strong>` : "Fully paid. Nothing further to pay."}
     </p>
     ${balance > 0 ? "You can now go ahead and pay for your shipment." : ""}
   `;
@@ -839,7 +839,7 @@ export const sendQuoteReadyEmail = onCall({ secrets: ALL_SECRETS }, async (req) 
     cust.notify_email !== false
       ? await sendEmail({
           to,
-          subject: `Your quote is ready — ${ship.tracking_number || "your shipment"}`,
+          subject: `Your quote is ready, ${ship.tracking_number || "your shipment"}`,
           html: emailShell({
             heading: "Your quote is ready",
             body,
@@ -856,7 +856,7 @@ export const sendQuoteReadyEmail = onCall({ secrets: ALL_SECRETS }, async (req) 
       shipment_id: shipmentId,
       channel: "email",
       type: "quote_ready",
-      subject: `Quote ready — ${ship.tracking_number || ""}`,
+      subject: `Quote ready, ${ship.tracking_number || ""}`,
       status: emailRes.ok ? "sent" : "failed",
       stub: !!emailRes.stub,
       created_at: FieldValue.serverTimestamp(),
@@ -977,7 +977,7 @@ export const sendInquiryReply = onCall({ secrets: EMAIL_SECRETS }, async (req) =
 // Runs unauthenticated with Admin SDK so the "Return with access code"
 // page can recognize a returning customer WITHOUT a prior login and
 // WITHOUT exposing the users collection to public reads. Returns only
-// { found, email } — never the code, hash, or other PII fields.
+// { found, email }, never the code, hash, or other PII fields.
 // The check character is validated client-side first; we re-validate here.
 // ═══════════════════════════════════════════════════════════════
 
@@ -1021,7 +1021,7 @@ function callerKey(req) {
 }
 
 // `subject` (the attempted code) is mixed into the bucket key so that a shared
-// IP — office NAT, mobile carrier, a whole household — cannot lock a real
+// IP, office NAT, mobile carrier, a whole household, cannot lock a real
 // customer out of their OWN id just because someone else on that IP was
 // guessing. An attacker sweeping many ids gets a fresh bucket per id, but each
 // id still only tolerates MAX_FAILS guesses per window, which is what actually
@@ -1092,7 +1092,7 @@ export const publicTrack = onCall(async (req) => {
   await throttleRecord(rl, true);
 
   const d = snap.docs[0].data();
-  // Return ONLY non-sensitive fields — never customer PII or the PDF URL.
+  // Return ONLY non-sensitive fields, never customer PII or the PDF URL.
   return {
     found: true,
     tracking_number: d.tracking_number || "",
@@ -1163,7 +1163,7 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
       if (qty <= 0) continue;
 
       // s_n 0 marks an item the customer described that is not on the price
-      // list. It cannot be priced here — size and handling decide the rate — so
+      // list. It cannot be priced here, size and handling decide the rate, so
       // it is recorded at 0 and the office quotes it before invoicing. Without
       // this branch the item was silently dropped and the customer's order
       // arrived missing exactly the thing they could not find in the list.
@@ -1261,7 +1261,7 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
       );
     }
     const owner = claimed.data();
-    // The ID alone is the credential, so it must match the email on file —
+    // The ID alone is the credential, so it must match the email on file -
     // otherwise anyone holding an ID could attach orders to that account.
     if ((owner.email || "").toLowerCase() !== email) {
       throw new HttpsError(
@@ -1294,7 +1294,7 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     }
     throw new HttpsError(
       "already-exists",
-      `An account already exists for ${email}. We have emailed your Customer ID — enter it as a returning customer to add this shipment to your account.`
+      `An account already exists for ${email}. We have emailed your Customer ID. Enter it as a returning customer to add this shipment to your account.`
     );
   } else {
     customerId = makeCustomerId(d.full_name);
@@ -1344,7 +1344,7 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
       city: d.destination_city || "",
     },
     notes: d.notes || "",
-    // Customer-declared fragile cargo — carried through to the warehouse,
+    // Customer-declared fragile cargo, carried through to the warehouse,
     // destination office and rider so handling instructions are not lost.
     fragile: !!d.fragile,
     fragile_note: d.fragile ? String(d.fragile_note || "").slice(0, 300) : "",
@@ -1369,7 +1369,7 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
   }
   const shipRef = await db.collection("shipments").add(shipment);
 
-  // Confirmation email carrying the Customer ID — the customer's ONLY
+  // Confirmation email carrying the Customer ID, the customer's ONLY
   // credential, so whether it actually sent must be recorded truthfully (it was
   // previously logged as "sent" unconditionally) and returned to the client.
   // Customer-supplied fields are escaped: they are rendered into HTML here.
@@ -1460,7 +1460,7 @@ export const viewByCustomerId = onCall(async (req) => {
         discount_value: s.discount_value || 0,
         discount_amount: s.discount_amount || 0,
         discount_reason: s.discount_reason || null,
-        // Proof of delivery — the customer is entitled to see the evidence that
+        // Proof of delivery, the customer is entitled to see the evidence that
         // their goods were handed over, and who released them.
         proof_photos: Array.isArray(s.proof_photos) ? s.proof_photos : [],
         handover_method: s.handover_method || null,
@@ -1959,7 +1959,7 @@ export const resetStaffPassword = onCall({ secrets: EMAIL_SECRETS }, async (req)
   if (!snap.exists) throw new HttpsError("not-found", "Staff account not found.");
   const target = snap.data();
   if (target.role === "customer") {
-    // Customers authenticate with an access code, not a password — issuing one
+    // Customers authenticate with an access code, not a password, issuing one
     // here would create a login path that does not exist for them.
     throw new HttpsError("failed-precondition", "Customers do not have passwords.");
   }
@@ -2000,7 +2000,7 @@ export const resetStaffPassword = onCall({ secrets: EMAIL_SECRETS }, async (req)
     actor_id: req.auth.uid,
     action: "staff_password_reset",
     target: uid,
-    // Never log the password itself — activity_log is readable by every admin.
+    // Never log the password itself, activity_log is readable by every admin.
     meta: { email: target.email || null, emailed },
     created_at: FieldValue.serverTimestamp(),
   });

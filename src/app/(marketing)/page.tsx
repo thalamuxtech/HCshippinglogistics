@@ -278,7 +278,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ─── How it works — animated journey ──────────────── */}
+      {/* ─── How it works, animated journey ──────────────── */}
       <ProcessJourney />
 
       {/* ─── Customer reviews (auto-slider) ───────────────── */}

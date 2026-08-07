@@ -1,13 +1,13 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Destination office — Containers.
+// Destination office, Containers.
 //
 // Top of the operating hierarchy: Container → Shipments → Warehouse stock.
 // Office staff work a container at a time (it clears customs as one, it is
 // offloaded as one), so this screen exists to select a whole container and move
 // it through a stage in a single action. Stage rules and the audit trail are the
-// shared ones in lib/bulk-advance.ts — this role is limited to stages 5–8.
+// shared ones in lib/bulk-advance.ts, this role is limited to stages 5-8.
 //
 // Read-only with respect to composition: assigning shipments TO a container is
 // a head-office action (loading happens in the USA), so there is no create or
@@ -129,7 +129,7 @@ export default function OfficeContainersPage() {
       });
     });
 
-    // Most recently touched container first — that is what staff are working on.
+    // Most recently touched container first, that is what staff are working on.
     return out.sort((a, b) => {
       if (!a.cnt) return 1;
       if (!b.cnt) return -1;

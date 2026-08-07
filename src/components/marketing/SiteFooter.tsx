@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { COMPANY } from "@/lib/constants";
+import { StaffEntryLink } from "@/components/marketing/StaffEntryLink";
 import { ShieldCheck, Ship } from "lucide-react";
 import { BrandPattern } from "@/components/marketing/BrandPattern";
 
@@ -97,10 +98,9 @@ export function SiteFooter() {
             >
               Powered by ThalamuxTech
             </a>
-            {/* No staff entry point here. The lock icon that used to link to
-                /login advertised the portal on the public site, and on this
-                domain that route is a 404 — so it only ever led somewhere dead.
-                Staff reach the portal by its own address. */}
+            {/* Staff padlock, rendered only on the portal host. It stays off the
+                public domain, where /login is a 404. */}
+            <StaffEntryLink />
           </div>
         </div>
       </div>

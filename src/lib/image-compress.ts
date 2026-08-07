@@ -3,11 +3,11 @@
 // ─────────────────────────────────────────────────────────────
 // Client-side image downscaling for proof-of-delivery photos.
 //
-// A modern phone camera produces 3–8 MB JPEGs. Proof of delivery only needs to
+// A modern phone camera produces 3-8 MB JPEGs. Proof of delivery only needs to
 // show that the right goods reached the right person, so storing originals burns
 // Storage quota (and the rider's mobile data) for detail nobody looks at.
 //
-// Compressing in the browser BEFORE upload is what saves the bandwidth — doing
+// Compressing in the browser BEFORE upload is what saves the bandwidth, doing
 // it server-side would mean paying to transfer the full-size file anyway. Cost
 // is a few hundred ms of canvas work per photo on the rider's device.
 //
@@ -27,7 +27,7 @@ export interface CompressOptions {
 const DEFAULTS: Required<CompressOptions> = {
   maxEdge: 1600,
   quality: 0.7,
-  skipBelowBytes: 250 * 1024, // 250 KB — already small enough to store as-is
+  skipBelowBytes: 250 * 1024, // 250 KB, already small enough to store as-is
 };
 
 function loadImage(file: File): Promise<HTMLImageElement> {

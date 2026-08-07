@@ -52,7 +52,7 @@ export default function DispatchCompletedPage() {
       try {
         // Read TODAY'S completion logs directly rather than every completed
         // shipment ever. The previous version fetched all completed shipments
-        // and then ran one listStatusLogs() per shipment — an N+1 that grew
+        // and then ran one listStatusLogs() per shipment, an N+1 that grew
         // without bound as the business completed more deliveries.
         const logs = await listCompletedLogsSince(startOfToday());
         // Only this rider's own completions: the heading promises "you marked

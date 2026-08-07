@@ -105,7 +105,7 @@ function OfficeShipmentDetailPageInner() {
         updatedByName: user.full_name,
       });
 
-      // Completing at the office IS a warehouse collection — the customer came to
+      // Completing at the office IS a warehouse collection, the customer came to
       // the counter rather than a rider going out. Record it the same way the
       // dispatch app records a delivery, so admin can tell the two apart and
       // always knows who released the cargo. Non-fatal: the stage change above
@@ -124,7 +124,7 @@ function OfficeShipmentDetailPageInner() {
       }
       // Notify the customer. The stage change is already committed, so a
       // notification (or notification-log) failure must NOT be reported as a
-      // failed stage update — that made staff re-advance shipments that had
+      // failed stage update, that made staff re-advance shipments that had
       // already moved. Record what actually happened instead.
       let notified = true;
       try {

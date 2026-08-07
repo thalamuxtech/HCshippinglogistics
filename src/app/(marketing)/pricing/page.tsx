@@ -113,7 +113,7 @@ export default function PricingPage() {
                 <Plane className="h-5 w-5" />
               </span>
               <h2 className="mt-5 text-lg font-bold text-navy">Air Freight</h2>
-              <p className="mt-1 text-sm text-ink-muted">Flat rate on billable weight, 7–10 days.</p>
+              <p className="mt-1 text-sm text-ink-muted">Flat rate on billable weight, 7-10 days.</p>
               <div className="mt-4 flex items-baseline gap-1">
                 <span className="font-mono text-3xl font-bold text-navy">
                   {formatCurrency(pricing.air.ratePerLb)}

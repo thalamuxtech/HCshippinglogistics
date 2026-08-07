@@ -1,4 +1,4 @@
-// Shared "off the map" screen — the real 404 page, and what /login renders on
+// Shared "off the map" screen, the real 404 page, and what /login renders on
 // the public domain.
 //
 // Reusing the exact same component matters: a bespoke "not available here" page

@@ -20,7 +20,7 @@ try {
 }
 
 const NAVY = "#0B1E3A";
-// Brand accent — the logo's royal blue (constant name kept as GOLD to avoid churn).
+// Brand accent, the logo's royal blue (constant name kept as GOLD to avoid churn).
 const GOLD = "#0A5BE0";
 const INK = "#1A202C";
 const MUTED = "#718096";
@@ -277,7 +277,7 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
 
   // Keep the totals + terms block together; move to a new page if it won't fit
   // above the footer (matters for long, multi-page item lists).
-  // Grew when the breakdown gained Items/Subtotal/Discount rows — 210 keeps the
+  // Grew when the breakdown gained Items/Subtotal/Discount rows, 210 keeps the
   // block from splitting across a page break.
   const totalsBlockH = 210;
   if (y + totalsBlockH > doc.page.height - 90) {

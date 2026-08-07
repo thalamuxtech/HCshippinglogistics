@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Bulk stage advance — shared by the admin and destination-office
+// Bulk stage advance, shared by the admin and destination-office
 // shipment lists so both portals enforce the SAME rules.
 //
 // Real ops move a whole batch through one stage at a time (a container
@@ -97,7 +97,7 @@ export interface BulkResult {
 
 // Email pacing: transactional providers rate-limit bursts, and a 40-barrel
 // container would otherwise fire 40 sends at once. Send in small batches with a
-// short gap — a stage update is not latency-critical.
+// short gap, a stage update is not latency-critical.
 const EMAIL_BATCH = 5;
 const EMAIL_GAP_MS = 350;
 
@@ -106,7 +106,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 /**
  * Execute a bulk advance. Each shipment gets its OWN append-only status-log
  * entry (via advanceStage) so the audit trail stays per-shipment, and a failure
- * on one shipment never aborts the rest — the caller receives the per-shipment
+ * on one shipment never aborts the rest, the caller receives the per-shipment
  * failures so it can tell the operator exactly which ones need attention.
  */
 export async function runBulkAdvance(params: {
@@ -132,7 +132,7 @@ export async function runBulkAdvance(params: {
   let done = 0;
   onProgress?.(0, total);
 
-  // Phase 1 — advance every shipment (the operation that must not be lost).
+  // Phase 1, advance every shipment (the operation that must not be lost).
   for (const ship of plan.advance) {
     try {
       await advanceStage({
@@ -154,7 +154,7 @@ export async function runBulkAdvance(params: {
     onProgress?.(done, total);
   }
 
-  // Phase 2 — notify, paced, and only for shipments that actually advanced.
+  // Phase 2, notify, paced, and only for shipments that actually advanced.
   if (notify && result.advanced.length > 0) {
     for (let i = 0; i < result.advanced.length; i += EMAIL_BATCH) {
       const batch = result.advanced.slice(i, i + EMAIL_BATCH);

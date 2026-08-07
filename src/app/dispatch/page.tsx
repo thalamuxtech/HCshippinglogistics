@@ -1,17 +1,17 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Dispatch — My Jobs dashboard.
+// Dispatch, My Jobs dashboard.
 //
 // A rider's shift view: what is assigned to me, what is ready to hand out, what
-// is blocked, and what I have already finished today — then the job list itself
+// is blocked, and what I have already finished today, then the job list itself
 // grouped by container (Container → Shipments → Deliveries).
 //
 // "Assigned to me" is deliberately surfaced first. The admin sets
 // assigned_dispatcher_id on a shipment, but the dispatch portal historically
 // ignored it and showed every rider the whole warehouse queue, so an assignment
 // had no visible effect. Assigned work now leads the dashboard while unassigned
-// arrivals stay reachable below — a small team still shares one pool, so hiding
+// arrivals stay reachable below, a small team still shares one pool, so hiding
 // the rest would strand cargo nobody was explicitly given.
 // ─────────────────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────
-// Brand Logo — official Highclass Shipping & Logistics mark.
+// Brand Logo, official Highclass Shipping & Logistics mark.
 // File: /public/brand/logo.png (ship + plane oval crest).
 // The crest has a white background, so on dark surfaces (footer/hero)
 // pass variant="light" to wrap it in a white rounded plate.

@@ -1,7 +1,7 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Destination office — Operations (vehicles / RORO).
+// Destination office, Operations (vehicles / RORO).
 //
 // Cars and other RORO cargo are routed here rather than into general Warehouse
 // stock. A vehicle is not shelved cargo: it is driven off the vessel, parked,
@@ -9,7 +9,7 @@
 // keyed on vehicle identity (class, curb weight, shipping line) instead of
 // box counts.
 //
-// Derived from shipments the same way the Warehouse view is — a RORO shipment
+// Derived from shipments the same way the Warehouse view is, a RORO shipment
 // appears here automatically once it reaches a destination stage. Bulk stage
 // advance uses the shared rules in lib/bulk-advance (stages 5-8 for this role).
 // ─────────────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ export default function OfficeOperationsPage() {
   }, [country]);
 
   // RORO only, and only once it has reached the destination half of the
-  // lifecycle — this role owns stages 5-8.
+  // lifecycle, this role owns stages 5-8.
   const vehicles = React.useMemo(
     () =>
       shipments.filter((s) => s.service_type === "roro" && stageOrder(s.current_status) >= 5),

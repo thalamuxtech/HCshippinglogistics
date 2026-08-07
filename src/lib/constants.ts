@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Highclass Shipping — Business Constants
+// Highclass Shipping, Business Constants
 // Single source of truth for pricing, stages, services, and rates.
 // Mirrors the Implementation Plan sections 5, 6, 8, 11.
 // ─────────────────────────────────────────────────────────────
@@ -118,12 +118,12 @@ export const SERVICES: Record<
   sea: {
     label: "Sea Cargo",
     tagline: "Containerized ocean freight for boxes, barrels, bags, and furniture.",
-    leadTime: "21–30 business weeks after departure",
+    leadTime: "21-30 business weeks after departure",
   },
   air: {
     label: "Air Freight",
     tagline: "Expedited air shipping for time-sensitive cargo.",
-    leadTime: "7–10 business days",
+    leadTime: "7-10 business days",
   },
   roro: {
     label: "RORO Vehicle Shipping",
@@ -186,7 +186,7 @@ export const SEA_PRICE_LIST: SeedPriceItem[] = [
   { s_n: 11, dimensions: "30 Gallon / 3ft", description: "Barrel (Short)", price: 200, category: "Barrel" },
   { s_n: 12, dimensions: "30 Inch Bag", description: "Black Bag (Large)", price: 100, category: "Bag" },
   { s_n: 13, dimensions: "36 Inch Bag", description: "Black Bag (Ex-Large)", price: 130, category: "Bag" },
-  { s_n: 14, dimensions: "21×13×9 – 28 inch", description: "Suitcase", price: 80, category: "Suitcase" },
+  { s_n: 14, dimensions: "21×13×9, 28 inch", description: "Suitcase", price: 80, category: "Suitcase" },
   { s_n: 15, dimensions: "27 Gallon", description: "Tote Large", price: 70, category: "Tote" },
   { s_n: 16, dimensions: "29 Gallon", description: "Tote Ex-Large", price: 90, category: "Tote" },
   { s_n: 17, dimensions: "40 Gallon", description: "Tote Biggest", price: 200, category: "Tote" },
@@ -195,9 +195,9 @@ export const SEA_PRICE_LIST: SeedPriceItem[] = [
   { s_n: 20, dimensions: "Light Weight", description: "White Sack", price: 60, category: "Sack" },
   { s_n: 21, dimensions: "Heavy Weight", description: "White Sack", price: 80, category: "Sack" },
   { s_n: 22, dimensions: "Light Weight", description: "Grey Sack", price: 120, category: "Sack" },
-  { s_n: 23, dimensions: '35"–42"', description: "TV", price: 120, category: "TV" },
-  { s_n: 24, dimensions: '50"–60"', description: "TV", price: 250, category: "TV" },
-  { s_n: 25, dimensions: '65"–70"', description: "TV", price: 300, category: "TV" },
+  { s_n: 23, dimensions: '35"-42"', description: "TV", price: 120, category: "TV" },
+  { s_n: 24, dimensions: '50"-60"', description: "TV", price: 250, category: "TV" },
+  { s_n: 25, dimensions: '65"-70"', description: "TV", price: 300, category: "TV" },
   { s_n: 26, dimensions: '75"', description: "TV", price: 400, category: "TV" },
   { s_n: 27, dimensions: '80"', description: "TV", price: 650, category: "TV" },
   { s_n: 28, dimensions: "Varies", description: "Furniture Set", price: 1400, category: "Furniture" },
@@ -222,7 +222,7 @@ export const COMPANY = {
     phones: ["+1 (240) 374-8394", "+1 (240) 499-6237"],
   },
   nigeria: {
-    label: "Nigeria Office",
+    label: "Nigeria Office & Warehouse",
     lines: [
       "28 Moleye Street, Alagomeji",
       "(Behind Sweet Sensation), Along Herbert Macaulay Way",

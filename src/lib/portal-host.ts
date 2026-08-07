@@ -8,7 +8,7 @@
 //
 // Two rules follow from that:
 //  1. The portal host is NEVER rendered into public markup. No notice, no link,
-//     no "use this address instead" hint — publishing the URL would defeat the
+//     no "use this address instead" hint, publishing the URL would defeat the
 //     point of keeping it off the marketing site.
 //  2. On the wrong host the login form stays fully functional-looking and simply
 //     never succeeds, returning the same "Incorrect email or password" a genuine
@@ -17,7 +17,7 @@
 //
 // Why this is enforced in the app rather than in Firebase Auth: the Auth
 // "authorized domains" list only gates OAuth popup/redirect flows. Email +
-// password sign-in — which is what staff use — is NOT restricted by it, so a
+// password sign-in, which is what staff use, is NOT restricted by it, so a
 // login form served from any origin authenticates happily. The gate therefore
 // has to live where the sign-in is initiated.
 //
@@ -41,7 +41,7 @@ const ALLOWED_PORTAL_HOSTS = [
  * Is the current host allowed to run the staff portal?
  *
  * Returns true during server rendering / static export, where there is no
- * `window` — the check is re-evaluated on the client, and defaulting to
+ * `window`, the check is re-evaluated on the client, and defaulting to
  * "blocked" would bake a blocked state into the prerendered HTML.
  *
  * Deliberately the ONLY export: a helper that returned the portal URL would

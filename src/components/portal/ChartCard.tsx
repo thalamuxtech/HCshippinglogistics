@@ -29,7 +29,7 @@ const PALETTE = ["#0A5BE0", "#0B1E3A", "#2E74EC", "#8B5CF6", "#14B8A6", "#F97316
 
 // Stable, SVG-safe unique id for gradient <defs>. React.useId() emits characters
 // (":", "«»") that are invalid inside a bare url(#id) reference and cause the
-// gradient fill — and the whole chart — to fail to paint. A plain counter is safe.
+// gradient fill, and the whole chart, to fail to paint. A plain counter is safe.
 let __gidCounter = 0;
 function useGradientId(prefix: string): string {
   const [id] = React.useState(() => `${prefix}${(__gidCounter += 1)}`);

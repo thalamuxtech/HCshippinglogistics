@@ -107,7 +107,7 @@ export default function ContactPage() {
               </Card>
             </Reveal>
 
-            {/* Live company details — see OfficeCards. */}
+            {/* Live company details, see OfficeCards. */}
             <OfficeCards />
           </div>
         </div>

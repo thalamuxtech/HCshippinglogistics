@@ -1,11 +1,11 @@
 // ─────────────────────────────────────────────────────────────
-// Order total: items + pickup − discount.
+// Order total: items + pickup - discount.
 //
 // One function, used by the admin editor, the customer portal and the invoice, so
 // the three can never disagree. Duplicating this arithmetic is how a customer
 // ends up seeing a different figure from the one on their invoice.
 //
-// No "use client" — this is pure arithmetic and the Cloud Functions mirror it.
+// No "use client", this is pure arithmetic and the Cloud Functions mirror it.
 // ─────────────────────────────────────────────────────────────
 
 import type { Shipment, ShipmentItem } from "./types";
@@ -21,7 +21,7 @@ export interface OrderTotals {
   subtotal: number;
   /** Money taken off (always a positive amount, or 0). */
   discountAmount: number;
-  /** What the customer owes: subtotal − discount, never below zero. */
+  /** What the customer owes: subtotal - discount, never below zero. */
   total: number;
   /** True when pickup was requested but staff have not priced it yet. */
   pickupPending: boolean;
@@ -51,7 +51,7 @@ export function computeOrderTotals(
   const subtotal = round2(itemsTotal + pickupFee);
 
   // Percent applies to the subtotal, so a discount agreed as "10% off" still
-  // means 10% after pickup is added — which is what a customer expects.
+  // means 10% after pickup is added, which is what a customer expects.
   let discountAmount = 0;
   const value = Number(s.discount_value) || 0;
   if (s.discount_type === "percent" && value > 0) {

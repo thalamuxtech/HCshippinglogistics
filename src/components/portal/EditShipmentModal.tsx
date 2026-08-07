@@ -5,7 +5,7 @@
 //
 // Scope note: stage, payment, container, DNR and dispatcher assignment each
 // already have their own purpose-built control on the detail page (they carry
-// side effects — audit logs, emails, balance recalculation). This modal edits
+// side effects, audit logs, emails, balance recalculation). This modal edits
 // only the descriptive record: who it is for, where it goes, what is in it.
 // Keeping those concerns apart is why editing here cannot silently change a
 // customer's balance.
@@ -101,7 +101,7 @@ export function EditShipmentModal({
     setDraft((d) => ({ ...d, [key]: value }));
 
   const hasItems = items.length > 0;
-  // With line items present the total is DERIVED, never hand-typed — otherwise
+  // With line items present the total is DERIVED, never hand-typed, otherwise
   // the invoice total and the items that justify it can disagree.
   const itemsTotal = React.useMemo(
     () => round2(items.reduce((sum, it) => sum + (Number(it.line_total) || 0), 0)),
@@ -122,7 +122,7 @@ export function EditShipmentModal({
           unit_price: unit,
           line_total: round2(qty * unit),
           // Giving an off-list item a price IS the quote, so the flag resolves to
-          // FALSE — not undefined. Leaving it true would badge the row forever;
+          // FALSE, not undefined. Leaving it true would badge the row forever;
           // deleting the key would erase the fact that this line was ever quoted,
           // and the "quote ready to send" prompt keys off exactly that history.
           needs_quote: unit > 0 ? false : next.needs_quote,
@@ -163,7 +163,7 @@ export function EditShipmentModal({
     const patch: Partial<Shipment> = {};
     const orig = draftFrom(shipment);
     // Restricted to the Draft's string fields so a boolean (fragile) can never
-    // be routed through .trim() — those are handled explicitly below.
+    // be routed through .trim(), those are handled explicitly below.
     type StringDraftKey = {
       [K in keyof Draft]: Draft[K] extends string ? K : never;
     }[keyof Draft];
@@ -381,7 +381,7 @@ export function EditShipmentModal({
             </div>
           </div>
 
-          {/* Fragile flag — visible to the warehouse, office and rider. */}
+          {/* Fragile flag, visible to the warehouse, office and rider. */}
           <div
             className={cn(
               "rounded-lg border-2 p-3 transition-colors",
@@ -399,7 +399,7 @@ export function EditShipmentModal({
                 <AlertTriangle
                   className={cn("h-4 w-4", draft.fragile ? "text-amber-600" : "text-ink-muted")}
                 />
-                Fragile — handle with care
+                Fragile, handle with care
               </span>
             </label>
             {draft.fragile && (

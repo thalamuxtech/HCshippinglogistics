@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-// Auth service — signup, access-code issuance, and return.
+// Auth service, signup, access-code issuance, and return.
 // Ties Firebase Auth + Firestore user doc + Customer Access Code
 // (Implementation Plan §13.1) together.
 // ─────────────────────────────────────────────────────────────
@@ -37,7 +37,7 @@ export interface SignupInput {
 
 export interface SignupResult {
   uid: string;
-  accessCode: string; // plaintext — show ONCE
+  accessCode: string; // plaintext, show ONCE
 }
 
 /**
@@ -114,7 +114,7 @@ export async function resetPassword(email: string) {
  * Used on the "Return with access code" screen to recognize a returning
  * customer. The check character is validated locally first (rejects typos
  * before any network call), then a Cloud Function (resolveAccessCode) does
- * the salted-hash match with Admin privileges — so the public `users`
+ * the salted-hash match with Admin privileges, so the public `users`
  * collection is NEVER exposed to unauthenticated reads.
  *
  * NOTE: full account access still requires the email/password login

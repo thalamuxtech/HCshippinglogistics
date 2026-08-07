@@ -7,8 +7,8 @@
 // record; pickup and discount are commercial decisions that change what the
 // customer owes, so they sit next to Payment where that consequence is visible.
 //
-// The total is always recomputed through computeOrderTotals — the same function
-// the customer portal and the invoice use — so the three can never disagree.
+// The total is always recomputed through computeOrderTotals, the same function
+// the customer portal and the invoice use, so the three can never disagree.
 // ─────────────────────────────────────────────────────────────
 
 import * as React from "react";
@@ -158,7 +158,7 @@ export function PricingAdjustCard({
             </span>
             {shipment.door_to_door ? (
               current.pickupPending ? (
-                <Badge variant="warning">Requested — not priced</Badge>
+                <Badge variant="warning">Requested, not priced</Badge>
               ) : (
                 <Badge variant="success">Priced</Badge>
               )
@@ -255,7 +255,7 @@ export function PricingAdjustCard({
           {preview.discountAmount > 0 && (
             <Row
               label={`Discount${dType === "percent" ? ` (${Number(dValue) || 0}%)` : ""}`}
-              value={`− ${formatCurrency(preview.discountAmount, currency)}`}
+              value={`- ${formatCurrency(preview.discountAmount, currency)}`}
               emphasis="discount"
             />
           )}

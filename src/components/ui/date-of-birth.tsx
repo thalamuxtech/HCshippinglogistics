@@ -1,11 +1,11 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Date-of-birth picker — three scrolling rollers (day · month name · year).
+// Date-of-birth picker, three scrolling rollers (day · month name · year).
 //
 // Replaces <input type="date">, which is a poor fit here: browsers render it in
 // the visitor's locale, so the same field reads DD/MM/YYYY for a Lagos customer
-// and MM/DD/YYYY for one in Maryland — ambiguous exactly where it matters. Native
+// and MM/DD/YYYY for one in Maryland, ambiguous exactly where it matters. Native
 // pickers also open on the current month, so reaching a 1985 birthday takes many
 // taps. Spelling the month out removes the ambiguity entirely.
 //
@@ -40,7 +40,7 @@ function daysInMonth(month: number | null, year: number | null): number {
   return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month];
 }
 
-const ITEM_H = 40; // px — must match the item height class below
+const ITEM_H = 40; // px, must match the item height class below
 
 function Column({
   label,
@@ -76,7 +76,7 @@ function Column({
         {label}
       </span>
       <div className="relative">
-        {/* Centre highlight band — the "selected" slot of the roller. */}
+        {/* Centre highlight band, the "selected" slot of the roller. */}
         <div
           className="pointer-events-none absolute inset-x-0 top-1/2 z-0 h-10 -translate-y-1/2 rounded-lg bg-gold/10 ring-1 ring-gold/30"
           aria-hidden
@@ -155,10 +155,13 @@ export function DateOfBirthPicker({
   }, [value]);
 
   const thisYear = new Date().getFullYear();
-  // 18–100 is the plausible range for someone shipping cargo; listing 1900
-  // onwards would just add scrolling.
+  // Newest year offered is thisYear - MIN_AGE, so the list starts at 2011 in 2026.
+  // A hard cap keeps the roller short; listing back to 1900 would just add
+  // scrolling for years nobody selects.
+  const MIN_AGE = 15;
+  const SPAN_YEARS = 86;
   const years = React.useMemo(
-    () => Array.from({ length: 83 }, (_, i) => thisYear - 18 - i),
+    () => Array.from({ length: SPAN_YEARS }, (_, i) => thisYear - MIN_AGE - i),
     [thisYear]
   );
 

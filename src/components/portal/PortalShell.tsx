@@ -264,7 +264,7 @@ export function PortalShell({
       {/* ─── Main column ───────────────────────────────────── */}
       {/* min-w-0 + overflow-x-clip: this column is a flex/normal-flow child whose
           content (wide cards, long emails, button rows) would otherwise force it
-          past the viewport on phones — every portal page inherited that overflow.
+          past the viewport on phones, every portal page inherited that overflow.
           Constraining it here fixes all of them in one place; individual tables
           still scroll inside their own overflow-x-auto wrappers. */}
       <div

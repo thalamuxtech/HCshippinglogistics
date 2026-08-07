@@ -9,7 +9,7 @@ import { useToast } from "@/components/ui/toast";
 
 // Admin-only testing helper shown in the top bar. ONE button that toggles:
 // "Add demo" when the database has no demo data, "Clear demo" once it does.
-// Never touches real data — every seeded doc is tagged { demo: true }.
+// Never touches real data, every seeded doc is tagged { demo: true }.
 export function DemoDataToolbar() {
   const { user } = useAuth();
   const toast = useToast();

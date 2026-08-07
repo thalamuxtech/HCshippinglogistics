@@ -158,7 +158,7 @@ export function SiteHeader() {
                 <PackagePlus className="h-4 w-4" /> Start an order
               </ButtonLink>
             </div>
-            {/* Both numbers on mobile too — a rider or customer on a phone is
+            {/* Both numbers on mobile too, a rider or customer on a phone is
                 the most likely person to tap-to-call, so hiding the second line
                 here is where it would be missed most. */}
             <div className="mt-2 border-t border-border pt-2">

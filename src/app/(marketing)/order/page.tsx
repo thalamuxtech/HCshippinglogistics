@@ -70,7 +70,7 @@ interface OrderResult {
   customerId: string;
   trackingNumber: string;
   total: number;
-  /** False when the confirmation email failed — the ID must then be saved from
+  /** False when the confirmation email failed, the ID must then be saved from
       this screen, since it is the customer's only way back to their shipments. */
   emailSent?: boolean;
 }
@@ -102,7 +102,7 @@ function OrderFlow() {
   const [seaQty, setSeaQty] = React.useState<Record<number, number>>({});
   const [seaCategory, setSeaCategory] = React.useState<string>(ALL);
   // Items the customer has that are not on the price list. They cannot be priced
-  // here — size and handling decide the rate — so they are carried as
+  // here, size and handling decide the rate, so they are carried as
   // quote-on-request lines at $0 and the office confirms the price. Without this
   // a customer with an unusual item had no way to order at all.
   const [customItems, setCustomItems] = React.useState<
@@ -128,7 +128,7 @@ function OrderFlow() {
   const [doorToDoor, setDoorToDoor] = React.useState(false);
   const [pickupAddress, setPickupAddress] = React.useState<string>("");
   const [notes, setNotes] = React.useState<string>("");
-  // Fragile declaration — travels with the shipment to the warehouse, the
+  // Fragile declaration, travels with the shipment to the warehouse, the
   // destination office and the rider.
   const [fragile, setFragile] = React.useState(false);
   const [fragileNote, setFragileNote] = React.useState("");
@@ -223,14 +223,14 @@ function OrderFlow() {
     [seaQty]
   );
   // Price the order from the LIVE list. Passing seaPriceList is what makes an
-  // admin price change reach the customer's total — the default argument is the
+  // admin price change reach the customer's total, the default argument is the
   // hardcoded constant, so omitting it silently quoted stale prices.
   const seaQuote = React.useMemo(
     () => buildSeaQuote(seaSelections, seaPriceList),
     [seaSelections, seaPriceList]
   );
 
-  // Only rows with a description count — an empty row the customer added and
+  // Only rows with a description count, an empty row the customer added and
   // never filled in should neither block submission nor reach the office.
   const validCustomItems = React.useMemo(
     () => customItems.filter((c) => c.description.trim().length > 0),
@@ -261,7 +261,7 @@ function OrderFlow() {
 
   const baseTotal =
     service === "sea" ? seaQuote.total : service === "air" ? airQuote.total : roroQuote.total;
-  // Pickup is no longer a fixed fee — the cost depends on distance and volume, so
+  // Pickup is no longer a fixed fee, the cost depends on distance and volume, so
   // staff price it after the order and the customer is told that up front. The
   // figure shown here is therefore the items only.
   const isQuotedOnly = service === "roro" && roroQuote.quoted;
@@ -309,8 +309,8 @@ function OrderFlow() {
     if (!rcvAddress.trim()) return "Please enter the receiver's full delivery address.";
     if (doorToDoor && !pickupAddress.trim())
       return "Please enter the pickup address for your requested pickup.";
-    // An order made up entirely of off-list items is legitimate — it just needs
-    // quoting — so either source satisfies this.
+    // An order made up entirely of off-list items is legitimate, it just needs
+    // quoting, so either source satisfies this.
     if (service === "sea" && seaSelections.length === 0 && validCustomItems.length === 0)
       return "Add at least one item to your sea cargo order.";
     if (service === "air" && (Number(airWeight) || 0) <= 0)
@@ -586,7 +586,7 @@ function OrderFlow() {
                     />
                   </div>
                   <div>
-                    {/* Still optional — the picker itself says so, and there is
+                    {/* Still optional, the picker itself says so, and there is
                         no `required` marker, so the label stays uncluttered. */}
                     <Label htmlFor="sender-dob">Date of birth</Label>
                     <DateOfBirthPicker
@@ -699,7 +699,7 @@ function OrderFlow() {
                   </div>
                 </div>
 
-                {/* Receiver / consignee — all required for delivery */}
+                {/* Receiver / consignee, all required for delivery */}
                 <div className="rounded-xl border border-border bg-surface p-4">
                   <p className="text-sm font-semibold text-navy">Receiver details</p>
                   <p className="text-xs text-ink-muted">
@@ -755,7 +755,7 @@ function OrderFlow() {
                   </div>
                 </div>
 
-                {/* Handoff: warehouse drop-off (free) vs pickup (quoted later —
+                {/* Handoff: warehouse drop-off (free) vs pickup (quoted later -
                     the cost depends on distance and volume, so quoting a fixed
                     figure here would be wrong as often as it was right). */}
                 <div className="rounded-xl border border-border bg-surface p-4">
@@ -956,7 +956,7 @@ function OrderFlow() {
                     <p className="text-xs text-amber-800">
                       <strong>Your final price will be higher.</strong> We still need to price{" "}
                       {pendingExtras.join(" and ")}. We confirm the full amount by email before you
-                      pay — nothing is charged until you approve it.
+                      pay. Nothing is charged until you approve it.
                     </p>
                   </div>
                 )}
@@ -1221,7 +1221,7 @@ function SeaBuilder({
         </ul>
 
         {/* Off-list items. Priced by the office rather than here, because the
-            rate depends on size and handling — so these are carried as
+            rate depends on size and handling, so these are carried as
             quote-on-request lines instead of being guessed at. */}
         <div className="rounded-xl border border-dashed border-border bg-surface/60 p-4">
           <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1288,7 +1288,7 @@ function SeaSummary({
 }: {
   quote: ReturnType<typeof buildSeaQuote>;
   onRemove: (sn: number) => void;
-  /** Off-list items — listed but not priced, since the office quotes them. */
+  /** Off-list items, listed but not priced, since the office quotes them. */
   customItems?: { description: string; quantity: number }[];
 }) {
   if (quote.items.length === 0 && customItems.length === 0) {
@@ -1346,7 +1346,7 @@ function SeaSummary({
             </div>
           ))}
           <p className="pt-1 text-xs text-ink-muted">
-            These are not in the total below — we will confirm their price before shipping.
+            These are not in the total below. We will confirm their price before shipping.
           </p>
         </div>
       )}

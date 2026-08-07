@@ -1,12 +1,12 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Dispatch — Containers received.
+// Dispatch, Containers received.
 //
 // Same hierarchy as the office portal: Container → Shipments → Deliveries.
 // A rider is handed a container's worth of cargo, so this screen shows what
 // arrived per container and how much of it is still to deliver. Read-only:
-// riders never change stage from here — a delivery is completed from its own
+// riders never change stage from here, a delivery is completed from its own
 // job page, with proof-of-delivery photos.
 //
 // Mobile-first (riders are on phones): large tap targets, no tables, no

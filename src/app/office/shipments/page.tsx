@@ -125,7 +125,7 @@ export default function OfficeShipmentsPage() {
           className="sm:w-64"
           aria-label="Filter by status"
         >
-          <option value="destination">Destination stages (5–8)</option>
+          <option value="destination">Destination stages (5-8)</option>
           <option value="all">All stages</option>
           {STAGES.map((s) => (
             <option key={s.key} value={s.key}>

@@ -1,7 +1,7 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Pricing settings — admin-editable RORO rates, vehicle-class rules,
+// Pricing settings, admin-editable RORO rates, vehicle-class rules,
 // air-freight rate, and terms/storage policy. Stored in Firestore at
 // site_content/pricing and read at runtime with the built-in constants as
 // the fallback (SEO-safe, no flash: defaults render immediately, live values

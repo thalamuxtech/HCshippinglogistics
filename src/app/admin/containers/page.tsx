@@ -156,7 +156,7 @@ export default function AdminContainersPage() {
   // Shipments to keep selected across the container switch that follows an
   // assign. Switching containers normally clears the stage selection (it belongs
   // to the container being left behind), but assigning then jumps to the new
-  // container — so without this the rows we just assigned would be deselected a
+  // container, so without this the rows we just assigned would be deselected a
   // tick later by the effect below.
   const carrySelectionRef = React.useRef<string[] | null>(null);
 
@@ -165,8 +165,8 @@ export default function AdminContainersPage() {
     setRemovedEmails(new Set());
     setExtraEmails([]);
     setNewEmail("");
-    // Drop any stage selection and close the rename editor — both belong to the
-    // container being left behind — unless an assign explicitly handed rows over.
+    // Drop any stage selection and close the rename editor, both belong to the
+    // container being left behind, unless an assign explicitly handed rows over.
     const carried = carrySelectionRef.current;
     carrySelectionRef.current = null;
     setStageSel(carried ? new Set(carried) : new Set());
@@ -321,7 +321,7 @@ export default function AdminContainersPage() {
         testEmail: testEmail.trim(),
       });
       if (res.ok) toast.success("Test sent", `Preview delivered to ${testEmail.trim()}.`);
-      // A failed send is a real failure, not a "queued" one — reporting it as
+      // A failed send is a real failure, not a "queued" one, reporting it as
       // pending hid provider rejections (e.g. Brevo IP allowlist 401s).
       else
         toast.error(
@@ -380,7 +380,7 @@ export default function AdminContainersPage() {
       if (res.failedCount && res.failedCount > 0) {
         const delivered = res.recipientCount - res.failedCount;
         const reason = res.error ? ` ${String(res.error).slice(0, 180)}` : "";
-        // Nothing delivered is an outright failure, not an "issue" — and always
+        // Nothing delivered is an outright failure, not an "issue", and always
         // include the provider's reason so it is actionable.
         if (delivered === 0) {
           toast.error("Broadcast not delivered", `All ${res.failedCount} failed.${reason}`);
@@ -481,7 +481,7 @@ export default function AdminContainersPage() {
         setStageSel(new Set(ids));
         toast.success(
           "Shipments assigned",
-          `${ok} shipment(s) added to CNT #${cnt}. They are selected below — use Advance stage to move the whole container.`
+          `${ok} shipment(s) added to CNT #${cnt}. They are selected below. Use Advance stage to move the whole container.`
         );
       } else if (ok === 0) {
         toast.error("Assign failed", "Could not assign any of the selected shipments.");
@@ -575,7 +575,7 @@ export default function AdminContainersPage() {
         </Card>
       ) : (
         <div className="space-y-6">
-          {/* Recipients — editable */}
+          {/* Recipients, editable */}
           <Card>
             <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
               <div className="min-w-0">
@@ -711,7 +711,7 @@ export default function AdminContainersPage() {
             </CardContent>
           </Card>
 
-          {/* Shipments on this container — stage control for the whole container.
+          {/* Shipments on this container, stage control for the whole container.
               Moving a container through a stage is ONE physical event, so it
               belongs here rather than forcing the admin to re-find the same
               shipments on the Shipments list and filter by CNT. */}

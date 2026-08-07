@@ -6,7 +6,7 @@
 // The stored role KEYS ("admin" | "nigeria_office" | "dispatcher" | "customer")
 // are load-bearing: Firestore rules match on them, features.ts gates menus by
 // them, and every existing user document carries one. So they are fixed forever.
-// Only the human-readable LABEL is editable here — which is what staff actually
+// Only the human-readable LABEL is editable here, which is what staff actually
 // see, and what changes when a team is renamed (Dispatch → Logistics).
 //
 // Stored at site_content/role_labels and read with the built-in defaults as the

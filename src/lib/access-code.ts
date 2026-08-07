@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
-// Customer Access Code (CAC) — Implementation Plan §13.1
-// A 10–12 char human-readable, non-guessable identifier.
+// Customer Access Code (CAC), Implementation Plan §13.1
+// A 10-12 char human-readable, non-guessable identifier.
 //
 // Layout (example, 12 chars):
 //   [NameInitials:2][BirthYYMM:4][ZIP frag:2][LogicalSerial:3][Check:1]
@@ -12,7 +12,7 @@
 // hash is stored server-side.
 // ─────────────────────────────────────────────────────────────
 
-// Unambiguous alphabet — excludes 0/O and 1/I/L to reduce transcription errors.
+// Unambiguous alphabet, excludes 0/O and 1/I/L to reduce transcription errors.
 export const CODE_ALPHABET = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // 31 chars, but we use base-34 subset below
 // For the logical-serial base-34 encoding we use a stable 34-char set (no 0,O,1,I,L).
 const B34 = "23456789ABCDEFGHJKMNPQRSTUVWXYZ"; // 31 safe chars
@@ -54,7 +54,7 @@ function dammDigit(body: string): number {
 }
 
 function checkChar(body: string): string {
-  return String(dammDigit(body)); // 0–9, always unambiguous
+  return String(dammDigit(body)); // 0-9, always unambiguous
 }
 
 export interface AccessCodeInputs {

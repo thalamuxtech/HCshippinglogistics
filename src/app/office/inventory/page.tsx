@@ -1,7 +1,7 @@
 "use client";
 
 // ─────────────────────────────────────────────────────────────
-// Destination warehouse — DERIVED from shipments, never hand-entered.
+// Destination warehouse, DERIVED from shipments, never hand-entered.
 //
 // The model is Container → Shipments → Items. A container's contents are
 // already fully described by the shipments assigned to it, so warehouse stock
@@ -10,7 +10,7 @@
 // here automatically, and it leaves when the shipment completes.
 //
 // This replaced a manual "Receive Item" form that wrote to a parallel
-// `destination_inventory` collection with an empty shipment_id — those rows
+// `destination_inventory` collection with an empty shipment_id, those rows
 // duplicated shipment data, could not be reconciled against a container, and
 // drifted the moment either side changed.
 // ─────────────────────────────────────────────────────────────
@@ -133,7 +133,7 @@ export default function OfficeInventoryPage() {
     });
   }, [arrived, q, view]);
 
-  // Group into containers — the unit warehouse staff actually work with.
+  // Group into containers, the unit warehouse staff actually work with.
   const buckets = React.useMemo<ContainerBucket[]>(() => {
     const map = new Map<string, ContainerBucket>();
     for (const s of filtered) {
@@ -167,7 +167,7 @@ export default function OfficeInventoryPage() {
         </h1>
         <p className="mt-1 text-sm text-ink-muted">
           Cargo held at the {country} warehouse, grouped by container. Updates automatically as
-          shipment stages change — nothing to enter by hand. Vehicles are tracked in{" "}
+          shipment stages change, nothing to enter by hand. Vehicles are tracked in{" "}
           <Link href="/office/operations" className="font-semibold text-gold-700 hover:underline">
             Operations
           </Link>
@@ -326,7 +326,7 @@ export default function OfficeInventoryPage() {
           <Link href="/office/shipments" className="font-semibold text-gold-700 hover:underline">
             Shipments
           </Link>{" "}
-          — you can select a whole container there and update it in one action.
+         , you can select a whole container there and update it in one action.
         </p>
       </div>
     </div>

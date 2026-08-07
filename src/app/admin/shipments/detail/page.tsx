@@ -131,7 +131,7 @@ function AdminShipmentDetailPageInner() {
       ),
     [shipment]
   );
-  // The shipment HAD off-list items and they are all priced now — so there is a
+  // The shipment HAD off-list items and they are all priced now, so there is a
   // quote worth telling the customer about. Detected from the flag surviving on a
   // priced row, or from every flagged row having been resolved.
   const hadQuoteItems = React.useMemo(
@@ -665,7 +665,7 @@ function AdminShipmentDetailPageInner() {
                           {it.category && (
                             <span className="ml-2 text-xs text-ink-muted">{it.category}</span>
                           )}
-                          {/* Off-list item the customer described — priced at 0
+                          {/* Off-list item the customer described, priced at 0
                               until someone here quotes it, so it must be obvious
                               rather than looking like a free line. */}
                           {it.needs_quote && (
@@ -710,7 +710,7 @@ function AdminShipmentDetailPageInner() {
             )}
           </Card>
 
-          {/* Hand-over record — who released the cargo, how, and who signed. */}
+          {/* Hand-over record, who released the cargo, how, and who signed. */}
           {(s.delivered_by_name || s.handover_method || s.current_status === "completed") && (
             <Card>
               <CardHeader className="flex-row items-center gap-2 space-y-0">
@@ -820,7 +820,7 @@ function AdminShipmentDetailPageInner() {
                           <p className="mt-0.5 text-xs text-ink-muted">by {log.updated_by_name}</p>
                         )}
                         {/* Proof-of-delivery photos were uploaded by riders but
-                            never shown anywhere — the whole point of capturing
+                            never shown anywhere, the whole point of capturing
                             them is that the office can check the hand-over. */}
                         {log.photos && log.photos.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-2">
@@ -925,7 +925,7 @@ function AdminShipmentDetailPageInner() {
             </CardContent>
           </Card>
 
-          {/* Pricing adjustments — above Payment, because the pickup fee and any
+          {/* Pricing adjustments, above Payment, because the pickup fee and any
               discount must be settled before money is taken. */}
           {user && (
             <PricingAdjustCard
@@ -1144,7 +1144,7 @@ function AdminShipmentDetailPageInner() {
 /**
  * Visual preview of the quote-ready email. Mirrors the server template in
  * sendQuoteReadyEmail so staff can check the figures and wording before it goes
- * out — the whole point of "optionally preview" is that nothing is sent blind.
+ * out, the whole point of "optionally preview" is that nothing is sent blind.
  */
 function QuotePreview({
   shipment,
@@ -1164,7 +1164,7 @@ function QuotePreview({
         <br />
         Subject:{" "}
         <span className="font-medium text-navy">
-          Your quote is ready — {shipment.tracking_number}
+          Your quote is ready, {shipment.tracking_number}
         </span>
       </div>
       <div className="bg-navy-gradient px-5 py-4">
@@ -1176,7 +1176,7 @@ function QuotePreview({
       <div className="space-y-3 bg-white px-5 py-5 text-sm">
         <h3 className="text-base font-bold text-navy">Your quote is ready</h3>
         <p className="text-ink">
-          Good news — we have priced the item you asked us to quote on shipment{" "}
+          Good news: we have priced the item you asked us to quote on shipment{" "}
           <strong>{shipment.tracking_number}</strong>.
         </p>
         {note.trim() && <p className="whitespace-pre-line text-ink">{note.trim()}</p>}
@@ -1204,7 +1204,7 @@ function QuotePreview({
           {balance > 0 ? (
             <>Balance due: <strong>{formatCurrency(balance, shipment.currency)}</strong></>
           ) : (
-            "Fully paid — nothing further to pay."
+            "Fully paid. Nothing further to pay."
           )}
         </p>
         {balance > 0 && (
