@@ -6,7 +6,7 @@
 import { chromium } from "playwright";
 import { readFileSync } from "node:fs";
 
-const logo = readFileSync("public/brand/logo.png").toString("base64");
+const logo = readFileSync("public/brand/logo-full.png").toString("base64");
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');

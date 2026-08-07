@@ -10,8 +10,11 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────
 
 const LOGO_SRC = "/brand/logo.png";
-const LOGO_W = 945;
-const LOGO_H = 629;
+// Intrinsic size of public/brand/logo.png. Resized from the 945x629 original by
+// scripts/optimize-logo.mjs: it was 305KB, half the homepage weight, for a logo
+// never rendered above 144px tall. The full-size art is at logo-full.png.
+const LOGO_W = 480;
+const LOGO_H = 319;
 
 // Compact square mark (staff sidebar, small placements). Uses the clean
 // square brand icon so it stays crisp at any size.
