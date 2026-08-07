@@ -125,6 +125,19 @@ export interface Shipment {
   dnr_release_note?: string | null;
   total_price: number;
   currency: string;
+  // ── Pricing adjustments set by staff after the order is placed ──
+  // Pickup is quoted, not fixed: the cost depends on distance and volume, so the
+  // customer is told at signup that it will be added, and staff set it here.
+  pickup_fee?: number;
+  pickup_fee_pending?: boolean;
+  /** Discount as a percentage of the pre-discount subtotal, or a flat amount. */
+  discount_type?: "percent" | "amount" | null;
+  discount_value?: number;
+  discount_reason?: string;
+  /** Money actually taken off, stored so the invoice and portal agree exactly. */
+  discount_amount?: number;
+  /** Subtotal before discount — items + pickup. Kept for a clear breakdown. */
+  subtotal?: number;
   // Payment
   payment_status?: PaymentStatus;
   deposit?: number;

@@ -17,6 +17,7 @@ import {
   PackagePlus,
   Container,
   Lock,
+  Camera,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import {
@@ -464,6 +465,55 @@ function ShipmentCard({
                 {formatCurrency(s.total_price, s.currency)}
               </span>
             </div>
+
+            {/* Breakdown — shown only when there is something to explain, so a
+                straightforward order stays uncluttered. A discount the customer
+                cannot see is a discount they will not thank you for. */}
+            {((s.pickup_fee ?? 0) > 0 ||
+              (s.discount_amount ?? 0) > 0 ||
+              s.pickup_fee_pending) && (
+              <div className="mt-3 space-y-1.5 border-t border-border pt-3 text-sm">
+                {typeof s.subtotal === "number" && s.subtotal > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-ink-muted">Items</span>
+                    <span className="font-mono text-ink">
+                      {formatCurrency(
+                        Math.max(0, s.subtotal - (s.pickup_fee ?? 0)),
+                        s.currency
+                      )}
+                    </span>
+                  </div>
+                )}
+                {(s.pickup_fee ?? 0) > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-ink-muted">Door-to-door pickup</span>
+                    <span className="font-mono text-ink">
+                      {formatCurrency(s.pickup_fee ?? 0, s.currency)}
+                    </span>
+                  </div>
+                )}
+                {s.pickup_fee_pending && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-ink-muted">Door-to-door pickup</span>
+                    <span className="text-xs font-semibold text-gold-700">To be quoted</span>
+                  </div>
+                )}
+                {(s.discount_amount ?? 0) > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-emerald-700">
+                      Discount
+                      {s.discount_type === "percent" && s.discount_value
+                        ? ` (${s.discount_value}%)`
+                        : ""}
+                      {s.discount_reason ? ` — ${s.discount_reason}` : ""}
+                    </span>
+                    <span className="font-mono font-semibold text-emerald-700">
+                      − {formatCurrency(s.discount_amount ?? 0, s.currency)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
             {(s.deposit > 0 || s.balance > 0) && (
               <div className="mt-3 grid grid-cols-2 gap-3 border-t border-border pt-3 text-sm">
                 <div className="flex items-center justify-between">
@@ -491,6 +541,53 @@ function ShipmentCard({
               </div>
             )}
           </div>
+
+          {/* Proof of delivery — the customer is entitled to see the evidence
+              their goods were handed over, and to whom. */}
+          {((s.proof_photos?.length ?? 0) > 0 || s.delivered_by_name) && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+              <p className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+                <Camera className="h-4 w-4" />
+                Proof of {s.handover_method === "warehouse_pickup" ? "collection" : "delivery"}
+              </p>
+              <div className="mt-2 space-y-0.5 text-xs text-emerald-800/90">
+                {s.received_by_name && (
+                  <p>
+                    Signed for by <strong>{s.received_by_name}</strong>
+                  </p>
+                )}
+                {s.delivered_by_name && (
+                  <p>
+                    {s.handover_method === "warehouse_pickup" ? "Released" : "Delivered"} by{" "}
+                    <strong>{s.delivered_by_name}</strong>
+                  </p>
+                )}
+                {s.delivered_at && <p>{new Date(s.delivered_at).toLocaleString()}</p>}
+              </div>
+              {(s.proof_photos?.length ?? 0) > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {s.proof_photos!.map((src, i) => (
+                    <a
+                      key={src}
+                      href={src}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group relative block h-24 w-24 overflow-hidden rounded-lg border border-emerald-200 focus-ring"
+                      title="Open full size"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={`Proof of handover ${i + 1}`}
+                        className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Invoice — available to the customer once the shipment is fully paid */}
           {payment === "paid" && s.receipt_pdf_url && (

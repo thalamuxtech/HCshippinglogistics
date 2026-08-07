@@ -71,6 +71,8 @@ export interface PublicOrderInput {
   dob?: string; // YYYY-MM-DD (age computed server-side)
   address: string; // sender's USA address — required (on the invoice, and the
   // fallback collection point for a door-to-door pickup)
+  /** Returning customer: their existing Customer ID, so orders stay on one account. */
+  customer_id?: string;
   fragile?: boolean;
   fragile_note?: string;
   destination_country: string;
@@ -127,7 +129,14 @@ export interface CustomerView {
     destination_country: string;
     destination_city?: string;
     receiver?: { full_name: string; phone: string; address?: string; city?: string } | null;
-    items?: { description: string; dimensions?: string; unit_price: number; quantity: number; line_total: number }[];
+    items?: {
+      description: string;
+      dimensions?: string;
+      unit_price: number;
+      quantity: number;
+      line_total: number;
+      needs_quote?: boolean;
+    }[];
     weight?: number | null;
     shipping_line?: string | null;
     vehicle_class?: string | null;
@@ -136,6 +145,21 @@ export interface CustomerView {
     balance: number;
     payment_status: string;
     currency: string;
+    // Pricing breakdown, so the portal shows the same figures as the invoice.
+    subtotal?: number | null;
+    pickup_fee?: number;
+    pickup_fee_pending?: boolean;
+    door_to_door?: boolean;
+    discount_type?: "percent" | "amount" | null;
+    discount_value?: number;
+    discount_amount?: number;
+    discount_reason?: string | null;
+    // Proof of delivery, visible to the customer who received the goods.
+    proof_photos?: string[];
+    handover_method?: "delivery" | "warehouse_pickup" | null;
+    delivered_by_name?: string | null;
+    received_by_name?: string | null;
+    delivered_at?: number | null;
     container_number?: string | null;
     container_shipped_on?: string | null;
     dnr?: boolean;

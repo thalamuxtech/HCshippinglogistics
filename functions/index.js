@@ -1210,11 +1210,11 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     total = d.vehicle_class === "class_c" ? 0 : RORO_RATE[line];
   }
 
-  // Door-to-door pickup fee (only added when there is a priced base; Class C is
-  // quoted separately, so we still record the pickup request without a fee here).
-  const PICKUP_FEE = 50;
+  // Door-to-door pickup is QUOTED, not a fixed fee: the cost depends on distance
+  // and volume, so a flat figure was wrong as often as it was right. The request
+  // is recorded with pickup_fee_pending so staff price it from the backend, and
+  // the customer is told at checkout that the final price will be higher.
   const wantsPickup = !!d.door_to_door;
-  if (wantsPickup && total > 0) total += PICKUP_FEE;
 
   // Compute age from date of birth (YYYY-MM-DD) for the backend record.
   let age = null;
@@ -1249,9 +1249,53 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     age: age,
     updated_at: FieldValue.serverTimestamp(),
   };
-  if (!existing.empty) {
-    customerId = existing.docs[0].id;
-    await existing.docs[0].ref.set(profileExtra, { merge: true });
+  // A returning customer supplies their Customer ID. Verify it and reuse the
+  // account so their history stays in one place.
+  const claimedId = String(d.customer_id || "").trim().toUpperCase();
+  if (claimedId) {
+    const claimed = await db.collection("users").doc(claimedId).get();
+    if (!claimed.exists || claimed.data().role !== "customer") {
+      throw new HttpsError(
+        "not-found",
+        "We could not find that Customer ID. Check it and try again, or continue as a new customer."
+      );
+    }
+    const owner = claimed.data();
+    // The ID alone is the credential, so it must match the email on file —
+    // otherwise anyone holding an ID could attach orders to that account.
+    if ((owner.email || "").toLowerCase() !== email) {
+      throw new HttpsError(
+        "permission-denied",
+        "That Customer ID belongs to a different email address. Use the email you registered with."
+      );
+    }
+    customerId = claimed.id;
+    await claimed.ref.set(profileExtra, { merge: true });
+  } else if (!existing.empty) {
+    // Signing up again with an address already on file: tell them, and send the
+    // ID so they can proceed, rather than silently creating a second identity for
+    // the same person (which is what splits an order history in two).
+    const found = existing.docs[0];
+    try {
+      await sendEmail({
+        to: email,
+        subject: "Your Highclass Shipping Customer ID",
+        html: emailShell({
+          heading: "Here is your Customer ID",
+          body: `You already have an account with us, so there is no need to register again.<br/><br/>
+                 Your Customer ID is <strong style="font-family:monospace;font-size:18px;letter-spacing:1px">${found.id}</strong><br/><br/>
+                 Enter it on the order form as a returning customer, or use it to track your shipments.`,
+          ctaUrl: `${SITE}/track`,
+          ctaLabel: "Track your shipments",
+        }),
+      });
+    } catch {
+      // Never let a failed email hide the real reason the order was rejected.
+    }
+    throw new HttpsError(
+      "already-exists",
+      `An account already exists for ${email}. We have emailed your Customer ID — enter it as a returning customer to add this shipment to your account.`
+    );
   } else {
     customerId = makeCustomerId(d.full_name);
     await db.collection("users").doc(customerId).set({
@@ -1289,7 +1333,9 @@ export const submitPublicOrder = onCall({ secrets: EMAIL_SECRETS }, async (req) 
     destination_country: d.destination_country,
     destination_city: d.destination_city || "",
     door_to_door: wantsPickup,
-    pickup_fee: wantsPickup && total > 0 ? PICKUP_FEE : 0,
+    pickup_fee: 0,
+    pickup_fee_pending: wantsPickup,
+    subtotal: total,
     pickup_address: wantsPickup ? d.pickup_address || d.address || "" : "",
     receiver: {
       full_name: d.receiver.full_name,
@@ -1404,6 +1450,23 @@ export const viewByCustomerId = onCall(async (req) => {
         balance: s.balance != null ? s.balance : s.total_price || 0,
         payment_status: s.payment_status || "unpaid",
         currency: s.currency || "USD",
+        // Pricing breakdown, so the portal can show the same figures as the
+        // invoice rather than a bare total the customer cannot reconcile.
+        subtotal: s.subtotal != null ? s.subtotal : null,
+        pickup_fee: s.pickup_fee || 0,
+        pickup_fee_pending: !!s.pickup_fee_pending,
+        door_to_door: !!s.door_to_door,
+        discount_type: s.discount_type || null,
+        discount_value: s.discount_value || 0,
+        discount_amount: s.discount_amount || 0,
+        discount_reason: s.discount_reason || null,
+        // Proof of delivery — the customer is entitled to see the evidence that
+        // their goods were handed over, and who released them.
+        proof_photos: Array.isArray(s.proof_photos) ? s.proof_photos : [],
+        handover_method: s.handover_method || null,
+        delivered_by_name: s.delivered_by_name || null,
+        received_by_name: s.received_by_name || null,
+        delivered_at: s.delivered_at ? s.delivered_at.toMillis() : null,
         container_number: s.container_number || null,
         container_shipped_on: s.container_shipped_on || null,
         dnr:

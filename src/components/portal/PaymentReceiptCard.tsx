@@ -50,6 +50,10 @@ export function PaymentReceiptCard({
   const unpriced = (shipment.items ?? []).filter(
     (it) => it.needs_quote && Number(it.unit_price) === 0
   );
+  // A requested pickup that has not been quoted is the same problem: the total is
+  // missing a charge the customer has already agreed to.
+  const pickupPending = !!shipment.door_to_door && !!shipment.pickup_fee_pending;
+  const blocked = unpriced.length > 0 || pickupPending;
 
   const depositNum = Math.max(0, Math.min(Number(deposit) || 0, total));
   const balance = Math.round((total - depositNum) * 100) / 100;
@@ -164,17 +168,19 @@ export function PaymentReceiptCard({
         <Badge variant={badge.variant}>{badge.label}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
-        {unpriced.length > 0 && (
+        {blocked && (
           <div className="flex items-start gap-2.5 rounded-lg border border-amber-300 bg-amber-50 p-3">
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
             <div className="min-w-0">
               <p className="text-sm font-semibold text-amber-800">
-                {unpriced.length} item{unpriced.length === 1 ? "" : "s"} not priced yet
+                {unpriced.length > 0
+                  ? `${unpriced.length} item${unpriced.length === 1 ? "" : "s"} not priced yet`
+                  : "Pickup fee not quoted yet"}
               </p>
               <p className="mt-0.5 text-xs text-amber-700">
-                This total is incomplete. Price {unpriced.length === 1 ? "it" : "them"} with{" "}
-                <strong>Edit</strong> first — otherwise the customer would be charged less than
-                they owe.
+                This total is incomplete — set the missing{" "}
+                {unpriced.length > 0 ? "item prices" : "pickup fee"} first, otherwise the customer
+                would be charged less than they owe.
               </p>
             </div>
           </div>
@@ -218,7 +224,7 @@ export function PaymentReceiptCard({
               variant="outline"
               onClick={() => savePayment(false)}
               loading={saving}
-              disabled={saving || unpriced.length > 0}
+              disabled={saving || blocked}
             >
               Save
             </Button>
@@ -231,7 +237,7 @@ export function PaymentReceiptCard({
             className="w-full"
             onClick={() => savePayment(true)}
             loading={saving || generating}
-            disabled={saving || generating || unpriced.length > 0}
+            disabled={saving || generating || blocked}
           >
             {generating ? (
               <>

@@ -91,6 +91,10 @@ function OrderFlow() {
   const [senderPhone, setSenderPhone] = React.useState("");
   const [senderDob, setSenderDob] = React.useState("");
   const [senderAddress, setSenderAddress] = React.useState("");
+  // Returning customers give their existing Customer ID so this order attaches to
+  // the account they already have.
+  const [returning, setReturning] = React.useState(false);
+  const [customerId, setCustomerId] = React.useState("");
 
   // ---- Sea state: s_n -> quantity ----
   // Live admin-managed price list; the order total is built from this.
@@ -255,13 +259,21 @@ function OrderFlow() {
     [roroLine, effectiveClass, pricing.roroLines]
   );
 
-  const PICKUP_FEE = 50;
   const baseTotal =
     service === "sea" ? seaQuote.total : service === "air" ? airQuote.total : roroQuote.total;
-  // Pickup fee applies only when there is a priced base (RORO Class C is quoted).
+  // Pickup is no longer a fixed fee — the cost depends on distance and volume, so
+  // staff price it after the order and the customer is told that up front. The
+  // figure shown here is therefore the items only.
   const isQuotedOnly = service === "roro" && roroQuote.quoted;
-  const pickupFee = doorToDoor && baseTotal > 0 ? PICKUP_FEE : 0;
-  const grandTotal = baseTotal + pickupFee;
+  const grandTotal = baseTotal;
+  // Anything that will change the final figure after ordering, so the estimate is
+  // never mistaken for the last word.
+  const pendingExtras: string[] = [
+    ...(doorToDoor ? ["pickup from your address"] : []),
+    ...(validCustomItems.length > 0
+      ? [`${validCustomItems.length} item${validCustomItems.length === 1 ? "" : "s"} to be quoted`]
+      : []),
+  ];
 
   // ---- Sea helpers ----
   const filteredSea =
@@ -289,6 +301,8 @@ function OrderFlow() {
     // The USA address is on the invoice and is what the warehouse matches a
     // drop-off or pickup against, so it cannot be left blank.
     if (!senderAddress.trim()) return "Please enter your USA address.";
+    if (returning && !customerId.trim())
+      return "Please enter your Customer ID, or choose \"I am new here\".";
     if (!destCountry) return "Please select a destination country.";
     if (!rcvName.trim()) return "Please enter the receiver's full name.";
     if (!rcvPhone.trim()) return "Please enter the receiver's phone number.";
@@ -324,6 +338,7 @@ function OrderFlow() {
         phone: senderPhone.trim(),
         dob: senderDob || undefined,
         address: senderAddress.trim(),
+        customer_id: returning ? customerId.trim().toUpperCase() : undefined,
         destination_country: destCountry,
         destination_city: destCity.trim() || undefined,
         door_to_door: doorToDoor,
@@ -472,8 +487,62 @@ function OrderFlow() {
                 <CardTitle>Your contact details</CardTitle>
               </CardHeader>
               <CardContent className="space-y-5">
+                {/* New vs returning. A returning customer supplies their Customer
+                    ID so this order joins their existing history instead of
+                    creating a second account for the same person. */}
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {(
+                    [
+                      { key: false, title: "I'm new here", desc: "First time shipping with us" },
+                      {
+                        key: true,
+                        title: "I've shipped before",
+                        desc: "I have a Customer ID",
+                      },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={String(opt.key)}
+                      type="button"
+                      onClick={() => setReturning(opt.key)}
+                      aria-pressed={returning === opt.key}
+                      className={cn(
+                        "flex cursor-pointer flex-col rounded-xl border-2 p-3.5 text-left transition-colors focus-ring",
+                        returning === opt.key
+                          ? "border-gold bg-gold/5"
+                          : "border-border hover:border-navy/30"
+                      )}
+                    >
+                      <span className="text-sm font-semibold text-navy">{opt.title}</span>
+                      <span className="mt-0.5 text-xs text-ink-muted">{opt.desc}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {returning && (
+                  <div>
+                    <Label htmlFor="cust-id" required>
+                      Your Customer ID
+                    </Label>
+                    <Input
+                      id="cust-id"
+                      value={customerId}
+                      onChange={(e) => setCustomerId(e.target.value.toUpperCase())}
+                      placeholder="e.g. HCAB1CD2EF3"
+                      className="font-mono"
+                      autoComplete="off"
+                    />
+                    <FieldHint>
+                      It was emailed to you when you first ordered, and appears on your invoices.
+                      Use the same email address you registered with.
+                    </FieldHint>
+                  </div>
+                )}
+
                 <p className="text-sm text-ink-muted">
-                  We send your Customer ID, tracking number, and receipt to this email.
+                  {returning
+                    ? "We match this order to your existing account, so all your shipments stay together."
+                    : "We send your Customer ID, tracking number, and receipt to this email."}
                 </p>
                 <div className="grid gap-5 sm:grid-cols-2">
                   <div>
@@ -686,9 +755,11 @@ function OrderFlow() {
                   </div>
                 </div>
 
-                {/* Handoff: warehouse drop-off (free) vs pickup (+$50) */}
+                {/* Handoff: warehouse drop-off (free) vs pickup (quoted later —
+                    the cost depends on distance and volume, so quoting a fixed
+                    figure here would be wrong as often as it was right). */}
                 <div className="rounded-xl border border-border bg-surface p-4">
-                  <p className="text-sm font-semibold text-navy">How will we get your items?</p>
+                  <p className="text-sm font-semibold text-navy">How do we get your items?</p>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2">
                     <button
                       type="button"
@@ -714,12 +785,13 @@ function OrderFlow() {
                         doorToDoor ? "border-gold bg-gold/5" : "border-border hover:border-navy/30"
                       )}
                     >
-                      <span className="flex items-center justify-between">
+                      <span className="flex items-center justify-between gap-2">
                         <span className="text-sm font-semibold text-navy">Request a pickup</span>
-                        <span className="text-xs font-bold text-gold-700">+{formatCurrency(PICKUP_FEE)}</span>
+                        <span className="shrink-0 text-xs font-bold text-gold-700">Quoted</span>
                       </span>
                       <span className="mt-1 text-xs text-ink-muted">
-                        We collect from your address. A {formatCurrency(PICKUP_FEE)} fee applies.
+                        We collect from your address. The fee depends on distance and volume, so we
+                        confirm it after you order.
                       </span>
                     </button>
                   </div>
@@ -851,10 +923,10 @@ function OrderFlow() {
                       <span>Shipping subtotal</span>
                       <span className="font-mono">{formatCurrency(baseTotal)}</span>
                     </div>
-                    {pickupFee > 0 && (
+                    {doorToDoor && (
                       <div className="flex items-center justify-between text-ink-muted">
                         <span>Door-to-door pickup</span>
-                        <span className="font-mono">{formatCurrency(pickupFee)}</span>
+                        <span className="text-xs font-semibold text-gold-700">To be quoted</span>
                       </div>
                     )}
                   </div>
@@ -875,6 +947,19 @@ function OrderFlow() {
                     )}
                   </span>
                 </div>
+
+                {/* State plainly what is still to be added, so the estimate is
+                    never mistaken for the final bill. */}
+                {pendingExtras.length > 0 && (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+                    <p className="text-xs text-amber-800">
+                      <strong>Your final price will be higher.</strong> We still need to price{" "}
+                      {pendingExtras.join(" and ")}. We confirm the full amount by email before you
+                      pay — nothing is charged until you approve it.
+                    </p>
+                  </div>
+                )}
 
                 <Button
                   className="w-full"

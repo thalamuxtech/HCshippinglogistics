@@ -31,7 +31,7 @@ const COMPANY = {
   tagline: "Excellence in handling your valuables.",
   email: "info@highclassshippinglogistics.com",
   site: "highclassshippinglogistics.com",
-  usa: ["6600 Foxley Road, Gate C", "Upper Marlboro, Maryland 20772", "+1 (240) 374-8394"],
+  usa: ["8611 Westphalia Road", "Upper Marlboro, Maryland 20774, USA", "+1 (240) 374-8394"],
   nigeria: ["28 Moleye Street, Alagomeji", "Yaba, Lagos", "+234 808 029 1754 · +234 704 393 7111"],
   terms: [
     "Shipment to Nigeria is solely at the shipper's risk.",
@@ -277,7 +277,9 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
 
   // Keep the totals + terms block together; move to a new page if it won't fit
   // above the footer (matters for long, multi-page item lists).
-  const totalsBlockH = 150;
+  // Grew when the breakdown gained Items/Subtotal/Discount rows — 210 keeps the
+  // block from splitting across a page break.
+  const totalsBlockH = 210;
   if (y + totalsBlockH > doc.page.height - 90) {
     doc.addPage();
     y = M;
@@ -292,11 +294,27 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
     doc.font("Helvetica").fontSize(9.5).fillColor(INK).text(val, cAmt, y, { width: 60, align: "right" });
     y += 16;
   };
-  const subtotal = total - (shipment.pickup_fee || 0);
+  // Derive the pre-discount subtotal from the stored value where available.
+  // Working back from `total` alone is wrong once a discount exists: total is
+  // AFTER the discount, so subtracting only the pickup fee understated the
+  // subtotal and made the discount line impossible to reconcile.
+  const pickupFee = shipment.pickup_fee || 0;
+  const discountAmount = shipment.discount_amount || 0;
+  const subtotal =
+    shipment.subtotal != null ? shipment.subtotal : total + discountAmount;
+  const itemsOnly = Math.max(0, subtotal - pickupFee);
   const totalsX = cPrice - 60;
   const totalsTop = y - 4;
+  rowT("Items", money(itemsOnly, currency), true);
+  if (pickupFee) rowT("Pickup fee", money(pickupFee, currency), true);
   rowT("Subtotal", money(subtotal, currency), true);
-  if (shipment.pickup_fee) rowT("Pickup fee", money(shipment.pickup_fee, currency), true);
+  if (discountAmount > 0) {
+    const label =
+      shipment.discount_type === "percent" && shipment.discount_value
+        ? `Discount (${shipment.discount_value}%)`
+        : "Discount";
+    rowT(label, `- ${money(discountAmount, currency)}`, true);
+  }
   if (deposit > 0) rowT("Deposit paid", money(deposit, currency), true);
   if (balance > 0) rowT("Balance due", money(balance, currency), true);
 

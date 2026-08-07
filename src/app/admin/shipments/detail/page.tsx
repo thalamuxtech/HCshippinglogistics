@@ -53,6 +53,7 @@ import { Input, Select, Textarea, Label } from "@/components/ui/input";
 import { StageBadge, Badge, FragileBadge } from "@/components/ui/badge";
 import { Skeleton, EmptyState } from "@/components/ui/misc";
 import { PaymentReceiptCard } from "@/components/portal/PaymentReceiptCard";
+import { PricingAdjustCard } from "@/components/portal/PricingAdjustCard";
 import { ConfirmDeleteModal } from "@/components/portal/ConfirmDeleteModal";
 import { EditShipmentModal } from "@/components/portal/EditShipmentModal";
 import { useToast } from "@/components/ui/toast";
@@ -923,6 +924,16 @@ function AdminShipmentDetailPageInner() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Pricing adjustments — above Payment, because the pickup fee and any
+              discount must be settled before money is taken. */}
+          {user && (
+            <PricingAdjustCard
+              shipment={s}
+              actor={{ id: user.id, full_name: user.full_name, role: "admin" }}
+              onChanged={load}
+            />
+          )}
 
           {/* Payment & receipt */}
           {user && (
