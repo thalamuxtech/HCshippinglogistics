@@ -155,11 +155,20 @@ export async function renderReceiptPdf({ shipment, receiptNumber, siteUrl }) {
   metaRow(`${docTitle} #`, receiptNumber, y);
   metaRow("DATE", issued, y + 15);
   metaRow("DUE DATE", status === "paid" ? "Paid" : due, y + 30);
+  // Customer ID: the credential the customer uses to view their shipments and
+  // to order again as a returning customer, so the invoice is the one document
+  // they can always find it on.
+  const customerId = (shipment.customer_id || "").trim();
+  let metaY = y + 45;
+  if (customerId) {
+    metaRow("CUSTOMER ID", customerId, metaY);
+    metaY += 15;
+  }
   const container = (shipment.container_number || "").trim();
-  let metaBottom = y + 45;
+  let metaBottom = metaY;
   if (container) {
-    metaRow("CONTAINER", `CNT #${container}`, y + 45);
-    metaBottom = y + 60;
+    metaRow("CONTAINER", `CNT #${container}`, metaY);
+    metaBottom = metaY + 15;
   }
   // Status badge under the meta
   doc.save();

@@ -7,7 +7,6 @@ import {
   UserCog,
   Tags,
   Inbox,
-  FileText,
   Boxes,
   Container,
   Settings,
@@ -30,7 +29,6 @@ const NAV: (PortalNavItem & { key: FeatureKey })[] = [
   { key: "admin.pricing", href: "/admin/pricing", label: "Pricing", icon: Tags },
   { key: "admin.containers", href: "/admin/containers", label: "Containers", icon: Container },
   { key: "admin.inquiries", href: "/admin/inquiries", label: "Submissions", icon: Inbox },
-  { key: "admin.content", href: "/admin/content", label: "Content", icon: FileText },
   { key: "admin.settings", href: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
@@ -43,7 +41,6 @@ const TITLES: Record<string, string> = {
   "/admin/pricing": "Pricing",
   "/admin/containers": "Container Broadcasts",
   "/admin/inquiries": "Submissions",
-  "/admin/content": "Site Content",
   "/admin/settings": "Settings",
 };
 

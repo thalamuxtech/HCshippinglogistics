@@ -40,7 +40,11 @@ import type {
   VehicleClass,
   ShipmentItem,
 } from "@/lib/types";
-import { submitPublicOrder, type PublicOrderInput } from "@/lib/notify";
+import {
+  submitPublicOrder,
+  viewByCustomerId,
+  type PublicOrderInput,
+} from "@/lib/notify";
 import { formatCurrency, cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -95,6 +99,10 @@ function OrderFlow() {
   // the account they already have.
   const [returning, setReturning] = React.useState(false);
   const [customerId, setCustomerId] = React.useState("");
+  const [loadingProfile, setLoadingProfile] = React.useState(false);
+  /** The ID whose details are currently loaded, so the confirmation only shows
+      while the field still matches what was fetched. */
+  const [loadedId, setLoadedId] = React.useState<string | null>(null);
 
   // ---- Sea state: s_n -> quantity ----
   // Live admin-managed price list; the order total is built from this.
@@ -291,6 +299,60 @@ function OrderFlow() {
   }
 
   // ---- Validation ----
+  /**
+   * Look up a returning customer and prefill their details, so they are not
+   * retyping a name, email and address we already hold. Everything stays
+   * editable: people move house and change numbers, and the order should record
+   * what is true today rather than what was true last time.
+   */
+  async function loadProfile() {
+    const id = customerId.trim().toUpperCase();
+    if (!id) return;
+    setLoadingProfile(true);
+    try {
+      const view = await viewByCustomerId(id);
+      if (!view.found || !view.customer) {
+        setLoadedId(null);
+        toast.error(
+          "We could not find that Customer ID",
+          "Check it against your confirmation email or an invoice, or continue as a new customer."
+        );
+        return;
+      }
+      const c = view.customer;
+      setCustomerId(c.id || id);
+      if (c.full_name) setSenderName(c.full_name);
+      if (c.email) setSenderEmail(c.email);
+      if (c.phone) setSenderPhone(c.phone);
+      if (c.dob) setSenderDob(c.dob);
+      if (c.address) setSenderAddress(c.address);
+
+      // Reuse the most recent shipment's receiver and destination: repeat orders
+      // usually go to the same person, and this is the part with the most typing.
+      const latest = (view.shipments ?? [])[0];
+      if (latest) {
+        if (latest.destination_country) setDestCountry(latest.destination_country);
+        if (latest.destination_city) setDestCity(latest.destination_city);
+        if (latest.receiver?.full_name) setRcvName(latest.receiver.full_name);
+        if (latest.receiver?.phone) setRcvPhone(latest.receiver.phone);
+        if (latest.receiver?.address) setRcvAddress(latest.receiver.address);
+      }
+
+      setLoadedId(c.id || id);
+      toast.success(
+        `Welcome back, ${(c.full_name || "").split(" ")[0] || "there"}`,
+        latest
+          ? "We filled in your details and your last receiver. Edit anything that has changed."
+          : "We filled in your details. Edit anything that has changed."
+      );
+    } catch {
+      setLoadedId(null);
+      toast.error("Could not load your details", "Please try again in a moment.");
+    } finally {
+      setLoadingProfile(false);
+    }
+  }
+
   function validate(): string | null {
     if (!senderName.trim()) return "Please enter your full name.";
     if (!senderEmail.trim() || !/.+@.+\..+/.test(senderEmail.trim()))
@@ -524,18 +586,47 @@ function OrderFlow() {
                     <Label htmlFor="cust-id" required>
                       Your Customer ID
                     </Label>
-                    <Input
-                      id="cust-id"
-                      value={customerId}
-                      onChange={(e) => setCustomerId(e.target.value.toUpperCase())}
-                      placeholder="e.g. HCAB1CD2EF3"
-                      className="font-mono"
-                      autoComplete="off"
-                    />
-                    <FieldHint>
-                      It was emailed to you when you first ordered, and appears on your invoices.
-                      Use the same email address you registered with.
-                    </FieldHint>
+                    <div className="flex flex-col gap-2 sm:flex-row">
+                      <Input
+                        id="cust-id"
+                        value={customerId}
+                        onChange={(e) => {
+                          setCustomerId(e.target.value.toUpperCase());
+                          // A changed ID invalidates whatever was loaded before.
+                          if (loadedId) setLoadedId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void loadProfile();
+                          }
+                        }}
+                        placeholder="e.g. HCAB1CD2EF3"
+                        className="font-mono"
+                        autoComplete="off"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={loadProfile}
+                        loading={loadingProfile}
+                        disabled={loadingProfile || !customerId.trim()}
+                        className="shrink-0"
+                      >
+                        {loadingProfile ? "Looking up…" : "Load my details"}
+                      </Button>
+                    </div>
+                    {loadedId ? (
+                      <p className="mt-1.5 flex items-start gap-1.5 text-xs font-medium text-emerald-700">
+                        <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        Welcome back. We filled in your details below, edit anything that has
+                        changed, then carry on to your items.
+                      </p>
+                    ) : (
+                      <FieldHint>
+                        It was emailed to you when you first ordered, and appears on your invoices.
+                        Use the same email address you registered with.
+                      </FieldHint>
+                    )}
                   </div>
                 )}
 

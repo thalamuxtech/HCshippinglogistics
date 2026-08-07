@@ -25,7 +25,6 @@ export type FeatureKey =
   | "admin.pricing"
   | "admin.containers"
   | "admin.inquiries"
-  | "admin.content"
   | "admin.settings"
   | "admin.demodata"
   // Destination office
@@ -71,7 +70,6 @@ export const FEATURES: FeatureMeta[] = [
   { key: "admin.pricing", label: "Pricing", href: "/admin/pricing", role: "admin" },
   { key: "admin.containers", label: "Containers", href: "/admin/containers", role: "admin" },
   { key: "admin.inquiries", label: "Submissions", href: "/admin/inquiries", role: "admin" },
-  { key: "admin.content", label: "Content", href: "/admin/content", role: "admin" },
   // Settings is `required`: it holds backup/restore, so an admin locked out of it
   // could not recover the system.
   { key: "admin.settings", label: "Settings", href: "/admin/settings", role: "admin", required: true },

@@ -27,6 +27,7 @@ import {
   Mail,
   ShieldCheck,
   Info,
+  FileText,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,14 +36,26 @@ import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/misc";
 import { useToast } from "@/components/ui/toast";
 import { EmailTestCard } from "@/components/portal/EmailTestCard";
+import { SiteContentPanel } from "@/components/portal/SiteContentPanel";
 import { useAuth } from "@/components/providers/AuthProvider";
 import { setSiteContent, logActivity } from "@/lib/db";
 import { exportBackup, restoreBackup, type BackupFile } from "@/lib/notify";
 import { useCompanyInfo, primeCompanyInfo, type CompanyInfo } from "@/lib/company-info";
+import { cn } from "@/lib/utils";
 import { useRoleLabels, primeRoleLabels, ROLE_LABEL_DEFAULTS, type RoleLabels } from "@/lib/role-labels";
 import type { Role } from "@/lib/types";
 
+type TabKey = "company" | "content" | "roles" | "system";
+
+const TABS: { key: TabKey; label: string; icon: React.ElementType }[] = [
+  { key: "company", label: "Company", icon: Building2 },
+  { key: "content", label: "Website content", icon: FileText },
+  { key: "roles", label: "Roles", icon: Tags },
+  { key: "system", label: "Email & backup", icon: DatabaseBackup },
+];
+
 export default function AdminSettingsPage() {
+  const [tab, setTab] = React.useState<TabKey>("company");
   const toast = useToast();
   const { user } = useAuth();
   const company = useCompanyInfo();
@@ -212,11 +225,43 @@ export default function AdminSettingsPage() {
       <div>
         <h1 className="text-xl font-bold text-navy">Settings</h1>
         <p className="text-sm text-ink-muted">
-          Company details, role naming, email delivery, and system backup.
+          Company details, website content, role naming, email delivery, and system backup.
         </p>
       </div>
 
+      {/* Tabs keep four unrelated concerns from stacking into one long scroll,
+          and give site content a home without another sidebar entry. */}
+      <div
+        role="tablist"
+        aria-label="Settings sections"
+        className="flex flex-wrap gap-1 rounded-xl border border-border bg-white p-1"
+      >
+        {TABS.map((tb) => {
+          const Icon = tb.icon;
+          const active = tab === tb.key;
+          return (
+            <button
+              key={tb.key}
+              role="tab"
+              aria-selected={active}
+              onClick={() => setTab(tb.key)}
+              className={cn(
+                "inline-flex min-h-[44px] flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors focus-ring",
+                active
+                  ? "bg-navy text-white shadow-card"
+                  : "text-ink-muted hover:bg-navy/5 hover:text-navy"
+              )}
+            >
+              <Icon className={cn("h-4 w-4", active ? "text-gold" : "")} />
+              <span className="hidden sm:inline">{tb.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* ── Company details ── */}
+      {tab === "company" && (
+        <>
       <Card>
         <CardHeader className="flex-row items-start gap-2 space-y-0">
           <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
@@ -327,7 +372,14 @@ export default function AdminSettingsPage() {
         </CardContent>
       </Card>
 
+        </>
+      )}
+
+      {/* ── Website content ── */}
+      {tab === "content" && <SiteContentPanel />}
+
       {/* ── Role names ── */}
+      {tab === "roles" && (
       <Card>
         <CardHeader className="flex-row items-start gap-2 space-y-0">
           <Tags className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
@@ -364,10 +416,12 @@ export default function AdminSettingsPage() {
         </CardContent>
       </Card>
 
-      {/* ── Email delivery ── */}
-      <EmailTestCard />
+      )}
 
-      {/* ── Backup & restore ── */}
+      {/* ── Email delivery + backup/restore ── */}
+      {tab === "system" && (
+        <>
+          <EmailTestCard />
       <Card>
         <CardHeader className="flex-row items-start gap-2 space-y-0">
           <DatabaseBackup className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden />
@@ -421,6 +475,9 @@ export default function AdminSettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+        </>
+      )}
 
       <p className="flex items-center gap-1.5 px-1 text-xs text-ink-muted">
         <ShieldCheck className="h-3.5 w-3.5" />
