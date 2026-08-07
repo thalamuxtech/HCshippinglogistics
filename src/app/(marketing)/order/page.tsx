@@ -959,7 +959,7 @@ function OrderFlow() {
                     <p className="text-xs text-amber-800">
                       <strong>Your final price may be higher.</strong> We still need to price{" "}
                       {pendingExtras.join(" and ")}. You can check your profile with your Customer
-                      ID any time to see the full amount before you pay.
+                      ID any time to see the full amount before you pay. Thank you.
                     </p>
                   </div>
                 )}
