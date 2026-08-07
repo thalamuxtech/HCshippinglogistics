@@ -52,3 +52,9 @@ features-out.txt
 audit-out.txt
 drawer-shot.png
 shot-*.png
+
+# Planning and operations docs live outside the app, in
+# HighClassShippingPlan/plan_docs/. Ignored here so a stray copy in the app
+# folder is never committed.
+GO-LIVE.md
+GOOGLE-BUSINESS-PROFILE.md
